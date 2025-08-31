@@ -1,0 +1,39 @@
+{
+  "name": "rxcod9/php-swoole-crud-microservice",
+  "description": "PHP Swoole CRUD Microservice",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "monolog/monolog": "^3.6",
+    "promphp/prometheus_client_php": "^2.10"
+  },
+  "require-dev": {
+    "phpmd/phpmd": "^2.15",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^10",
+    "squizlabs/php_codesniffer": "^3.13"
+  },
+  "scripts": {
+    "start": "php public/index.php",
+    "test": "vendor/bin/phpunit",
+    "cs": "vendor/bin/phpcs -p --standard=phpcs.xml",
+    "cbf": "vendor/bin/phpcbf -p --standard=phpcs.xml"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "authors": [
+    {
+      "name": "Ramakant Gangwar",
+      "email": "14928642+rxcod9@users.noreply.github.com"
+    }
+  ]
+}

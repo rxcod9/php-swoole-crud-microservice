@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<ruleset name="php-swoole-crud-microservice">
+  <file>src</file>
+  <!-- <file>app</file> -->
+  <rule ref="PSR12"/>
+</ruleset>

@@ -1,0 +1,16 @@
+:443 {
+	encode gzip zstd
+	tls internal
+
+	reverse_proxy app:9501 {
+		flush_interval -1
+		transport http {
+			versions h1 h2 h3
+			keepalive 64s
+		}
+	}
+}
+
+:80 {
+	redir https://{host}{uri}
+}
