@@ -2,7 +2,10 @@
 /.php-cs-fixer.cache
 /.phpunit.result.cache
 /.idea/
-/.vscode/
 /build/
 ab*.log
 *.log
+
+# vscode
+.vscode/*
+!.vscode/launch.json

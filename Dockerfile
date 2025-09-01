@@ -30,6 +30,9 @@ RUN docker-php-ext-install pdo pdo_mysql pdo_sqlite
 RUN pecl install redis \
  && docker-php-ext-enable redis
 
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
 # --- Composer ---
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
