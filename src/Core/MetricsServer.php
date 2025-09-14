@@ -3,12 +3,9 @@
 namespace App\Core;
 
 use Prometheus\RenderTextFormat;
-use Prometheus\CollectorRegistry;
-use Prometheus\Storage\Redis;
 use Swoole\Http\Server;
 use Swoole\Http\Response;
 use Swoole\Http\Request;
-use Swoole\Coroutine;
 
 if (!defined('SWOOLE_BASE')) {
     define('SWOOLE_BASE', 2);

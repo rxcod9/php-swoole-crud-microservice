@@ -77,6 +77,22 @@ final class RedisContext
         return $this->command('del', [$key]);
     }
 
+    public function scan($it, string $pattern, int $count = 100): mixed
+    {
+        return $this->command('scan', [$it, $pattern, $count]);
+    }
+
+    public function deleteByPattern(string $pattern): void
+    {
+        $it = null;
+        while ($keys = $this->scan($it, $pattern, 100)) {
+            print_r($keys);
+            foreach ($keys as $key) {
+                $this->del($key);
+            }
+        }
+    }
+
     public function exists(string $key): mixed
     {
         return $this->command('exists', [$key]);

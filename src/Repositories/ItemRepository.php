@@ -4,10 +4,25 @@ namespace App\Repositories;
 
 use App\Core\DbContext;
 
+/**
+ * Repository for managing items in the database.
+ */
 final class ItemRepository
 {
+    /**
+     * Constructor to initialize the repository with a database context.
+     *
+     * @param DbContext $ctx The database context for managing connections.
+     */
     public function __construct(private DbContext $ctx) {}
 
+    /**
+     * Create a new item in the database.
+     *
+     * @param array $d The data for the new item (expects 'sku', 'title', 'price').
+     * @return int The ID of the newly created item.
+     * @throws \RuntimeException If the insert operation fails.
+     */
     public function create(array $d): int
     {
         $conn = $this->ctx->conn(); // returns Swoole\Coroutine\MySQL
@@ -25,6 +40,13 @@ final class ItemRepository
         return (int)$conn->insert_id;
     }
 
+    /**
+     * Find an item by its ID.
+     *
+     * @param int $id The ID of the item to find.
+     * @return array|null The item data as an associative array, or null if not found.
+     * @throws \RuntimeException If the query operation fails.
+     */
     public function find(int $id): ?array
     {
         $conn = $this->ctx->conn();
@@ -42,6 +64,12 @@ final class ItemRepository
         return $rows[0] ?? null;
     }
 
+    /**
+     * List items with a default limit.
+     *
+     * @return array An array of items, each represented as an associative array.
+     * @throws \RuntimeException If the query operation fails.
+     */
     public function list(): array
     {
         $conn = $this->ctx->conn();
@@ -54,6 +82,14 @@ final class ItemRepository
         return $rows;
     }
 
+    /**
+     * Update an existing item.
+     *
+     * @param int $id The ID of the item to update.
+     * @param array $d The data to update (expects 'sku', 'title', 'price').
+     * @return bool True if the item was updated, false otherwise.
+     * @throws \RuntimeException If the update operation fails.
+     */
     public function update(int $id, array $d): bool
     {
         $conn = $this->ctx->conn();
@@ -68,9 +104,16 @@ final class ItemRepository
             throw new \RuntimeException("Update failed: " . $stmt->error);
         }
 
-        return (bool)($result['affected_rows'] ?? 0);
+        return (bool)($stmt->affected_rows ?? 0);
     }
 
+    /**
+     * Delete an item by its ID.
+     *
+     * @param int $id The ID of the item to delete.
+     * @return bool True if the item was deleted, false otherwise.
+     * @throws \RuntimeException If the delete operation fails.
+     */
     public function delete(int $id): bool
     {
         $conn = $this->ctx->conn();
@@ -85,6 +128,6 @@ final class ItemRepository
             throw new \RuntimeException("Delete failed: " . $stmt->error);
         }
 
-        return (bool)($result['affected_rows'] ?? 0);
+        return (bool)($stmt->affected_rows ?? 0);
     }
 }

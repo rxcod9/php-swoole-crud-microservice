@@ -11,11 +11,13 @@
     "phpmd/phpmd": "^2.15",
     "phpstan/phpstan": "^2.1",
     "phpunit/phpunit": "^10",
-    "squizlabs/php_codesniffer": "^3.13"
+    "squizlabs/php_codesniffer": "^3.13",
+    "zircote/swagger-php": "^5.3"
   },
   "scripts": {
     "start": "php public/index.php",
     "test": "vendor/bin/phpunit",
+    "openapi:generate": "vendor/bin/openapi --output public/openapi.json src",
     "cs": "vendor/bin/phpcs -p --standard=phpcs.xml",
     "cbf": "vendor/bin/phpcbf -p --standard=phpcs.xml"
   },

@@ -1,16 +1,32 @@
-:443 {
-	encode gzip zstd
-	tls internal
+# HTTPS site
+https://localhost {
+    encode gzip zstd
 
-	reverse_proxy app:9501 {
-		flush_interval -1
-		transport http {
-			versions h1 h2 h3
-			keepalive 64s
-		}
-	}
+    # Internal TLS for local dev
+    tls internal
+
+    # Reverse proxy to your Swoole HTTP server
+    reverse_proxy app:9501 {
+        flush_interval -1
+        transport http {
+            versions h1 h2 h3
+            keepalive 64s
+        }
+    }
+
+    # Optional security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # Logs
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
 }
 
-:80 {
-	redir https://{host}{uri}
+# HTTP site: redirect all traffic to HTTPS
+http://localhost {
+    redir https://localhost{uri} permanent
 }
