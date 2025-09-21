@@ -14,7 +14,7 @@
 #   docker run -p 9501:9501 php-swoole-crud-microservice
 
 # ================= Build Stage =================
-FROM php:8.2-cli AS build
+FROM php:8.4-cli AS build
 
 # --- System dependencies ---
 # Installs build tools and libraries required for compiling Swoole and PHP extensions.
@@ -64,7 +64,7 @@ RUN pecl install xdebug \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # ================= Runtime Stage =================
-FROM php:8.2-cli
+FROM php:8.4-cli
 
 # --- Runtime system dependencies ---
 # Installs only the libraries required at runtime.
