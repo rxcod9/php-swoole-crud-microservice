@@ -1,4 +1,9 @@
+# docker-compose.yml
+# Docker Compose configuration for PHP Swoole CRUD Microservice stack
+# Includes: app, metrics, MySQL, Prometheus, Grafana, Redis, Caddy, Swagger UI
+
 services:
+  # Main PHP Swoole application service
   app:
     build:
       context: .
@@ -7,32 +12,36 @@ services:
     volumes:
       - .:/app
       - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - ./docker/certs/server.crt:/etc/ssl/certs/server.crt:ro
+      - ./docker/certs/server.key:/etc/ssl/private/server.key:ro
     environment:
-      APP_ENV: prod
-      DB_DRIVER: mysql
-      DB_DSN: mysql:host=mysql;dbname=app;charset=utf8mb4
-      DB_USER: app
-      DB_PASS: app
-      DB_POOL_MIN: 5
-      DB_POOL_MAX: 200
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_POOL_MIN: 5
-      REDIS_POOL_MAX: 200
-      SWOOLE_WORKER_NUM: 4
-      SWOOLE_TASK_WORKER_NUM: 4
-      SWOOLE_MAX_REQUEST: 10000
-      XDEBUG_MODE: debug
-      XDEBUG_CONFIG: client_host=host.docker.internal client_port=9003
+      APP_ENV: prod                       # Application environment
+      DB_DRIVER: mysql                    # Database driver
+      DB_DSN: mysql:host=mysql;dbname=app;charset=utf8mb4  # DSN for MySQL
+      DB_USER: app                        # Database user
+      DB_PASS: app                        # Database password
+      DB_POOL_MIN: 5                      # Min DB pool size
+      DB_POOL_MAX: 200                    # Max DB pool size
+      REDIS_HOST: redis                   # Redis host
+      REDIS_PORT: 6379                    # Redis port
+      REDIS_POOL_MIN: 5                   # Min Redis pool size
+      REDIS_POOL_MAX: 200                 # Max Redis pool size
+      SWOOLE_WORKER_NUM: 4                # Swoole worker processes
+      SWOOLE_TASK_WORKER_NUM: 4           # Swoole task worker processes
+      SWOOLE_MAX_REQUEST: 10000           # Max requests per worker
+      SSL_ENABLE: false
+      XDEBUG_MODE: debug                  # Xdebug mode
+      XDEBUG_CONFIG: client_host=host.docker.internal client_port=9003 # Xdebug config
     ports:
-      - "9501:9501"
-    depends_on: [mysql, redis]
+      - "9501:9501"                       # Expose Swoole HTTP port
+    depends_on: [mysql, redis]            # Wait for MySQL and Redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9501/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
 
+  # Metrics server for Prometheus scraping
   metrics:
     build: .
     command: php public/metrics-server.php
@@ -45,6 +54,7 @@ services:
       retries: 5
     depends_on: [app]
 
+  # MySQL database service
   mysql:
     image: mysql:8.4
     environment:
@@ -61,6 +71,7 @@ services:
       timeout: 2s
       retries: 20
 
+  # MySQL exporter for Prometheus
   mysqld-exporter:
     image: prom/mysqld-exporter:latest
     container_name: mysqld_exporter
@@ -80,6 +91,7 @@ services:
     depends_on:
       - mysql
 
+  # Prometheus monitoring service
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -94,6 +106,7 @@ services:
       retries: 5
     depends_on: [mysqld-exporter, metrics, app]
 
+  # Grafana dashboard service
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -111,6 +124,7 @@ services:
       retries: 5
     depends_on: [prometheus]
 
+  # Redis in-memory data store
   redis:
     image: redis:7
     ports: ["6379:6379"]
@@ -120,11 +134,17 @@ services:
       timeout: 2s
       retries: 20
 
+  # Caddy web server and reverse proxy
   caddy:
-    image: caddy:2
-    ports: ["443:443","80:80"]
+    image: caddy:2.8
+    ports: 
+      - "443:443"
+      - "80:80"
+      - "443:443/udp"   # <- needed for QUIC / HTTP3
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on: [app]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "https://localhost/healthz"]
@@ -132,6 +152,7 @@ services:
       timeout: 10s
       retries: 5
 
+  # Swagger UI for API documentation
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: swagger_ui
@@ -142,3 +163,7 @@ services:
     ports:
       - "8080:8080"
     depends_on: [app]
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -19,7 +19,9 @@ final class IndexController extends Controller
 {
     public function __construct()
     {
+        //
     }
+
     #[OA\Get(
         path: '/',
         summary: 'Home',

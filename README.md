@@ -75,7 +75,14 @@ curl -i -X DELETE http://localhost:9501/users/1 -H 'Content-Type: application/js
 ### Benchmarking
 
 ```bash
-# Run ApacheBench for health check endpoint
+# Run k6 
+k6 run --http-debug="full" k6/crud_load_test_real.js > logs/k6_real.log 2>&1
+# OR
+k6 run --http-debug="full" k6/crud_load_test_read.js > logs/k6_read.log 2>&1
+# OR
+k6 run --http-debug="full" k6/crud_load_test.js > logs/k6.log 2>&1
+
+# Run ApacheBench
 ab -n 100000 -c 100 -v 4 http://localhost:9501/users/1 2>&1 | tee ab.log
 ```
 

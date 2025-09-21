@@ -2,25 +2,38 @@
 
 use Swoole\Coroutine\MySQL;
 
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
-
+/**
+ * Logs a message with a timestamp.
+ *
+ * @param string $msg The message to log.
+ * @return void
+ */
 function logMsg($msg) {
     echo "[" . date('Y-m-d H:i:s') . "] $msg\n";
 }
 
+// Enable Swoole coroutine runtime for asynchronous operations.
 Swoole\Runtime::enableCoroutine();
 
+/**
+ * Main coroutine for running database migrations.
+ *
+ * Loads configuration, connects to MySQL, and executes migration SQL files.
+ *
+ * @return void
+ */
 go(function () {
     logMsg("Starting migration...");
 
+    // Load application configuration.
     $cfg = require __DIR__ . "/../config/config.php";
     logMsg("Loaded config.");
 
+    // Extract MySQL database configuration.
     $db  = $cfg["db"]["mysql"];
     logMsg("Database config: host={$db['host']}, user={$db['user']}, db={$db['db']}, port={$db['port']}");
 
+    // Create a new Swoole Coroutine MySQL client and connect.
     $mysql = new MySQL();
     $res = $mysql->connect([
         'host'     => $db['host'],
@@ -35,9 +48,11 @@ go(function () {
     }
     logMsg("Connected to MySQL.");
 
+    // Load migration file paths from configuration.
     $migrations = require __DIR__ . "/../config/database.php";
     logMsg("Loaded migrations config.");
 
+    // Iterate over migration groups and run each migration SQL file.
     foreach ($migrations as $k => $migs) {
         logMsg("Processing migration group: $k");
         foreach ($migs as $m) {

@@ -2,20 +2,46 @@
 
 namespace App\Core;
 
+/**
+ * Class Controller
+ *
+ * Abstract base controller providing common functionality for all controllers.
+ * Handles request assignment and standardized JSON responses.
+ *
+ * @package App\Core
+ */
 abstract class Controller
 {
+    /**
+     * The request object associated with the controller.
+     *
+     * @var mixed
+     */
     protected $request;
-    // protected $response;
-    public function setRequest($req)
+
+    /**
+     * Assigns the request object to the controller.
+     *
+     * @param mixed $req The request object.
+     * @return void
+     */
+    public function setRequest($req): void
     {
         $this->request = $req;
     }
-    // public function setResponse($res)
-    // {
-    //     $this->response = $res;
-    // }
+
+    /**
+     * Returns a structured JSON response.
+     *
+     * @param mixed $data The data to encode as JSON.
+     * @param int $status The HTTP status code (default: 200).
+     * @return array The structured response containing status and JSON data.
+     */
     protected function json($data, int $status = 200): array
     {
-        return ['__status' => $status, '__json' => $data];
+        return [
+            '__status' => $status,
+            '__json' => $data
+        ];
     }
 }

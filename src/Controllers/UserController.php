@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\RedisContext;
+use App\Core\RedisPool;
 use App\Services\UserService;
 use OpenApi\Attributes as OA;
 
@@ -18,8 +18,10 @@ final class UserController extends Controller
      */
     public function __construct(
         private UserService $svc,
-        private RedisContext $ctx
-    ) {}
+        private RedisPool $pool
+    ) {
+        //
+    }
 
     /**
      * Create a new user.
@@ -49,7 +51,8 @@ final class UserController extends Controller
         $data = json_decode($this->request->rawContent() ?: '[]', true);
         $user = $this->svc->create($data);
 
-        $redis = $this->ctx->conn(); // returns Swoole\Coroutine\Redis
+        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        defer(fn() => $this->pool->put($redis));
         // Invalidate cache
         $redis->del("users:list:100:0"); // Invalidate all list caches
         $redis->del("users:list:100:100"); // Invalidate all list caches
@@ -65,22 +68,61 @@ final class UserController extends Controller
     #[OA\Get(
         path: '/users',
         summary: 'List users',
-        description: 'Get all users with optional pagination',
+        description: 'Get all users with optional pagination. Use either page & limit or offset & limit',
         tags: ['Users'],
+        parameters: [
+            new OA\Parameter(
+                name: 'page',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: null)
+            ),
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)
+            ),
+            new OA\Parameter(
+                name: 'offset',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
+            )
+        ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(
-                        type: 'object',
-                        properties: [
-                            new OA\Property(property: 'id', type: 'integer'),
-                            new OA\Property(property: 'name', type: 'string'),
-                            new OA\Property(property: 'email', type: 'string'),
-                        ]
-                    )
+                    type: 'object',
+                    properties: [
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer', example: 3001),
+                                    new OA\Property(property: 'name', type: 'string', example: 'string'),
+                                    new OA\Property(property: 'email', type: 'string', example: 'string'),
+                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                ]
+                            )
+                        ),
+                        new OA\Property(
+                            property: 'pagination',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'total', type: 'integer', example: 1),
+                                new OA\Property(property: 'count', type: 'integer', example: 1),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 100),
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                            ]
+                        ),
+                    ]
                 )
             )
         ]
@@ -88,9 +130,17 @@ final class UserController extends Controller
     public function index(): array
     {
         // Simple caching with Redis
-        $redis = $this->ctx->conn(); // returns Swoole\Coroutine\Redis
-        $limit = (int)($this->request->get['limit'] ?? 100);
-        $offset = (int)($this->request->get['offset'] ?? 0);
+        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        defer(fn() => $this->pool->put($redis));
+
+        // Pagination params
+        $page = (int)($this->request->get['page'] ?? 1);
+        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $offset = max(0, ($page - 1) * $limit);
+
+        // Override with direct offset if provided
+        $limit = (int)($this->request->get['limit'] ?? $limit);
+        $offset = (int)($this->request->get['offset'] ?? $offset);
 
         // Cache key based on pagination params
         $cacheKey = "users:list:$limit:$offset";
@@ -101,7 +151,21 @@ final class UserController extends Controller
         // Fetch from service if not cached
         $users = $this->svc->list($limit, $offset);
 
-        // cache for 60s
+        // Get total count for pagination metadata
+        $total = $this->svc->count();
+        $pages = ceil($total / $limit);
+        $users = [
+            'data' => $users,
+            'pagination' => [
+                'total' => $total,
+                'count' => count($users),
+                'per_page' => $limit,
+                'current_page' => floor($offset / $limit) + 1,
+                'total_pages' => $pages,
+            ]
+        ];
+
+        // cache for 10s
         $redis->setex($cacheKey, 10, json_encode($users));
 
         // Respond with user list
@@ -141,7 +205,8 @@ final class UserController extends Controller
     )]
     public function show(array $params): array
     {
-        $redis = $this->ctx->conn(); // returns Swoole\Coroutine\Redis
+        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        defer(fn() => $this->pool->put($redis));
         $id = (int)$params['id'];
         $cacheKey = "user:$id";
 
@@ -197,7 +262,8 @@ final class UserController extends Controller
             return $this->json(['error' => 'Not Found'], 404);
         }
 
-        $redis = $this->ctx->conn(); // returns Swoole\Coroutine\Redis
+        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        defer(fn() => $this->pool->put($redis));
         // Invalidate caches
         $redis->del("user:{$p['id']}");
         $redis->del("users:list:100:0"); // Invalidate all list caches
@@ -231,7 +297,8 @@ final class UserController extends Controller
     {
         $ok = $this->svc->delete((int)$p['id']);
         if ($ok) {
-            $redis = $this->ctx->conn(); // returns Swoole\Coroutine\Redis
+            $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+            defer(fn() => $this->pool->put($redis));
             // Invalidate cache
             $redis->del("user:{$p['id']}");
             $redis->del("users:list:100:0"); // Invalidate all list caches

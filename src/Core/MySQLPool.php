@@ -7,53 +7,92 @@ use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Mysql;
 
 /**
- * MySQLPool
- * 
+ * Class MySQLPool
+ *
  * A coroutine-safe MySQL connection pool for Swoole.
  * Automatically scales pool size based on usage patterns.
+ *
+ * @package App\Core
  */
 final class MySQLPool
 {
-    private Channel $chan;
+    /**
+     * @var Channel The coroutine channel used for managing Redis connections.
+     */
+    private Channel $channel;
+
+    /**
+     * @var int Minimum number of connections to keep in the pool.
+     */
     private int $min;
+
+    /**
+     * @var int Maximum number of connections allowed in the pool.
+     */
     private int $max;
+
+    /**
+     * @var array MySQL connection configuration.
+     */
     private array $conf;
+
+    /**
+     * @var int Number of created connections.
+     */
     private int $created = 0;
+
+    /**
+     * @var bool Whether the pool has been initialized.
+     */
     private bool $initialized = false;
 
     /**
-     * Constructor
-     * @param array $conf MySQL connection config
-     * @param int $min Minimum connections
-     * @param int $max Maximum connections
+     * @var float Idle buffer ratio for scaling decisions (0 to 1).
      */
-    public function __construct(array $conf, int $min = 5, int $max = 200)
+    private float $idleBuffer; // e.g., 0.05 = 5%
+
+    /**
+     * @var float Margin ratio for scaling decisions (0 to 1).
+     */
+    private float $margin;     // e.g., 0.05 = 5% margin
+
+    /**
+     * MySQLPool constructor.
+     *
+     * @param array $conf MySQL connection config (host, port, user, pass, db, charset, timeout)
+     * @param int $min Minimum connections to pre-create
+     * @param int $max Maximum connections allowed
+     */
+    public function __construct(array $conf, int $min = 5, int $max = 200, float $idleBuffer = 0.05, float $margin = 0.05)
     {
         $this->conf = $conf;
         $this->min = $min;
         $this->max = $max;
+        $this->idleBuffer = $idleBuffer;
+        $this->margin = $margin;
 
-        $this->chan = new Channel($max);
+        $this->channel = new Channel($max);
 
         // Pre-create minimum connections
         for ($i = 0; $i < $min; $i++) {
             $conn = $this->make();
             error_log(sprintf('[%s] [INIT] Pre-created connection #%d', date('Y-m-d H:i:s'), $i + 1));
-            $this->chan->push($conn);
+            $this->channel->push($conn);
         }
         $this->initialized = true;
         error_log(sprintf('[%s] [INIT] MySQL Pool initialized with %d connections', date('Y-m-d H:i:s'), $min));
     }
 
-    public function isInitialized(): bool
-    {
-        return $this->initialized;
-    }
-
     /**
-     * Create a new MySQL connection
+     * Create a new MySQL connection.
+     * Uses exponential backoff for retries on failure.
+     *
+     * @param int $retry Current retry attempt count.
+     *
+     * @return Mysql
+     * @throws \RuntimeException If connection fails.
      */
-    private function make(): Mysql
+    private function make(int $retry = 0): Mysql
     {
         try {
             $mysql = new Mysql();
@@ -73,7 +112,6 @@ final class MySQLPool
             }
 
             $this->created++;
-            // log count of created connections
             error_log(sprintf(
                 '[%s] [CREATE] MySQL connection created. Total connections: %d',
                 date('Y-m-d H:i:s'),
@@ -81,6 +119,17 @@ final class MySQLPool
             ));
             return $mysql;
         } catch (\Throwable $e) {
+            // retry with exponential backoff
+            if ($retry <= 10) {
+                $backoff = (1 << $retry) * 100000; // exponential backoff in microseconds
+                error_log(sprintf('[%s] [RETRY] Retrying MySQL connection in %.2f seconds...', date('Y-m-d H:i:s'), $backoff / 1000000));
+                Coroutine::sleep($backoff / 1000000);
+                $retry++;
+                return $this->make($retry);
+            }
+            // after retries, throw exception
+            // give up and let the caller handle it
+
             error_log(sprintf(
                 '[%s] [EXCEPTION] MySQL connection error: %s | MySQL Pool created: %d',
                 date('Y-m-d H:i:s'),
@@ -92,11 +141,12 @@ final class MySQLPool
     }
 
     /**
-     * Get a MySQL connection from the pool
-     * Auto-scales pool size based on usage patterns
+     * Get a MySQL connection from the pool.
+     * Auto-scales pool size based on usage patterns.
      *
-     * @param float $timeout Timeout in seconds to wait for a connection
-     * @throws \RuntimeException if pool is exhausted
+     * @param float $timeout Timeout in seconds to wait for a connection.
+     * @return Mysql
+     * @throws \RuntimeException If pool is exhausted or not initialized.
      */
     public function get(float $timeout = 1.0): Mysql
     {
@@ -104,27 +154,66 @@ final class MySQLPool
             throw new \RuntimeException('MySQL pool not initialized yet');
         }
 
-        $available = $this->chan->length();
+        $available = $this->channel->length();
         $used = $this->created - $available;
-        $exhaustedRatio = $used / $this->max;
 
-        // --- Auto-scale up ---
-        if (($available <= 1 || $exhaustedRatio >= 0.75) && $this->created < $this->max) {
-            $toCreate = min($this->max - $this->created, max(1, (int)($this->max * 0.05)));
+        // Auto-scale up
+        if (($available <= 1) && $this->created < $this->max) {
+            $toCreate = 1; //min($this->max - $this->created, max(1, (int)($this->max * 0.05)));
             error_log(sprintf('[%s] [SCALE-UP Mysql] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
             for ($i = 0; $i < $toCreate; $i++) {
-                $this->chan->push($this->make());
+                $this->channel->push($this->make());
             }
         }
 
-        // --- Auto-scale down ---
-        $idleRatio = $available / max(1, $this->created);
-        if ($idleRatio >= 0.5 && $this->created > $this->min) {
-            // Close up to 25% of excess idle connections
-            $toClose = min($this->created - $this->min, (int)($this->created * 0.05));
-            error_log(sprintf('[%s] [SCALE-DOWN Mysql] Closing %d idle connections (idleRatio: %.2f)', date('Y-m-d H:i:s'), $toClose, $idleRatio));
+        $conn = $this->channel->pop($timeout);
+        if (!$conn) {
+            error_log(sprintf('[%s] [ERROR] DB pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', date('Y-m-d H:i:s'), $timeout, $available, $used, $this->created));
+            throw new \RuntimeException('DB pool exhausted', 503);
+        }
+
+        // // Ping to check health
+        // if ($conn->query('SELECT 1') === false) {
+        //     error_log(sprintf('[%s] [PING-FAIL] MySQL Connection unhealthy, recreating...', date('Y-m-d H:i:s')));
+        //     $conn = $this->make();
+        // } else {
+        //     error_log(sprintf('[%s] [PING] MySQL Connection healthy', date('Y-m-d H:i:s')));
+        // }
+
+        return $conn;
+    }
+
+    /**
+     * Manually trigger auto-scaling logic.
+     * Can be called periodically to adjust pool size.
+     *
+     * @return void
+     * @throws \RuntimeException If pool is exhausted or not initialized.
+     */
+    public function autoScale(): void
+    {
+        $available = $this->channel->length();
+        $used = max(0, $this->created - $available);
+        $idleBufferCount = (int)($this->max * $this->idleBuffer);
+        $upperThreshold = (int)($idleBufferCount * (1 + $this->margin)); // scale down threshold
+        $lowerThreshold = min($this->min, (int)($idleBufferCount * (1 - $this->margin))); // scale up threshold
+
+        // ----------- Scale UP if idle connections are below lowerThreshold -----------
+        if ($available < $lowerThreshold && $this->created < $this->max) {
+            $toCreate = min($this->max - $this->created, $lowerThreshold - $available);
+            error_log(sprintf('[%s] [SCALE-UP Mysql] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
+            for ($i = 0; $i < $toCreate; $i++) {
+                $this->channel->push($this->make());
+            }
+        }
+
+        // ----------- Scale DOWN if idle connections exceed upperThreshold -----------
+        if ($available > $upperThreshold && $this->created > $this->min) {
+            $excessIdle = $available - $upperThreshold;
+            $toClose = min($this->created - $this->min, $excessIdle);
+            error_log(sprintf('[%s] [SCALE-DOWN Mysql] Auto-scaling DOWN: Closing %d idle Redis connections', date('Y-m-d H:i:s'), $toClose));
             for ($i = 0; $i < $toClose; $i++) {
-                $conn = $this->chan->pop(0.01); // non-blocking pop
+                $conn = $this->channel->pop(0.01); // non-blocking pop
                 if ($conn) {
                     $conn->close();
                     $this->created--;
@@ -132,33 +221,18 @@ final class MySQLPool
                 }
             }
         }
-
-        $conn = $this->chan->pop($timeout);
-        if (!$conn) {
-            error_log(sprintf('[%s] [ERROR] DB pool exhausted (timeout: %.2f)', date('Y-m-d H:i:s'), $timeout));
-            throw new \RuntimeException('DB pool exhausted', 503);
-        }
-
-        // Ping to check health
-        if ($conn->query('SELECT 1') === false) {
-            error_log(sprintf('[%s] [PING-FAIL] MySQL Connection unhealthy, recreating...', date('Y-m-d H:i:s')));
-            $conn = $this->make();
-        } else {
-            error_log(sprintf('[%s] [PING] MySQL Connection healthy', date('Y-m-d H:i:s')));
-        }
-
-        return $conn;
     }
 
     /**
-     * Return a MySQL connection back to the pool
-     * 
-     * @param MySQL $conn The MySQL connection to return
+     * Return a MySQL connection back to the pool.
+     *
+     * @param Mysql $conn The MySQL connection to return.
+     * @return void
      */
     public function put(Mysql $conn): void
     {
-        if (!$this->chan->isFull()) {
-            $this->chan->push($conn);
+        if (!$this->channel->isFull()) {
+            $this->channel->push($conn);
             error_log(sprintf('[%s] [PUT] MySQL Connection returned to pool', date('Y-m-d H:i:s')));
         } else {
             // MySQL Pool is full, close the connection
@@ -169,49 +243,48 @@ final class MySQLPool
     }
 
     /**
-     * Execute a query safely with optional parameters
+     * Execute a query safely with optional parameters.
      *
-     * @param string $sql The SQL query to execute
-     * @param array $params Optional parameters for prepared statements
-     * @return array The result set as an array
+     * @param string $sql The SQL query to execute.
+     * @param array $params Optional parameters for prepared statements.
+     * @return array The result set as an array.
+     * @throws \RuntimeException If query or prepare fails.
      */
     public function query(string $sql, array $params = []): array
     {
         $conn = $this->get();
-        try {
-            if ($params) {
-                $stmt = $conn->prepare($sql);
-                if ($stmt === false) {
-                    error_log(sprintf('[%s] [ERROR] Prepare failed: %s', date('Y-m-d H:i:s'), $conn->error));
-                    throw new \RuntimeException('Prepare failed: ' . $conn->error);
-                }
-                $result = $stmt->execute($params);
-                error_log(sprintf('[%s] [QUERY] Executed prepared statement: %s', date('Y-m-d H:i:s'), $sql));
-            } else {
-                $result = $conn->query($sql);
-                error_log(sprintf('[%s] [QUERY] Executed query: %s', date('Y-m-d H:i:s'), $sql));
+        defer(fn() => isset($conn) && $conn->connected && $this->put($conn));
+
+        if ($params) {
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                error_log(sprintf('[%s] [ERROR] Prepare failed: %s', date('Y-m-d H:i:s'), $conn->error));
+                throw new \RuntimeException('Prepare failed: ' . $conn->error);
             }
-        } finally {
-            $this->put($conn);
+            $result = $stmt->execute($params);
+            error_log(sprintf('[%s] [QUERY] Executed prepared statement: %s', date('Y-m-d H:i:s'), $sql));
+        } else {
+            $result = $conn->query($sql);
+            error_log(sprintf('[%s] [QUERY] Executed query: %s', date('Y-m-d H:i:s'), $sql));
         }
 
         return is_array($result) ? $result : [];
     }
 
     /**
-     * Get current pool size and stats
+     * Get current pool size and stats.
      *
-     * @return array Associative array with 'size', 'available', and 'created' keys
+     * @return array Associative array with 'capacity', 'available', 'created', and 'in_use' keys.
      */
     public function stats(): array
     {
         $stats = [
-            'capacity'   => $this->chan->capacity,
-            'available'  => $this->chan->length(),
+            'capacity'   => $this->channel->capacity,
+            'available'  => $this->channel->length(),
             'created'    => $this->created,
-            'in_use'     => $this->created - $this->chan->length(),
+            'in_use'     => $this->created - $this->channel->length(),
         ];
-        error_log(sprintf('[%s] [STATS] MySQL Pool stats: %s', date('Y-m-d H:i:s'), json_encode($stats)));
+        // error_log(sprintf('[%s] [STATS] MySQL Pool stats: %s', date('Y-m-d H:i:s'), json_encode($stats)));
         return $stats;
     }
 }

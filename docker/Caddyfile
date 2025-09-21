@@ -21,8 +21,10 @@ https://localhost {
 
     # Logs
     log {
-        output file /var/log/caddy/access.log
-        format json
+        #output file /var/log/caddy/access.log
+        #format json
+        output stdout
+        format console
     }
 }
 

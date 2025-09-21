@@ -2,19 +2,24 @@
 
 namespace App\Repositories;
 
-use App\Core\DbContext;
+use App\Core\MySQLPool;
 
 /**
+ * Class UserRepository
+ *
  * Repository for managing users in the database.
+ * Provides CRUD operations: create, read, update, delete, and list users.
+ *
+ * @package App\Repositories
  */
 final class UserRepository
 {
     /**
-     * Constructor to initialize the repository with a database context.
+     * UserRepository constructor.
      *
-     * @param DbContext $ctx The database context for managing connections.
+     * @param MySQLPool $pool The database context for managing connections.
      */
-    public function __construct(private DbContext $ctx)
+    public function __construct(private MySQLPool $pool)
     {
         //
     }
@@ -28,7 +33,11 @@ final class UserRepository
      */
     public function create(array $d): int
     {
-        $conn = $this->ctx->conn(); // returns Swoole\Coroutine\MySQL
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => isset($conn) && $conn->connected && $this->pool->put($conn));
 
         $stmt = $conn->prepare("INSERT INTO users (name, email) VALUES (?, ?)");
         if ($stmt === false) {
@@ -37,7 +46,7 @@ final class UserRepository
 
         $result = $stmt->execute([$d['name'], $d['email']]);
         if ($result === false) {
-            throw new \RuntimeException("Insert failed: " . $stmt->error);
+            throw new \RuntimeException("Insert failed: " . $conn->error);
         }
 
         return (int)$conn->insert_id;
@@ -52,7 +61,11 @@ final class UserRepository
      */
     public function find(int $id): ?array
     {
-        $conn = $this->ctx->conn();
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
 
         $stmt = $conn->prepare("SELECT id, name, email, created_at, updated_at FROM users WHERE id=? LIMIT 1");
         if ($stmt === false) {
@@ -61,7 +74,7 @@ final class UserRepository
 
         $rows = $stmt->execute([$id]);
         if ($rows === false) {
-            throw new \RuntimeException("Query failed: " . $stmt->error);
+            throw new \RuntimeException("Query failed: " . $conn->error);
         }
 
         return $rows[0] ?? null;
@@ -77,13 +90,15 @@ final class UserRepository
      */
     public function list(int $limit = 100, int $offset = 0): array
     {
-        $conn = $this->ctx->conn();
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
 
-        // Enforce sane ranges
-        $limit  = max(1, min($limit, 1000));  // clamp 1–1000
+        $limit  = max(1, min($limit, 1000));
         $offset = max(0, $offset);
 
-        // Use placeholders and execute with params
         $stmt = $conn->prepare("
             SELECT id, name, email, created_at, updated_at
             FROM users
@@ -95,13 +110,40 @@ final class UserRepository
             throw new \RuntimeException("Prepare failed: " . $conn->error);
         }
 
-        // In Swoole, execute() takes params as an array
         $result = $stmt->execute([$offset, $limit]);
         if ($result === false) {
             throw new \RuntimeException("Execute failed: " . $conn->error);
         }
 
-        return $result; // already array of rows
+        return $result;
+    }
+
+    /**
+     * Count users with pagination.
+     */
+    public function count(): int
+    {
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
+
+        $stmt = $conn->prepare("
+            SELECT count(*) as total
+            FROM users
+        ");
+
+        if ($stmt === false) {
+            throw new \RuntimeException("Prepare failed: " . $conn->error);
+        }
+
+        $result = $stmt->execute();
+        if ($result === false) {
+            throw new \RuntimeException("Execute failed: " . $conn->error);
+        }
+
+        return $result[0]['total'] ?? 0;
     }
 
     /**
@@ -114,7 +156,11 @@ final class UserRepository
      */
     public function update(int $id, array $d): bool
     {
-        $conn = $this->ctx->conn();
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
 
         $stmt = $conn->prepare("UPDATE users SET name=?, email=? WHERE id=?");
         if ($stmt === false) {
@@ -123,7 +169,7 @@ final class UserRepository
 
         $result = $stmt->execute([$d['name'], $d['email'], $id]);
         if ($result === false) {
-            throw new \RuntimeException("Update failed: " . $stmt->error);
+            throw new \RuntimeException("Update failed: " . $conn->error);
         }
 
         return (bool)($stmt->affected_rows ?? 0);
@@ -138,7 +184,11 @@ final class UserRepository
      */
     public function delete(int $id): bool
     {
-        $conn = $this->ctx->conn();
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
 
         $stmt = $conn->prepare("DELETE FROM users WHERE id=?");
         if ($stmt === false) {
@@ -147,7 +197,7 @@ final class UserRepository
 
         $result = $stmt->execute([$id]);
         if ($result === false) {
-            throw new \RuntimeException("Delete failed: " . $stmt->error);
+            throw new \RuntimeException("Delete failed: " . $conn->error);
         }
 
         return (bool)($stmt->affected_rows ?? 0);

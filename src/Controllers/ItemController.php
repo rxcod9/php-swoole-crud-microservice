@@ -15,7 +15,9 @@ final class ItemController extends Controller
     /**
      * Inject ItemService for business logic operations.
      */
-    public function __construct(private ItemService $svc) {}
+    public function __construct(private ItemService $svc) {
+        //
+    }
 
     /**
      * Create a new item.
