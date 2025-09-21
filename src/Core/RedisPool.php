@@ -125,7 +125,7 @@ final class RedisPool
             $retry++;
             if ($retry <= 3) {
                 $backoff = (1 << $retry) * 100000; // exponential backoff in microseconds
-                error_log(sprintf('[%s] [RETRY] Retrying MySQL connection in %.2f seconds...', date('Y-m-d H:i:s'), $backoff / 1000000));
+                error_log(sprintf('[%s] [RETRY] Retrying Redis connection in %.2f seconds...', date('Y-m-d H:i:s'), $backoff / 1000000));
                 Coroutine::sleep($backoff / 1000000);
                 return $this->make($retry);
             }
