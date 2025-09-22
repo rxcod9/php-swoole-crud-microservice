@@ -10,6 +10,11 @@ use App\Repositories\UserRepository;
  * Service layer for User entity.
  * Encapsulates business logic and interacts with UserRepository.
  *
+ * @method array list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method array find(int $id)
+ * @method array findByEmail(string $email)
+ * @method array delete(int $id)
+ *
  * @package App\Services
  */
 final class UserService
@@ -45,37 +50,6 @@ final class UserService
     }
 
     /**
-     * Get a user by ID.
-     *
-     * @param int $id User ID.
-     * @return array|null User record or null if not found.
-     */
-    public function get(int $id): ?array
-    {
-        return $this->repo->find($id);
-    }
-
-    /**
-     * List users with pagination.
-     *
-     * @param int $limit Number of records to return.
-     * @param int $offset Number of records to skip.
-     * @return array List of user records.
-     */
-    public function list(int $limit = 100, int $offset = 0): array
-    {
-        return $this->repo->list($limit, $offset);
-    }
-
-    /**
-     * Count total users.
-     */
-    public function count(): int
-    {
-        return $this->repo->count();
-    }
-
-    /**
      * Update a user by ID and return the updated user data.
      *
      * @param int $id User ID.
@@ -89,13 +63,14 @@ final class UserService
     }
 
     /**
-     * Delete a user by ID.
-     *
-     * @param int $id User ID.
-     * @return bool True if deletion was successful, false otherwise.
+     * Magic method to forward calls to the repository.
      */
-    public function delete(int $id): bool
+    public function __call($name, $arguments)
     {
-        return $this->repo->delete($id);
+        if (!method_exists($this->repo, $name)) {
+            throw new \BadMethodCallException("Method {$name} does not exist in UserRepository");
+        }
+
+        return $this->repo->$name(...$arguments);
     }
 }

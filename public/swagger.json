@@ -12,6 +12,33 @@
         }
     ],
     "paths": {
+        "/health": {
+            "get": {
+                "tags": [
+                    "Home"
+                ],
+                "summary": "Health Check",
+                "description": "Health check endpoint to verify the service is running.",
+                "operationId": "e4e515718baf0a6e403365e1b2593e0d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/": {
             "get": {
                 "tags": [
@@ -47,6 +74,66 @@
                 "summary": "List items",
                 "description": "Get all items with optional pagination",
                 "operationId": "7ff9b0b177ece7be3fbab004025e278f",
+                "parameters": [
+                    {
+                        "name": "sku",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "title",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "created_after",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "created_before",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "maximum": 1000
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "minimum": 0
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful operation",
@@ -245,6 +332,56 @@
                 }
             }
         },
+        "/items/sku/{sku}": {
+            "get": {
+                "tags": [
+                    "Items"
+                ],
+                "summary": "Get item by SKU",
+                "description": "Show a single item by ID.\nURL param: id",
+                "operationId": "6079ac5cd806be648f8da954f4b10b5b",
+                "parameters": [
+                    {
+                        "name": "sku",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Item found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "sku": {
+                                            "type": "string"
+                                        },
+                                        "title": {
+                                            "type": "string"
+                                        },
+                                        "price": {
+                                            "type": "number",
+                                            "format": "float"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Item not found"
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -255,11 +392,40 @@
                 "operationId": "1b19ef577de560a5c1ec9c909b88e5cc",
                 "parameters": [
                     {
-                        "name": "page",
+                        "name": "email",
                         "in": "query",
                         "required": false,
                         "schema": {
-                            "type": "integer",
+                            "type": "string",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "created_after",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "default": null
+                        }
+                    },
+                    {
+                        "name": "created_before",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
                             "default": null
                         }
                     },
@@ -502,6 +668,52 @@
                 "responses": {
                     "204": {
                         "description": "User deleted"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
+        "/users/email/{email}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user by Email",
+                "description": "Show a single user by Email.\nURL param: id",
+                "operationId": "1df924e56cb85c4b082c644be659b203",
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "User not found"

@@ -16,7 +16,7 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\WebSocketServer;
+use App\Core\Servers\WebSocketServer;
 
 /**
  * Load application configuration.

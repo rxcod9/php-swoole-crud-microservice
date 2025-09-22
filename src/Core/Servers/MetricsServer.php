@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Core;
+namespace App\Core\Servers;
 
+use App\Core\Metrics;
 use Prometheus\RenderTextFormat;
-use Swoole\Http\Server;
-use Swoole\Http\Response;
 use Swoole\Http\Request;
+use Swoole\Http\Response;
+use Swoole\Http\Server;
 
 /**
  * MetricsServer

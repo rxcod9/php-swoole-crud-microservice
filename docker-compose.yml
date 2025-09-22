@@ -36,7 +36,7 @@ services:
       - "9501:9501"                       # Expose Swoole HTTP port
     depends_on: [mysql, redis]            # Wait for MySQL and Redis
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9501/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:9501/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -143,11 +143,11 @@ services:
       - "443:443/udp"   # <- needed for QUIC / HTTP3
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      # - caddy_data:/data
+      # - caddy_config:/config
     depends_on: [app]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "https://localhost/healthz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "https://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -164,6 +164,6 @@ services:
       - "8080:8080"
     depends_on: [app]
 
-volumes:
-  caddy_data:
-  caddy_config:
+# volumes:
+#   # caddy_data:
+#   # caddy_config:

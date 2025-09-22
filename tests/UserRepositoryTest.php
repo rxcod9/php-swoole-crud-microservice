@@ -6,7 +6,7 @@
  */
 
 use PHPUnit\Framework\TestCase;
-use App\Core\DbContext;
+use App\Core\Contexts\DbContext;
 use App\Repositories\UserRepository;
 
 class UserRepositoryTest extends TestCase

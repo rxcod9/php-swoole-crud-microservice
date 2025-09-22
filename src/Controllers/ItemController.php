@@ -15,7 +15,8 @@ final class ItemController extends Controller
     /**
      * Inject ItemService for business logic operations.
      */
-    public function __construct(private ItemService $svc) {
+    public function __construct(private ItemService $svc)
+    {
         //
     }
 
@@ -59,6 +60,44 @@ final class ItemController extends Controller
         summary: 'List items',
         description: 'Get all items with optional pagination',
         tags: ['Items'],
+        parameters: [
+            new OA\Parameter(
+                name: 'sku',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', default: null)
+            ),
+            new OA\Parameter(
+                name: 'title',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', default: null)
+            ),
+            new OA\Parameter(
+                name: 'created_after',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'date', default: null)
+            ),
+            new OA\Parameter(
+                name: 'created_before',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'date', default: null)
+            ),
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)
+            ),
+            new OA\Parameter(
+                name: 'offset',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
+            )
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -80,9 +119,23 @@ final class ItemController extends Controller
     )]
     public function index(): array
     {
-        $limit = (int)($this->request->get['limit'] ?? 100);
-        $offset = (int)($this->request->get['offset'] ?? 0);
-        return $this->json($this->svc->list($limit, $offset));
+        // Pagination params
+        $page = (int)($this->request->get['page'] ?? 1);
+        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $offset = max(0, ($page - 1) * $limit);
+
+        // Override with direct offset if provided
+        $limit = (int)($this->request->get['limit'] ?? $limit);
+        $offset = (int)($this->request->get['offset'] ?? $offset);
+        $filters = [
+            'sku' => $this->request->get['sku'] ?? null,
+            'title' => $this->request->get['title'] ?? null,
+            'created_after' => $this->request->get['created_after'] ?? null,
+            'created_before' => $this->request->get['created_before'] ?? null,
+        ];
+        $sortBy = $this->request->get['sortBy'] ?? null;
+        $sortDirection = $this->request->get['sortDirection'] ?? null;
+        return $this->json($this->svc->list($limit, $offset, $filters, $sortBy, $sortDirection));
     }
 
     /**
@@ -119,7 +172,48 @@ final class ItemController extends Controller
     )]
     public function show(array $params): array
     {
-        $u = $this->svc->get((int)$params['id']);
+        $u = $this->svc->find((int)$params['id']);
+        if (!$u) {
+            return $this->json(['error' => 'Not Found'], 404);
+        }
+        return $this->json($u);
+    }
+
+    /**
+     * Show a single item by ID.
+     * URL param: id
+     */
+    #[OA\Get(
+        path: '/items/sku/{sku}',
+        summary: 'Get item by SKU',
+        tags: ['Items'],
+        parameters: [
+            new OA\Parameter(
+                name: 'sku',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string')
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Item found',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'sku', type: 'string'),
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'price', type: 'number', format: 'float'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 404, description: 'Item not found')
+        ]
+    )]
+    public function showBySku(array $params): array
+    {
+        $u = $this->svc->findBySku(urldecode((string)$params['sku']));
         if (!$u) {
             return $this->json(['error' => 'Not Found'], 404);
         }

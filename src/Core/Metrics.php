@@ -34,15 +34,15 @@ final class Metrics
     public static function reg(): CollectorRegistry
     {
         // Uncomment below to use in-memory adapter (not shared between workers)
-        // $adapter = new InMemory();
+        $adapter = new InMemory();
 
         // Redis adapter → shared between workers
-        $adapter = new Redis([
-            'host' => 'redis',
-            'port' => 6379,
-            'timeout' => 0.1,
-            'read_timeout' => 10,
-        ]);
+        // $adapter = new Redis([
+        //     'host' => 'redis',
+        //     'port' => 6379,
+        //     'timeout' => 0.1,
+        //     'read_timeout' => 10,
+        // ]);
 
         if (!self::$r) {
             self::$r = new CollectorRegistry($adapter);

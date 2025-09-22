@@ -10,6 +10,11 @@ use App\Repositories\ItemRepository;
  * Service layer for Item entity.
  * Encapsulates business logic and interacts with ItemRepository.
  *
+ * @method array list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method array find(int $id)
+ * @method array findBySku(string $sku)
+ * @method array delete(int $id)
+ *
  * @package App\Services
  */
 final class ItemService
@@ -44,27 +49,6 @@ final class ItemService
     }
 
     /**
-     * Get an item by ID.
-     *
-     * @param int $id Item ID.
-     * @return array|null Item record or null if not found.
-     */
-    public function get(int $id): ?array
-    {
-        return $this->repo->find($id);
-    }
-
-    /**
-     * List all items.
-     *
-     * @return array List of item records.
-     */
-    public function list(): array
-    {
-        return $this->repo->list();
-    }
-
-    /**
      * Update an item by ID and return the updated item data.
      *
      * @param int $id Item ID.
@@ -78,13 +62,14 @@ final class ItemService
     }
 
     /**
-     * Delete an item by ID.
-     *
-     * @param int $id Item ID.
-     * @return bool True if deletion was successful, false otherwise.
+     * Magic method to forward calls to the repository.
      */
-    public function delete(int $id): bool
+    public function __call($name, $arguments)
     {
-        return $this->repo->delete($id);
+        if (!method_exists($this->repo, $name)) {
+            throw new \BadMethodCallException("Method {$name} does not exist in ItemRepository");
+        }
+
+        return $this->repo->$name(...$arguments);
     }
 }

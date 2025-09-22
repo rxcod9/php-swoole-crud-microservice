@@ -44,4 +44,19 @@ abstract class Controller
             '__json' => $data
         ];
     }
+
+    /**
+     * Returns a structured HTML response.
+     *
+     * @param mixed $data The data as HTML.
+     * @param int $status The HTTP status code (default: 200).
+     * @return array The structured response containing status and HTML data.
+     */
+    protected function html($data, int $status = 200): array
+    {
+        return [
+            '__status' => $status,
+            '__html' => $data
+        ];
+    }
 }

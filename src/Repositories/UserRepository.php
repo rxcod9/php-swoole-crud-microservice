@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Core\MySQLPool;
+use App\Core\Pools\MySQLPool;
 
 /**
  * Class UserRepository
@@ -81,14 +81,13 @@ final class UserRepository
     }
 
     /**
-     * List users with pagination.
+     * Find a user by its email.
      *
-     * @param int $limit The maximum number of users to return (default 100, max 1000).
-     * @param int $offset The offset from which to start returning users (default 0).
-     * @return array An array of users, each represented as an associative array.
+     * @param int $email The Email of the user to find.
+     * @return array|null The user data as an associative array, or null if not found.
      * @throws \RuntimeException If the query operation fails.
      */
-    public function list(int $limit = 100, int $offset = 0): array
+    public function findByEmail(string $email): ?array
     {
         /**
          * @var \Swoole\Coroutine\Mysql $conn
@@ -96,21 +95,93 @@ final class UserRepository
         $conn = $this->pool->get();
         defer(fn() => $conn->connected && $this->pool->put($conn));
 
+        $stmt = $conn->prepare("SELECT id, name, email, created_at, updated_at FROM users WHERE email=? LIMIT 1");
+        if ($stmt === false) {
+            throw new \RuntimeException("Failed to prepare statement: " . $conn->error);
+        }
+
+        $rows = $stmt->execute([$email]);
+        if ($rows === false) {
+            throw new \RuntimeException("Query failed: " . $conn->error);
+        }
+
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * List users with pagination.
+     *
+     * @param int $limit The maximum number of users to return (default 100, max 1000).
+     * @param int $offset The offset from which to start returning users (default 0).
+     * @return array An array of users, each represented as an associative array.
+     * @throws \RuntimeException If the query operation fails.
+     */
+    public function list(
+        int $limit = 100,
+        int $offset = 0,
+        array $filters = [],
+        string $sortBy = 'id',
+        string $sortDir = 'DESC'
+    ): array {
+        /** @var \Swoole\Coroutine\Mysql $conn */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
+
         $limit  = max(1, min($limit, 1000));
         $offset = max(0, $offset);
 
-        $stmt = $conn->prepare("
-            SELECT id, name, email, created_at, updated_at
-            FROM users
-            ORDER BY id DESC
-            LIMIT ?, ?
-        ");
+        $sql = "SELECT id, name, email, created_at, updated_at FROM users";
+        $where = [];
+        $params = [];
 
+        // filters
+        foreach ($filters as $field => $value) {
+            if(is_null($value)) {
+                continue;
+            }
+            switch ($field) {
+                case 'email':
+                    $where[] = "email = ?";
+                    $params[] = $value;
+                    break;
+                case 'name':
+                    $where[] = "name LIKE ?";
+                    $params[] = "%$value%";
+                    break;
+                case 'created_after':
+                    $where[] = "created_at > ?";
+                    $params[] = $value;
+                    break;
+                case 'created_before':
+                    $where[] = "created_at < ?";
+                    $params[] = $value;
+                    break;
+            }
+        }
+
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        // order by (only allow known columns)
+        $allowedSort = ['id', 'name', 'email', 'created_at', 'updated_at'];
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'id';
+        }
+        $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+        $sql .= " ORDER BY $sortBy $sortDir";
+
+        // pagination
+        $sql .= " LIMIT ?, ?";
+        $params[] = $offset;
+        $params[] = $limit;
+
+        $stmt = $conn->prepare($sql);
         if ($stmt === false) {
             throw new \RuntimeException("Prepare failed: " . $conn->error);
         }
 
-        $result = $stmt->execute([$offset, $limit]);
+        $result = $stmt->execute($params);
         if ($result === false) {
             throw new \RuntimeException("Execute failed: " . $conn->error);
         }

@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\RedisPool;
+use App\Core\Pools\RedisPool;
 use App\Services\UserService;
 use OpenApi\Attributes as OA;
 
@@ -54,9 +54,9 @@ final class UserController extends Controller
         $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
         // Invalidate cache
-        $redis->del("users:list:100:0"); // Invalidate all list caches
-        $redis->del("users:list:100:100"); // Invalidate all list caches
-        $redis->del("users:list:100:200"); // Invalidate all list caches
+        // $redis->del("users:list:100:0"); // Invalidate all list caches
+        // $redis->del("users:list:100:100"); // Invalidate all list caches
+        // $redis->del("users:list:100:200"); // Invalidate all list caches
 
         return $this->json($user, 201);
     }
@@ -72,10 +72,28 @@ final class UserController extends Controller
         tags: ['Users'],
         parameters: [
             new OA\Parameter(
-                name: 'page',
+                name: 'email',
                 in: 'query',
                 required: false,
-                schema: new OA\Schema(type: 'integer', default: null)
+                schema: new OA\Schema(type: 'string', default: null)
+            ),
+            new OA\Parameter(
+                name: 'name',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', default: null)
+            ),
+            new OA\Parameter(
+                name: 'created_after',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'date', default: null)
+            ),
+            new OA\Parameter(
+                name: 'created_before',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'date', default: null)
             ),
             new OA\Parameter(
                 name: 'limit',
@@ -141,6 +159,14 @@ final class UserController extends Controller
         // Override with direct offset if provided
         $limit = (int)($this->request->get['limit'] ?? $limit);
         $offset = (int)($this->request->get['offset'] ?? $offset);
+        $filters = [
+            'email' => $this->request->get['email'] ?? null,
+            'name' => $this->request->get['name'] ?? null,
+            'created_after' => $this->request->get['created_after'] ?? null,
+            'created_before' => $this->request->get['created_before'] ?? null,
+        ];
+        $sortBy = $this->request->get['sortBy'] ?? null;
+        $sortDirection = $this->request->get['sortDirection'] ?? null;
 
         // Cache key based on pagination params
         $cacheKey = "users:list:$limit:$offset";
@@ -149,7 +175,7 @@ final class UserController extends Controller
         }
 
         // Fetch from service if not cached
-        $users = $this->svc->list($limit, $offset);
+        $users = $this->svc->list($limit, $offset, $filters, $sortBy, $sortDirection);
 
         // Get total count for pagination metadata
         $total = $this->svc->count();
@@ -214,7 +240,58 @@ final class UserController extends Controller
             return $this->json(json_decode($cached));
         }
 
-        $u = $this->svc->get($id);
+        $u = $this->svc->find($id);
+        if (!$u) {
+            return $this->json(['error' => 'Not Found'], 404);
+        }
+
+        $redis->setex($cacheKey, 300, json_encode($u)); // 5 min cache
+        return $this->json($u);
+    }
+
+    /**
+     * Show a single user by Email.
+     * URL param: id
+     */
+    #[OA\Get(
+        path: '/users/email/{email}',
+        summary: 'Get user by Email',
+        tags: ['Users'],
+        parameters: [
+            new OA\Parameter(
+                name: 'email',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string')
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'User found',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'email', type: 'string'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 404, description: 'User not found')
+        ]
+    )]
+    public function showByEmail(array $params): array
+    {
+        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        defer(fn() => $this->pool->put($redis));
+        $email = (string)$params['email'];
+        $cacheKey = "user:email:$email";
+
+        if ($cached = $redis->get($cacheKey)) {
+            return $this->json(json_decode($cached));
+        }
+
+        $u = $this->svc->findByEmail(urldecode($email));
         if (!$u) {
             return $this->json(['error' => 'Not Found'], 404);
         }
@@ -266,9 +343,10 @@ final class UserController extends Controller
         defer(fn() => $this->pool->put($redis));
         // Invalidate caches
         $redis->del("user:{$p['id']}");
-        $redis->del("users:list:100:0"); // Invalidate all list caches
-        $redis->del("users:list:100:100"); // Invalidate all list caches
-        $redis->del("users:list:100:200"); // Invalidate all list caches
+        $redis->del("user:{$data['email']}");
+        // $redis->del("users:list:100:0"); // Invalidate all list caches
+        // $redis->del("users:list:100:100"); // Invalidate all list caches
+        // $redis->del("users:list:100:200"); // Invalidate all list caches
         return $this->json($u);
     }
 
@@ -301,9 +379,9 @@ final class UserController extends Controller
             defer(fn() => $this->pool->put($redis));
             // Invalidate cache
             $redis->del("user:{$p['id']}");
-            $redis->del("users:list:100:0"); // Invalidate all list caches
-            $redis->del("users:list:100:100"); // Invalidate all list caches
-            $redis->del("users:list:100:200"); // Invalidate all list caches
+            // $redis->del("users:list:100:0"); // Invalidate all list caches
+            // $redis->del("users:list:100:100"); // Invalidate all list caches
+            // $redis->del("users:list:100:200"); // Invalidate all list caches
         }
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }

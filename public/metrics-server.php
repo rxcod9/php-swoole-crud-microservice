@@ -17,7 +17,7 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\MetricsServer;
+use App\Core\Servers\MetricsServer;
 
 /**
  * Load application configuration.

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Core;
+namespace App\Core\Pools;
 
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;

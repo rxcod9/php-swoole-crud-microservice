@@ -2,8 +2,8 @@
 
 namespace App\Controllers;
 
-use OpenApi\Attributes as OA;
 use App\Core\Controller;
+use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: "1.0.0",
