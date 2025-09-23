@@ -10,3 +10,8 @@ scrape_configs:
     metrics_path: /                 # ensure your PHP/Swoole exposes this path
     static_configs:
       - targets: ['metrics:9310']  # or use container name if in same network
+
+  - job_name: 'php_app2'
+    metrics_path: /metrics                 # ensure your PHP/Swoole exposes this path
+    static_configs:
+      - targets: ['app:9501']  # or use container name if in same network

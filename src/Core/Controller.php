@@ -35,13 +35,19 @@ abstract class Controller
      *
      * @param mixed $data The data to encode as JSON.
      * @param int $status The HTTP status code (default: 200).
+     * @param string $contentType Content-Type (default: application/json)
+     *
      * @return array The structured response containing status and JSON data.
      */
-    protected function json($data, int $status = 200): array
-    {
+    protected function json(
+        $data,
+        int $status = 200,
+        string $contentType = 'application/json'
+    ): array {
         return [
-            '__status' => $status,
-            '__json' => $data
+            '__status'      => $status,
+            '__json'        => $data,
+            '__contentType' => $contentType
         ];
     }
 
@@ -50,13 +56,40 @@ abstract class Controller
      *
      * @param mixed $data The data as HTML.
      * @param int $status The HTTP status code (default: 200).
+     * @param string $contentType Content-Type (default: text/html)
+     *
      * @return array The structured response containing status and HTML data.
      */
-    protected function html($data, int $status = 200): array
-    {
+    protected function html(
+        $data,
+        int $status = 200,
+        string $contentType = 'text/html'
+    ): array {
         return [
-            '__status' => $status,
-            '__html' => $data
+            '__status'      => $status,
+            '__html'        => $data,
+            '__contentType' => $contentType
+        ];
+    }
+
+    /**
+     * Returns a structured Text response.
+     *
+     * @param mixed $data The data as Text.
+     * @param int $status The HTTP status code (default: 200).
+     * @param string $contentType Content-Type (default: text/plain)
+     *
+     * @return array The structured response containing status and Text data.
+     */
+    protected function text(
+        $data,
+        int $status = 200,
+        string $contentType = 'text/plain'
+    ): array {
+        return [
+            '__status'      => $status,
+            '__text'        => $data,
+            '__contentType' => $contentType
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Core\Events;
 
 use App\Core\Container;
+use App\Core\Metrics;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
 use Swoole\Table;
@@ -47,30 +48,32 @@ final class TaskRequestHandler
 
             (new PoolBinder())->bind($server, $this->container);
 
-            // // Metrics collection
-            // $reg = Metrics::reg();
-            // $counter = $reg->getOrRegisterCounter(
-            //     'task_requests_total',
-            //     'Requests',
-            //     'Total HTTP requests',
-            //     ['method', 'path', 'status']
-            // );
-            // $hist = $reg->getOrRegisterHistogram(
-            //     'task_request_seconds',
-            //     'Latency',
-            //     'HTTP request latency',
-            //     ['method', 'path']
-            // );
+            // Metrics collection
+            $reg = Metrics::reg();
+            $counter = $reg->getOrRegisterCounter(
+                'task_requests_total',
+                'Tasks',
+                'Total Task requests',
+                ['class', 'status']
+            );
+            $hist = $reg->getOrRegisterHistogram(
+                'task_request_seconds',
+                'Latency',
+                'HTTP request latency',
+                ['class']
+            );
 
-            $response = (new TaskRequestDispatcher($this->container))->dispatch($task);
+            $status = (new TaskRequestDispatcher($this->container))->dispatch($task);
             // echo __CLASS__ . "Payload: " . PHP_EOL;
-            // var_dump($response);
+            // var_dump($status);
 
             // Metrics and async logging
             $dur = microtime(true) - $start;
 
-            // $counter->inc([$task->server['request_method'], $path, (string)$status]);
-            // $hist->observe($dur, [$task->server['request_method'], $path]);
+            $data = $task->data;
+            $class = $data['class'] ?? null;
+            $counter->inc([$class, (string)$status]);
+            $hist->observe($dur, [$class]);
 
             // (new TaskRequestLogger())->log(
             //     $server,
@@ -83,7 +86,7 @@ final class TaskRequestHandler
             //     ]
             // );
 
-            return $response;
+            return $status;
         } catch (\Throwable $e) {
             echo $e->getMessage();
             // (new TaskRequestLogger())->log(

@@ -42,6 +42,9 @@ $router->get('/', 'IndexController@index');
 $router->get('/health', 'HealthController@check');
 $router->get('/health.html', 'HealthController@checkHtml');
 
+// Metrics route.
+$router->get('/metrics', 'MetricsController@check');
+
 // Users CRUD routes.
 $router->post('/users', 'UserController@create');      // Create a new user.
 $router->get('/users', 'UserController@index');        // List all users.

@@ -96,6 +96,26 @@ final class ItemController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
+            ),
+            new OA\Parameter(
+                name: 'sortBy',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(
+                    type: 'string',
+                    enum: ["id", "sku", "created_at", "updated_at"], // allowed columns
+                    default: 'id'
+                )
+            ),
+            new OA\Parameter(
+                name: 'sortDirection',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(
+                    type: 'string',
+                    enum: ["ASC", "DESC"], // allowed columns
+                    default: 'DESC'
+                )
             )
         ],
         responses: [
@@ -133,9 +153,15 @@ final class ItemController extends Controller
             'created_after' => $this->request->get['created_after'] ?? null,
             'created_before' => $this->request->get['created_before'] ?? null,
         ];
-        $sortBy = $this->request->get['sortBy'] ?? null;
-        $sortDirection = $this->request->get['sortDirection'] ?? null;
-        return $this->json($this->svc->list($limit, $offset, $filters, $sortBy, $sortDirection));
+        $sortBy = $this->request->get['sortBy'] ?? 'id';
+        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
+        return $this->json($this->svc->list(
+            $limit,
+            $offset,
+            $filters,
+            $sortBy,
+            $sortDirection
+        ));
     }
 
     /**

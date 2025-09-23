@@ -1,0 +1,165 @@
+{
+  "title": "PHP App Metrics",
+  "uid": "php_full_dashboard",
+  "timezone": "browser",
+  "refresh": "15s",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests/sec",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "rate(http_requests_total_Requests[1m])", "legendFormat": "{{method}} {{path}} {{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests/sec per Path",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(path)(rate(http_requests_total_Requests[1m]))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests/sec per Method",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(method)(rate(http_requests_total_Requests[1m]))", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Status Codes",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(status)(rate(http_requests_total_Requests[1m]))", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Avg HTTP Latency",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "rate(http_request_seconds_Latency_sum[1m]) / rate(http_request_seconds_Latency_count[1m])", "legendFormat": "avg latency" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency per Path",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(path)(rate(http_request_seconds_Latency_sum[1m])) / sum by(path)(rate(http_request_seconds_Latency_count[1m]))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency per Method",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(method)(rate(http_request_seconds_Latency_sum[1m])) / sum by(method)(rate(http_request_seconds_Latency_count[1m]))", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "HTTP Request Latency Heatmap",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "sum by(le)(rate(http_request_seconds_Latency_bucket[1m]))", "format": "heatmap", "legendFormat": "≤{{le}}s" }
+      ],
+      "color": { "mode": "spectrum" }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency P95",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by(le)(rate(http_request_seconds_Latency_bucket[1m])))", "legendFormat": "P95" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency P99",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum by(le)(rate(http_request_seconds_Latency_bucket[1m])))", "legendFormat": "P99" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "PHP Version",
+      "gridPos": { "x": 0, "y": 30, "w": 6, "h": 4 },
+      "targets": [ { "expr": "php_info", "legendFormat": "{{version}}" } ]
+    },
+    {
+      "type": "stat",
+      "title": "PHP Memory Usage",
+      "gridPos": { "x": 6, "y": 30, "w": 6, "h": 4 },
+      "targets": [ { "expr": "php_memory_usage_bytes", "legendFormat": "memory" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "PHP CPU Usage",
+      "gridPos": { "x": 12, "y": 30, "w": 12, "h": 4 },
+      "targets": [ { "expr": "rate(php_cpu_seconds_total[1m])", "legendFormat": "cpu" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Swoole Active Connections",
+      "gridPos": { "x": 0, "y": 34, "w": 6, "h": 4 },
+      "targets": [ { "expr": "swoole_connections_active", "legendFormat": "active" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Swoole Total Connections",
+      "gridPos": { "x": 6, "y": 34, "w": 6, "h": 4 },
+      "targets": [ { "expr": "increase(swoole_connections_total[5m])", "legendFormat": "total" } ]
+    },
+    {
+      "type": "stat",
+      "title": "Swoole Task Waiting",
+      "gridPos": { "x": 12, "y": 34, "w": 6, "h": 4 },
+      "targets": [ { "expr": "swoole_task_waiting", "legendFormat": "waiting" } ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests Errors (5xx)",
+      "gridPos": { "x": 18, "y": 34, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "sum by(path)(rate(http_requests_total_Requests{status=~\"5..\"}[1m]))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests 4xx",
+      "gridPos": { "x": 0, "y": 38, "w": 12, "h": 4 },
+      "targets": [
+        { "expr": "sum by(path)(rate(http_requests_total_Requests{status=~\"4..\"}[1m]))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Requests > 500ms",
+      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 4 },
+      "targets": [
+        {
+          "expr": "(sum by(path)(rate(http_request_seconds_Latency_count[1m])) - sum by(path)(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[1m])))",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Request Count per Endpoint",
+      "gridPos": { "x": 0, "y": 42, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "expr": "sum by(path)(rate(http_requests_total_Requests[1m]))",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    }
+  ]
+}

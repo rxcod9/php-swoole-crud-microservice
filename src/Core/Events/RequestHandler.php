@@ -3,6 +3,7 @@
 namespace App\Core\Events;
 
 use App\Core\Container;
+use App\Core\Metrics;
 use App\Core\Router;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -47,20 +48,20 @@ final class RequestHandler
             (new PoolBinder())->bind($this->server, $this->container);
             (new MiddlewarePipeline())->handle($req, $this->container);
 
-            // // Metrics collection
-            // $reg = Metrics::reg();
-            // $counter = $reg->getOrRegisterCounter(
-            //     'http_requests_total',
-            //     'Requests',
-            //     'Total HTTP requests',
-            //     ['method', 'path', 'status']
-            // );
-            // $hist = $reg->getOrRegisterHistogram(
-            //     'http_request_seconds',
-            //     'Latency',
-            //     'HTTP request latency',
-            //     ['method', 'path']
-            // );
+            // Metrics collection
+            $reg = Metrics::reg();
+            $counter = $reg->getOrRegisterCounter(
+                'http_requests_total',
+                'Requests',
+                'Total HTTP requests',
+                ['method', 'path', 'status']
+            );
+            $hist = $reg->getOrRegisterHistogram(
+                'http_request_seconds',
+                'Latency',
+                'HTTP request latency',
+                ['method', 'path']
+            );
 
             $payload = (new RequestDispatcher($this->router))->dispatch($req, $this->container);
 
@@ -69,16 +70,17 @@ final class RequestHandler
             $json = $payload['__json'] ?? null;
             $html = $payload['__html'] ?? null;
             $text = $payload['__text'] ?? null;
+            $contentType = $payload['__contentType'] ?? null;
 
             # if $path ends with .html the non -json response
             if ($html) {
-                $res->header('Content-Type', 'text/html');
+                $res->header('Content-Type', $contentType ?? 'text/html');
                 $res->end($status === 204 ? '' : $html);
             } elseif ($text) {
-                $res->header('Content-Type', 'text/plain');
+                $res->header('Content-Type', $contentType ?? 'text/plain');
                 $res->end($status === 204 ? '' : $text);
             } else {
-                $res->header('Content-Type', 'application/json');
+                $res->header('Content-Type', $contentType ?? 'application/json');
                 $res->end($status === 204 ? '' : json_encode($json ?: $payload));
             }
             $res->status($status);
@@ -86,8 +88,11 @@ final class RequestHandler
             // Metrics and async logging
             $dur = microtime(true) - $start;
 
-            // $counter->inc([$req->server['request_method'], $path, (string)$status]);
-            // $hist->observe($dur, [$req->server['request_method'], $path]);
+            // skip metrics and health routes
+            if ($path !== '/health' && $path !== '/health.html' && $path !== '/metrics') {
+                $counter->inc([$req->server['request_method'], $path, (string)$status]);
+                $hist->observe($dur, [$req->server['request_method'], $path]);
+            }
 
             (new RequestLogger())->log(
                 $this->server,

@@ -132,6 +132,34 @@
                             "default": null,
                             "minimum": 0
                         }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "id",
+                            "enum": [
+                                "id",
+                                "sku",
+                                "created_at",
+                                "updated_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sortDirection",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "DESC",
+                            "enum": [
+                                "ASC",
+                                "DESC"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -382,6 +410,21 @@
                 }
             }
         },
+        "/metrics": {
+            "get": {
+                "tags": [
+                    "Home"
+                ],
+                "summary": "Metrics Check",
+                "description": "Metrics check endpoint to verify the service is running.",
+                "operationId": "f4821e00361389c730d6841767377a9e",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "tags": [
@@ -447,6 +490,34 @@
                             "type": "integer",
                             "default": null,
                             "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "id",
+                            "enum": [
+                                "id",
+                                "email",
+                                "created_at",
+                                "updated_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sortDirection",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "DESC",
+                            "enum": [
+                                "ASC",
+                                "DESC"
+                            ]
                         }
                     }
                 ],
