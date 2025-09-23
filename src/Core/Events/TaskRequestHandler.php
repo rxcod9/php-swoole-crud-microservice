@@ -34,12 +34,6 @@ final class TaskRequestHandler
 
     public function __invoke(Server $server, Task $task): bool
     {
-        // $data = $task->data;
-        // if (($data['type'] ?? '') === 'log') {
-        //     LoggerTask::handle($data['data']);
-        // }
-        // return true;
-
         try {
             (new WorkerReadyChecker())->wait();
 

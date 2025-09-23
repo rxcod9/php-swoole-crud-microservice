@@ -27,17 +27,34 @@ use Swoole\Table;
  */
 final class RequestHandler
 {
+    /**
+     * RequestHandler constructor.
+     *
+     * @param Router $router Router instance for HTTP request routing
+     * @param Server $server Swoole HTTP server instance
+     * @param Table $table Shared memory table for worker health checks
+     * @param Container $container Dependency injection container
+     */
     public function __construct(
         private Router $router,
         private Server $server,
         private Table $table,
+        private Table $rateLimitTable,
         private Container $container
-    ) {}
+    ) {
+        //
+    }
 
+    /**
+     * Handle the incoming HTTP request.
+     *
+     * @param Request $req The incoming HTTP request
+     * @param Response $res The HTTP response to be sent
+     */
     public function __invoke(Request $req, Response $res): void
     {
-        $cors = new CorsHandler();
-        if ($cors->handle($req, $res)) return;
+        // $cors = new CorsHandler();
+        // if ($cors->handle($req, $res)) return;
 
         try {
             (new WorkerReadyChecker())->wait();
@@ -46,69 +63,27 @@ final class RequestHandler
             $start = microtime(true);
 
             (new PoolBinder())->bind($this->server, $this->container);
-            (new MiddlewarePipeline())->handle($req, $this->container);
 
-            // Metrics collection
-            $reg = Metrics::reg();
-            $counter = $reg->getOrRegisterCounter(
-                'http_requests_total',
-                'Requests',
-                'Total HTTP requests',
-                ['method', 'path', 'status']
-            );
-            $hist = $reg->getOrRegisterHistogram(
-                'http_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['method', 'path']
-            );
+            // (new MiddlewarePipeline())->handle($req, $this->container);
+            $pipeline = new MiddlewarePipeline();
 
-            $payload = (new RequestDispatcher($this->router))->dispatch($req, $this->container);
+            // register middleware in order
+            $pipeline->addMiddleware(new \App\Middlewares\CorsMiddleware());
+            // $pipeline->addMiddleware(new \App\Middlewares\AuthMiddleware());
+            $pipeline->addMiddleware(new \App\Middlewares\RateLimitMiddleware($this->rateLimitTable));
+            $pipeline->addMiddleware(new \App\Middlewares\SecurityHeadersMiddleware());
+            // $pipeline->addMiddleware(new \App\Middlewares\LoggingMiddleware());
+            // $pipeline->addMiddleware(new \App\Middlewares\MetricsMiddleware());
+            $pipeline->addMiddleware(new \App\Middlewares\HideServerHeaderMiddleware());
+            // $pipeline->addMiddleware(new \App\Middlewares\CompressionMiddleware());
 
-            $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
-            $status = $payload['__status'] ?? 200;
-            $json = $payload['__json'] ?? null;
-            $html = $payload['__html'] ?? null;
-            $text = $payload['__text'] ?? null;
-            $contentType = $payload['__contentType'] ?? null;
-
-            # if $path ends with .html the non -json response
-            if ($html) {
-                $res->header('Content-Type', $contentType ?? 'text/html');
-                $res->end($status === 204 ? '' : $html);
-            } elseif ($text) {
-                $res->header('Content-Type', $contentType ?? 'text/plain');
-                $res->end($status === 204 ? '' : $text);
-            } else {
-                $res->header('Content-Type', $contentType ?? 'application/json');
-                $res->end($status === 204 ? '' : json_encode($json ?: $payload));
-            }
-            $res->status($status);
-
-            // Metrics and async logging
-            $dur = microtime(true) - $start;
-
-            // skip metrics and health routes
-            if ($path !== '/health' && $path !== '/health.html' && $path !== '/metrics') {
-                // get route name from path
-                [$route, $action] = $this->router->getRouteByPath(
-                    $req->server['request_method'],
-                    $path ?? '/'
-                );
-                $counter->inc([$req->server['request_method'], $route['path'], (string)$status]);
-                $hist->observe($dur, [$req->server['request_method'], $route['path']]);
-            }
-
-            (new RequestLogger())->log(
-                $this->server,
+            $pipeline->handle(
                 $req,
-                [
-                    'id' => $reqId,
-                    'method' => $req->server['request_method'],
-                    'path' => $path,
-                    'status' => $status,
-                    'dur_ms' => (int)round($dur * 1000)
-                ]
+                $res,
+                $this->container,
+                function () use ($req, $res, $reqId, $start) {
+                    $this->dispatch($req, $res, $reqId, $start);
+                }
             );
         } catch (\Throwable $e) {
             $status = $e->getCode() ?: 500;
@@ -124,5 +99,85 @@ final class RequestHandler
                 ]
             );
         }
+    }
+
+    /**
+     * Dispatch the request to the appropriate route handler and send the response.
+     *
+     * @param Request $req The incoming HTTP request
+     * @param Response $res The HTTP response to be sent
+     * @param string $reqId Unique request ID for logging
+     * @param float $start Timestamp when request processing started
+     *
+     * @return void
+     */
+    public function dispatch(
+        Request $req,
+        Response $res,
+        string $reqId,
+        float $start
+    ): void {
+        // Metrics collection
+        $reg = Metrics::reg();
+        $counter = $reg->getOrRegisterCounter(
+            'http_requests_total',
+            'Requests',
+            'Total HTTP requests',
+            ['method', 'path', 'status']
+        );
+        $hist = $reg->getOrRegisterHistogram(
+            'http_request_seconds',
+            'Latency',
+            'HTTP request latency',
+            ['method', 'path']
+        );
+
+        $payload = (new RequestDispatcher($this->router))->dispatch($req, $this->container);
+
+        $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $status = $payload['__status'] ?? 200;
+        $json = $payload['__json'] ?? null;
+        $html = $payload['__html'] ?? null;
+        $text = $payload['__text'] ?? null;
+        $contentType = $payload['__contentType'] ?? null;
+
+        # if $path ends with .html the non -json response
+        if ($html) {
+            $res->header('Content-Type', $contentType ?? 'text/html');
+            $res->end($status === 204 ? '' : $html);
+        } elseif ($text) {
+            $res->header('Content-Type', $contentType ?? 'text/plain');
+            $res->end($status === 204 ? '' : $text);
+        } else {
+            $res->header('Content-Type', $contentType ?? 'application/json');
+            $res->end($status === 204 ? '' : json_encode($json ?: $payload));
+        }
+        $res->status($status);
+
+        // Metrics and async logging
+        $dur = microtime(true) - $start;
+
+        // skip metrics and health routes
+        if ($path !== '/health' && $path !== '/health.html' && $path !== '/metrics') {
+            // get route name from path
+            [$route, $action] = $this->router->getRouteByPath(
+                $req->server['request_method'],
+                $path ?? '/'
+            );
+            $counter->inc([$req->server['request_method'], $route['path'], (string)$status]);
+            $hist->observe($dur, [$req->server['request_method'], $route['path']]);
+        }
+
+        (new RequestLogger())->log(
+            $this->server,
+            $req,
+            [
+                'id' => $reqId,
+                'method' => $req->server['request_method'],
+                'path' => $path,
+                'status' => $status,
+                'dur_ms' => (int)round($dur * 1000)
+            ]
+        );
     }
 }

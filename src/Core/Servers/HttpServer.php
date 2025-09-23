@@ -73,6 +73,11 @@ final class HttpServer
         $table->column("redis_in_use", Table::TYPE_INT, 8);
         $table->create();
 
+        // Shared memory table for worker health
+        $rateLimitTable = new Table(64);
+        $rateLimitTable->column("count", Table::TYPE_INT, 8);
+        $rateLimitTable->create();
+
         $host = $config['server']['host'];
         $port = $config['server']['http_port'];
 
@@ -161,6 +166,7 @@ final class HttpServer
                 $router,
                 $this->server,
                 $table,
+                $rateLimitTable,
                 $container
             )
         );
