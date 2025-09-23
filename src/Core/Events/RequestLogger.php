@@ -16,7 +16,7 @@ final class RequestLogger
         // ]);
         $server->task([
             'class' => LogTask::class,
-            'arguments' => $data
+            'arguments' => [$data]
         ]);
     }
 }

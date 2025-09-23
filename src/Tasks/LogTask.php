@@ -13,14 +13,24 @@ use Monolog\Logger;
 final class LogTask implements TaskInterface
 {
     /**
-     * Handles logging of the provided payload.
+     * Handles logging of the provided arguments.
      *
-     * @param array $payload The data to be logged.
+     * @param array $arguments The data to be logged.
      *
      * @return mixed
      */
     public function handle(...$arguments)
     {
-        echo __CLASS__ . " " . json_encode($arguments, JSON_PRETTY_PRINT) . PHP_EOL;
+        [$data] = $arguments;
+        // echo __CLASS__ . " " . json_encode($arguments, JSON_PRETTY_PRINT) . PHP_EOL;
+        static $log = null;
+        if (!$log) {
+            $log = new Logger('access');
+            $log->pushHandler(new StreamHandler('/app/logs/access.log'));
+        }
+        $log->info(
+            'request',
+            $data
+        );
     }
 }
