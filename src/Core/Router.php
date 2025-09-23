@@ -114,6 +114,33 @@ final class Router
             $vars[] = $m[1];
             return '([^/]+)';
         }, $path);
-        return ['regex' => '#^' . $regex . '$#', 'vars' => $vars];
+        return [
+            'regex' => '#^' . $regex . '$#',
+            'path' => $path,
+            'vars' => $vars
+        ];
+    }
+
+    /**
+     * Retrieves the action associated with a given HTTP method and path.
+     *
+     * @param string $method HTTP method
+     * @param string $uri Request URI
+     * @return array|null The action handler if found, null otherwise
+     */
+    public function getRouteByPath(string $method, string $uri): ?array
+    {
+        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        foreach ($this->routes as $routeMethod => $routes) {
+            if (strtoupper($routeMethod) !== strtoupper($method)) {
+                continue;
+            }
+            foreach ($routes as [$compiled, $action]) {
+                if (preg_match($compiled['regex'], $path)) {
+                    return [$compiled, $action];
+                }
+            }
+        }
+        return null;
     }
 }

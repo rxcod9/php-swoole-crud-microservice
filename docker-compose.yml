@@ -110,11 +110,13 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    # environment:
-    #   - GF_SECURITY_ADMIN_USER=admin
-    #   - GF_SECURITY_ADMIN_PASSWORD=admin
-    # volumes:
-    #   - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      # - grafana-data:/var/lib/grafana   # persist dashboards, users, settings
     ports:
       - "3000:3000"
     healthcheck:
@@ -164,6 +166,7 @@ services:
       - "8080:8080"
     depends_on: [app]
 
-# volumes:
+volumes:
+  grafana-data:
 #   # caddy_data:
 #   # caddy_config:

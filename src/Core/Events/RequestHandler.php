@@ -90,8 +90,13 @@ final class RequestHandler
 
             // skip metrics and health routes
             if ($path !== '/health' && $path !== '/health.html' && $path !== '/metrics') {
-                $counter->inc([$req->server['request_method'], $path, (string)$status]);
-                $hist->observe($dur, [$req->server['request_method'], $path]);
+                // get route name from path
+                [$route, $action] = $this->router->getRouteByPath(
+                    $req->server['request_method'],
+                    $path ?? '/'
+                );
+                $counter->inc([$req->server['request_method'], $route['path'], (string)$status]);
+                $hist->observe($dur, [$req->server['request_method'], $route['path']]);
             }
 
             (new RequestLogger())->log(
