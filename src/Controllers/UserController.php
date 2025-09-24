@@ -189,7 +189,7 @@ final class UserController extends Controller
         $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Cache key based on pagination params
-        $cacheKey = "users:list:$limit:$offset";
+        $cacheKey = "users:list:$limit:$offset:" . md5(json_encode(array_filter($filters))) . ":$sortBy:$sortDirection";
         if ($cached = $redis->get($cacheKey)) {
             return $this->json(json_decode($cached));
         }

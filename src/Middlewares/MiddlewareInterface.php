@@ -5,6 +5,16 @@ use Swoole\Http\Request;
 use Swoole\Http\Response;
 use App\Core\Container;
 
+/**
+ * Middleware interface for handling HTTP requests and responses.
+ *
+ * @package App\Middlewares
+ * @version 1.0.0
+ * @since 1.0.0
+ * @author Your Name
+ * @license MIT
+ * @link https://your-repo-link
+ */
 interface MiddlewareInterface
 {
     /**

@@ -63,6 +63,9 @@ curl -s -X GET http://localhost:9501/users -H 'Content-Type: application/json' |
 # Get a user by ID
 curl -s -X GET http://localhost:9501/users/1 -H 'Content-Type: application/json' | jq
 
+# Get a user by Email
+curl -s -X GET http://localhost:9501/users/email/alice%40example.com -H 'Content-Type: application/json' | jq
+
 # Update a user
 curl -i -X PUT http://localhost:9501/users/1 \
     -H 'Content-Type: application/json' \

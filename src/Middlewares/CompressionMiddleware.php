@@ -7,6 +7,9 @@ use Swoole\Http\Response;
 
 final class CompressionMiddleware implements MiddlewareInterface
 {
+    /**
+     * Compress JSON responses using gzip.
+     */
     public function handle(Request $req, Response $res, Container $c, callable $next): void
     {
         $next(); // call next middleware

@@ -7,11 +7,25 @@ use App\Middlewares\MiddlewareInterface;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
+/**
+ * Middleware pipeline to process HTTP requests through a series of middleware components.
+ * Each middleware can modify the request/response and decide whether to continue the chain.
+ * 
+ * @package App\Core\Events
+ * @version 1.0.0
+ * @since 1.0.0
+ * @author Your Name
+ * @license MIT
+ * @link https://your-repo-link
+ */
 final class MiddlewarePipeline
 {
     /** @var MiddlewareInterface[] */
     private array $middlewares = [];
 
+    /**
+     * MiddlewarePipeline constructor.
+     */
     public function __construct()
     {
         // $this->middlewares[] = new \App\Middlewares\CorsMiddleware();
@@ -19,6 +33,9 @@ final class MiddlewarePipeline
         // Add more middleware as needed
     }
 
+    /**
+     * Add a middleware to the pipeline
+     */
     public function addMiddleware(MiddlewareInterface $middleware): void
     {
         $this->middlewares[] = $middleware;
