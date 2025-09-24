@@ -123,16 +123,35 @@ final class ItemController extends Controller
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(
-                        type: 'object',
-                        properties: [
-                            new OA\Property(property: 'id', type: 'integer'),
-                            new OA\Property(property: 'sku', type: 'string'),
-                            new OA\Property(property: 'title', type: 'string'),
-                            new OA\Property(property: 'price', type: 'number', format: 'float'),
-                        ]
-                    )
+                    type: 'object',
+                    properties: [
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer'),
+                                    new OA\Property(property: 'sku', type: 'string'),
+                                    new OA\Property(property: 'title', type: 'string'),
+                                    new OA\Property(property: 'price', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                ]
+                            )
+                        ),
+                        new OA\Property(
+                            property: 'pagination',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'total', type: 'integer', example: 1),
+                                new OA\Property(property: 'count', type: 'integer', example: 1),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 100),
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                            ]
+                        ),
+                    ]
                 )
             )
         ]

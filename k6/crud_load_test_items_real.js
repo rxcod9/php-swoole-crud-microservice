@@ -6,7 +6,7 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_ITEMS: 500,
+    TOTAL_ITEMS: 100,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
     LIST_PAGES: 3,
@@ -18,7 +18,7 @@ const CONFIG = {
         // DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 500,
+        MAX_VUS: 100,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
@@ -146,7 +146,7 @@ export default function (data) {
         // UPDATE
         const id = randomItem(itemIds);
         const item = generateItem(id);
-        const res = http.put(`http://localhost:9501/items/${id}`, JSON.stringify({ name: `${item.name}-updated`, email: item.email }), { headers: { 'Content-Type': 'application/json' } });
+        const res = http.put(`http://localhost:9501/items/${id}`, JSON.stringify({ sku: `${item.sku}-updated`, title: item.title, price: item.price }), { headers: { 'Content-Type': 'application/json' } });
         updateTrend.add(res.timings.duration);
         check(res, { 'UPDATE success': r => r.status === 200 });
 

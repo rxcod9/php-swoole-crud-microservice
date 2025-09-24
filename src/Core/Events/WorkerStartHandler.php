@@ -5,6 +5,7 @@ namespace App\Core\Events;
 use App\Core\Contexts\AppContext;
 use App\Core\Pools\MySQLPool;
 use App\Core\Pools\RedisPool;
+use App\Tables\TableWithLRUAndGC;
 use Swoole\Http\Server;
 use Swoole\Table;
 use Swoole\Timer;
@@ -21,7 +22,8 @@ final class WorkerStartHandler
 
     public function __construct(
         private array $config,
-        private Table $table
+        private Table $table,
+        private TableWithLRUAndGC $cacheTable
     ) {
         //
     }
@@ -46,6 +48,11 @@ final class WorkerStartHandler
         AppContext::setWorkerReady(true);
         echo "Worker {$workerId} started with {$pid} ready\n";
 
+        $this->startTimers($server, $workerId, $pid);
+    }
+
+    private function startTimers(Server $server, int $workerId, int $pid): void
+    {
         // Heartbeat every 5s
         $timerId = Timer::tick(5000, function ($timerId) use ($server, $workerId, $pid) {
             $this->tick($timerId, $server, $workerId, $pid);
@@ -117,5 +124,7 @@ final class WorkerStartHandler
             "redis_created"     => $redisCreated,
             "redis_in_use"      => $redisInUse,
         ]);
+
+        $this->cacheTable->gc(); // run garbage collection on cache table
     }
 }

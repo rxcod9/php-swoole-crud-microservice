@@ -9,6 +9,10 @@ use App\Core\Events\TaskFinishHandler;
 use App\Core\Events\TaskRequestHandler;
 use App\Core\Events\WorkerStartHandler;
 use App\Core\Router;
+use App\Services\Cache\CacheService;
+use App\Services\Cache\RedisCacheService;
+use App\Services\Cache\TableCacheService;
+use App\Tables\TableWithLRUAndGC;
 use Swoole\Http\Server;
 use Swoole\Table;
 
@@ -74,6 +78,10 @@ final class HttpServer
         $table->create();
 
         // Shared memory table for worker health
+        $cacheTable = new TableWithLRUAndGC(5000, 300, 100);
+        $cacheTable->create();
+
+        // Shared memory table for worker health
         $rateLimitTable = new Table(64);
         $rateLimitTable->column("count", Table::TYPE_INT, 8);
         $rateLimitTable->create();
@@ -107,9 +115,13 @@ final class HttpServer
 
         $container = new Container();
         $container->bind(Server::class, fn() => $this->server);
+        $container->bind(TableWithLRUAndGC::class, fn() => $cacheTable);
         $container->bind(Table::class, fn() => $table);
+        // $container->bind(RedisCacheService::class, fn() => $table);
+        // $container->bind(TableCacheService::class, fn() => $table);
+        // $container->bind(CacheService::class, fn() => $table);
 
-        $workerStartHandler = new WorkerStartHandler($config, $table);
+        $workerStartHandler = new WorkerStartHandler($config, $table, $cacheTable);
 
         // Worker start event
         $this->server->on(

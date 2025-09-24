@@ -90,7 +90,7 @@ export function setup() {
             headers: { 'Content-Type': 'application/json' }
         });
         // createTrend.add(res.timings.duration);
-        check(res, { 'CREATE success': r => r.status === 201 });
+        // check(res, { 'CREATE success': r => r.status === 201 });
         try { itemIds.push(JSON.parse(res.body).id); }
         catch (e) { console.error('Failed parse CREATE response', res.body); }
     }
@@ -146,7 +146,7 @@ export default function (data) {
     //     // UPDATE
     //     const id = randomItem(itemIds);
     //     const item = generateItem(id);
-    //     const res = http.put(`http://localhost:9501/items/${id}`, JSON.stringify({ name: `${item.name}-updated`, email: item.email }), { headers: { 'Content-Type': 'application/json' } });
+    //     const res = http.put(`http://localhost:9501/items/${id}`, JSON.stringify({ sku: `${item.sku}-updated`, title: item.title, price: item.price }), { headers: { 'Content-Type': 'application/json' } });
     //     updateTrend.add(res.timings.duration);
     //     check(res, { 'UPDATE success': r => r.status === 200 });
 

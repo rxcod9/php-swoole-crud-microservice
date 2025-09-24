@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\Pools\RedisPool;
+use App\Services\Cache\CacheService;
 use App\Services\UserService;
 use OpenApi\Attributes as OA;
 
@@ -18,7 +18,7 @@ final class UserController extends Controller
      */
     public function __construct(
         private UserService $svc,
-        private RedisPool $pool
+        private CacheService $cache
     ) {
         //
     }
@@ -51,10 +51,8 @@ final class UserController extends Controller
         $data = json_decode($this->request->rawContent() ?: '[]', true);
         $user = $this->svc->create($data);
 
-        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn() => $this->pool->put($redis));
         // Invalidate cache
-        // @TODO: More granular invalidation
+        $this->cache->invalidateLists('users');
 
         return $this->json($user, 201);
     }
@@ -165,10 +163,6 @@ final class UserController extends Controller
     )]
     public function index(): array
     {
-        // Simple caching with Redis
-        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn() => $this->pool->put($redis));
-
         // Pagination params
         $page   = (int)($this->request->get['page'] ?? 1);
         $limit  = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
@@ -189,9 +183,15 @@ final class UserController extends Controller
         $sortDirection  = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Cache key based on pagination params
-        $cacheKey = "users:list:$limit:$offset:" . md5(json_encode(array_filter($filters))) . ":$sortBy:$sortDirection";
-        if ($cached = $redis->get($cacheKey)) {
-            return $this->json(json_decode($cached));
+        $query = [
+            "limit" => $limit,
+            "offset" => $offset,
+            "filters" => array_filter($filters),
+            "sortBy" => $sortBy,
+            "sortDirection" => $sortDirection,
+        ];
+        if ($cached = $this->cache->getList('users', $query)) {
+            return $this->json($cached);
         }
 
         // Fetch from service if not cached
@@ -221,10 +221,10 @@ final class UserController extends Controller
         ];
 
         // cache for 10s
-        $redis->setex($cacheKey, 10, json_encode($data));
+        $this->cache->setList('users', $query, $data);
 
         // Respond with user list
-        return $this->json($users);
+        return $this->json($data);
     }
 
     /**
@@ -260,14 +260,10 @@ final class UserController extends Controller
     )]
     public function show(array $params): array
     {
-        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn() => $this->pool->put($redis));
-
         $id         = (int)$params['id'];
-        $cacheKey   = "user:$id";
 
-        if ($cached = $redis->get($cacheKey)) {
-            return $this->json(json_decode($cached));
+        if ($cached = $this->cache->getRecord('users', $id)) {
+            return $this->json($cached);
         }
 
         $u = $this->svc->find($id);
@@ -275,7 +271,8 @@ final class UserController extends Controller
             return $this->json(['error' => 'Not Found'], 404);
         }
 
-        $redis->setex($cacheKey, 300, json_encode($u)); // 5 min cache
+        $this->cache->setRecord('users', $id, $u);
+
         return $this->json($u);
     }
 
@@ -312,14 +309,10 @@ final class UserController extends Controller
     )]
     public function showByEmail(array $params): array
     {
-        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn() => $this->pool->put($redis));
-
         $email      = (string)$params['email'];
-        $cacheKey   = "user:email:$email";
 
-        if ($cached = $redis->get($cacheKey)) {
-            return $this->json(json_decode($cached));
+        if ($cached = $this->cache->getRecordByColumn('users', 'email', $email)) {
+            return $this->json($cached);
         }
 
         $u = $this->svc->findByEmail(urldecode($email));
@@ -327,7 +320,8 @@ final class UserController extends Controller
             return $this->json(['error' => 'Not Found'], 404);
         }
 
-        $redis->setex($cacheKey, 300, json_encode($u)); // 5 min cache
+        $this->cache->setRecord('users', $u['id'], $u);
+        $this->cache->setRecordByColumn('users', 'email', $email, $u);
         return $this->json($u);
     }
 
@@ -370,14 +364,11 @@ final class UserController extends Controller
             return $this->json(['error' => 'Not Found'], 404);
         }
 
-        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn() => $this->pool->put($redis));
+        $this->cache->invalidateRecord('users', $u['id']);
+        $this->cache->invalidateRecordByColumn('users', 'email', $u['email']);
 
-        // Invalidate caches
-        $redis->del("user:{$p['id']}");
-        $redis->del("user:{$data['email']}");
         // Invalidate cache
-        // @TODO: More granular invalidation
+        $this->cache->invalidateLists('users');
         return $this->json($u);
     }
 
@@ -406,13 +397,11 @@ final class UserController extends Controller
     {
         $ok = $this->svc->delete((int)$p['id']);
         if ($ok) {
-            $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
-            defer(fn() => $this->pool->put($redis));
+            // Invalidate cache
+            $this->cache->invalidateRecord('users', $p['id']);
 
             // Invalidate cache
-            $redis->del("user:{$p['id']}");
-            // Invalidate cache
-            // @TODO: More granular invalidation
+            $this->cache->invalidateLists('users');
         }
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }

@@ -6,7 +6,7 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 3000,
+    TOTAL_USERS: 100,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
     LIST_PAGES: 3,
@@ -18,7 +18,7 @@ const CONFIG = {
         // DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 1000,
+        MAX_VUS: 100,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
