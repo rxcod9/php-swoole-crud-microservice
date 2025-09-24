@@ -14,24 +14,11 @@ use Swoole\Http\Response;
  * @package App\Core\Events
  * @version 1.0.0
  * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
  */
 final class MiddlewarePipeline
 {
     /** @var MiddlewareInterface[] */
     private array $middlewares = [];
-
-    /**
-     * MiddlewarePipeline constructor.
-     */
-    public function __construct()
-    {
-        // $this->middlewares[] = new \App\Middlewares\CorsMiddleware();
-        // $this->middlewares[] = new \App\Middlewares\AuthMiddleware();
-        // Add more middleware as needed
-    }
 
     /**
      * Add a middleware to the pipeline
@@ -48,16 +35,17 @@ final class MiddlewarePipeline
         Request $req,
         Response $res,
         Container $container,
+        array $routeMiddlewares,
         callable $finalHandler
     ): void {
-        $index = 0;
+        // Merge once, not on every $next()
+        $allMiddlewares = [...$this->middlewares, ...$routeMiddlewares];
+        $total = count($allMiddlewares);
 
-        $runner = function () use (&$index, $req, $res, $container, &$runner, $finalHandler) {
-            if ($index < count($this->middlewares)) {
-                $middleware = $this->middlewares[$index++];
-                $middleware->handle($req, $res, $container, $runner);
+        $runner = function (int $index = 0) use ($req, $res, $container, $allMiddlewares, $total, $finalHandler, &$runner) {
+            if ($index < $total) {
+                $allMiddlewares[$index]->handle($req, $res, $container, fn() => $runner($index + 1));
             } else {
-                // All middleware called $next(), execute final handler
                 $finalHandler();
             }
         };

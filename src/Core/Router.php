@@ -12,70 +12,75 @@ namespace App\Core;
 final class Router
 {
     /**
-     * @var array<string, array<int, array{regex: string, vars: array<int, string>}, string>> $routes
+     * @var array<string, array<int, array{regex: string, vars: array<int, string>, path: string}, string, array>> $routes
      * Stores the registered routes grouped by HTTP method.
      */
     private array $routes = [];
 
     /**
-     * Registers a route for a given HTTP method, path, and action.
+     * Registers a route for a given HTTP method, path, action, and optional middlewares.
      *
      * @param string $method HTTP method (GET, POST, etc.)
      * @param string $path Route path, e.g. '/users/{id}'
      * @param string $action The action handler (e.g. controller@method)
+     * @param array<class-string> $middlewares List of middlewares class names
      * @return void
      */
-    public function add(string $method, string $path, string $action): void
+    public function add(string $method, string $path, string $action, array $middlewares = []): void
     {
-        $this->routes[strtoupper($method)][] = [$this->compile($path), $action];
+        $this->routes[strtoupper($method)][] = [$this->compile($path), $action, $middlewares];
     }
 
     /**
      * Registers a GET route.
-     *
      * @param string $p Route path
      * @param string $a Action handler
+     * @param array<class-string> $mw List of middlewares class names
+     *
      * @return void
      */
-    public function get(string $p, string $a): void
+    public function get(string $p, string $a, array $mw = []): void
     {
-        $this->add('GET', $p, $a);
+        $this->add('GET', $p, $a, $mw);
     }
 
     /**
      * Registers a POST route.
-     *
      * @param string $p Route path
      * @param string $a Action handler
+     * @param array<class-string> $mw List of middlewares class names
+     *
      * @return void
      */
-    public function post(string $p, string $a): void
+    public function post(string $p, string $a, array $mw = []): void
     {
-        $this->add('POST', $p, $a);
+        $this->add('POST', $p, $a, $mw);
     }
 
     /**
      * Registers a PUT route.
-     *
      * @param string $p Route path
      * @param string $a Action handler
+     * @param array<class-string> $mw List of middlewares class names
+     *
      * @return void
      */
-    public function put(string $p, string $a): void
+    public function put(string $p, string $a, array $mw = []): void
     {
-        $this->add('PUT', $p, $a);
+        $this->add('PUT', $p, $a, $mw);
     }
 
     /**
      * Registers a DELETE route.
-     *
      * @param string $p Route path
      * @param string $a Action handler
+     * @param array<class-string> $mw List of middlewares class names
+     *
      * @return void
      */
-    public function delete(string $p, string $a): void
+    public function delete(string $p, string $a, array $mw = []): void
     {
-        $this->add('DELETE', $p, $a);
+        $this->add('DELETE', $p, $a, $mw);
     }
 
     /**
@@ -83,29 +88,29 @@ final class Router
      *
      * @param string $method HTTP method
      * @param string $uri Request URI
-     * @return array{0: string, 1: array<string, string>} Matched action and parameters
+     * @return array{0: string, 1: array<string, string>, 2: array<class-string>} Matched action, parameters, and middlewares
      * @throws \RuntimeException If no route matches (404)
      */
     public function match(string $method, string $uri): array
     {
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
-        foreach ($this->routes[strtoupper($method)] ?? [] as [$compiled, $action]) {
+        foreach ($this->routes[strtoupper($method)] ?? [] as [$compiled, $action, $middlewares]) {
             if (preg_match($compiled['regex'], $path, $m)) {
                 $params = [];
                 foreach ($compiled['vars'] as $i => $name) {
                     $params[$name] = $m[$i + 1];
                 }
-                return [$action, $params];
+                return [$action, $params, $middlewares];
             }
         }
         throw new \RuntimeException('Not Found', 404);
     }
 
     /**
-     * Compiles a route path into a regex and extracts variable names.
+     * Compiles a route path into a regex pattern and extracts variable names.
      *
-     * @param string $path Route path (e.g. '/users/{id}')
-     * @return array{regex: string, vars: array<int, string>} Compiled regex and variable names
+     * @param string $path Route path with optional variables (e.g. '/users/{id}')
+     * @return array{regex: string, vars: array<int, string>, path: string} Compiled regex, variable names, and original path
      */
     private function compile(string $path): array
     {
@@ -126,7 +131,7 @@ final class Router
      *
      * @param string $method HTTP method
      * @param string $uri Request URI
-     * @return array|null The action handler if found, null otherwise
+     * @return array|null The route details (compiled, action, middlewares) if found
      */
     public function getRouteByPath(string $method, string $uri): ?array
     {
@@ -135,9 +140,9 @@ final class Router
             if (strtoupper($routeMethod) !== strtoupper($method)) {
                 continue;
             }
-            foreach ($routes as [$compiled, $action]) {
+            foreach ($routes as [$compiled, $action, $middlewares]) {
                 if (preg_match($compiled['regex'], $path)) {
-                    return [$compiled, $action];
+                    return [$compiled, $action, $middlewares];
                 }
             }
         }

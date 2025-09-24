@@ -10,10 +10,12 @@ use App\Repositories\ItemRepository;
  * Service layer for Item entity.
  * Encapsulates business logic and interacts with ItemRepository.
  *
- * @method array list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
- * @method array find(int $id)
- * @method array findBySku(string $sku)
- * @method array delete(int $id)
+ * @method int      count()
+ * @method array    delete(int $id)
+ * @method int      filteredCount()
+ * @method array    find(int $id)
+ * @method array    findBySku(string $sku)
+ * @method array    list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  *
  * @package App\Services
  */

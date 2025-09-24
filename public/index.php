@@ -40,6 +40,7 @@ $router->get('/', 'IndexController@index');
 
 // Health check route.
 $router->get('/health', 'HealthController@check');
+// $router->get('/health', 'HealthController@check', [new \App\Middlewares\RateLimitMiddleware()]);
 $router->get('/health.html', 'HealthController@checkHtml');
 
 // Metrics route.

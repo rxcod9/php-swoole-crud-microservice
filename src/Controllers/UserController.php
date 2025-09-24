@@ -54,9 +54,7 @@ final class UserController extends Controller
         $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
         // Invalidate cache
-        // $redis->del("users:list:100:0"); // Invalidate all list caches
-        // $redis->del("users:list:100:100"); // Invalidate all list caches
-        // $redis->del("users:list:100:200"); // Invalidate all list caches
+        // @TODO: More granular invalidation
 
         return $this->json($user, 201);
     }
@@ -168,25 +166,27 @@ final class UserController extends Controller
     public function index(): array
     {
         // Simple caching with Redis
-        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
 
         // Pagination params
-        $page = (int)($this->request->get['page'] ?? 1);
-        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $page   = (int)($this->request->get['page'] ?? 1);
+        $limit  = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override with direct offset if provided
-        $limit = (int)($this->request->get['limit'] ?? $limit);
+        $limit  = (int)($this->request->get['limit'] ?? $limit);
         $offset = (int)($this->request->get['offset'] ?? $offset);
+
         $filters = [
-            'email' => $this->request->get['email'] ?? null,
-            'name' => $this->request->get['name'] ?? null,
-            'created_after' => $this->request->get['created_after'] ?? null,
-            'created_before' => $this->request->get['created_before'] ?? null,
+            'email'             => $this->request->get['email'] ?? null,
+            'name'              => $this->request->get['name'] ?? null,
+            'created_after'     => $this->request->get['created_after'] ?? null,
+            'created_before'    => $this->request->get['created_before'] ?? null,
         ];
-        $sortBy = $this->request->get['sortBy'] ?? 'id';
-        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
+
+        $sortBy         = $this->request->get['sortBy'] ?? 'id';
+        $sortDirection  = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Cache key based on pagination params
         $cacheKey = "users:list:$limit:$offset:" . md5(json_encode(array_filter($filters))) . ":$sortBy:$sortDirection";
@@ -204,21 +204,24 @@ final class UserController extends Controller
         );
 
         // Get total count for pagination metadata
-        $total = $this->svc->count();
-        $pages = ceil($total / $limit);
-        $users = [
-            'data' => $users,
-            'pagination' => [
-                'total' => $total,
-                'count' => count($users),
-                'per_page' => $limit,
-                'current_page' => floor($offset / $limit) + 1,
-                'total_pages' => $pages,
+        $filteredTotal  = $this->svc->filteredCount($filters);
+        $total          = $this->svc->count();
+        $pages          = ceil($total / $limit);
+
+        $data = [
+            'data'          => $users,
+            'pagination'    => [
+                'count'             => count($users),
+                'current_page'      => floor($offset / $limit) + 1,
+                'filtered_total'    => $filteredTotal,
+                'per_page'          => $limit,
+                'total_pages'       => $pages,
+                'total'             => $total,
             ]
         ];
 
         // cache for 10s
-        $redis->setex($cacheKey, 10, json_encode($users));
+        $redis->setex($cacheKey, 10, json_encode($data));
 
         // Respond with user list
         return $this->json($users);
@@ -257,10 +260,11 @@ final class UserController extends Controller
     )]
     public function show(array $params): array
     {
-        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
-        $id = (int)$params['id'];
-        $cacheKey = "user:$id";
+
+        $id         = (int)$params['id'];
+        $cacheKey   = "user:$id";
 
         if ($cached = $redis->get($cacheKey)) {
             return $this->json(json_decode($cached));
@@ -310,8 +314,9 @@ final class UserController extends Controller
     {
         $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
-        $email = (string)$params['email'];
-        $cacheKey = "user:email:$email";
+
+        $email      = (string)$params['email'];
+        $cacheKey   = "user:email:$email";
 
         if ($cached = $redis->get($cacheKey)) {
             return $this->json(json_decode($cached));
@@ -359,20 +364,20 @@ final class UserController extends Controller
     )]
     public function update(array $p): array
     {
-        $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $u = $this->svc->update((int)$p['id'], $data);
+        $data   = json_decode($this->request->rawContent() ?: '[]', true);
+        $u      = $this->svc->update((int)$p['id'], $data);
         if (!$u) {
             return $this->json(['error' => 'Not Found'], 404);
         }
 
-        $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
+        $redis  = $this->pool->get(); // returns Swoole\Coroutine\Redis
         defer(fn() => $this->pool->put($redis));
+
         // Invalidate caches
         $redis->del("user:{$p['id']}");
         $redis->del("user:{$data['email']}");
-        // $redis->del("users:list:100:0"); // Invalidate all list caches
-        // $redis->del("users:list:100:100"); // Invalidate all list caches
-        // $redis->del("users:list:100:200"); // Invalidate all list caches
+        // Invalidate cache
+        // @TODO: More granular invalidation
         return $this->json($u);
     }
 
@@ -403,11 +408,11 @@ final class UserController extends Controller
         if ($ok) {
             $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis
             defer(fn() => $this->pool->put($redis));
+
             // Invalidate cache
             $redis->del("user:{$p['id']}");
-            // $redis->del("users:list:100:0"); // Invalidate all list caches
-            // $redis->del("users:list:100:100"); // Invalidate all list caches
-            // $redis->del("users:list:100:200"); // Invalidate all list caches
+            // Invalidate cache
+            // @TODO: More granular invalidation
         }
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }

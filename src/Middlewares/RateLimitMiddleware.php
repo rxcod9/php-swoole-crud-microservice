@@ -8,17 +8,17 @@ use Swoole\Table;
 
 final class RateLimitMiddleware implements MiddlewareInterface
 {
-    private Table $table;
+    // private Table $table;
 
-    public function __construct(Table $table)
+    public function __construct()
     {
-        $this->table = $table; // Swoole table for storing IP counts
+        // $this->table = $table; // Swoole table for storing IP counts
     }
 
     public function handle(Request $req, Response $res, Container $c, callable $next): void
     {
         $ip = $req->server['remote_addr'] ?? 'unknown';
-        $limit = 100; // requests per minute
+        $limit = 10; // requests per minute
         $key = "rate:{$ip}";
 
         $count = $this->table->get($key)['count'] ?? 0;

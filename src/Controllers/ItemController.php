@@ -140,28 +140,52 @@ final class ItemController extends Controller
     public function index(): array
     {
         // Pagination params
-        $page = (int)($this->request->get['page'] ?? 1);
-        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $page   = (int)($this->request->get['page'] ?? 1);
+        $limit  = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override with direct offset if provided
-        $limit = (int)($this->request->get['limit'] ?? $limit);
+        $limit  = (int)($this->request->get['limit'] ?? $limit);
         $offset = (int)($this->request->get['offset'] ?? $offset);
+
         $filters = [
-            'sku' => $this->request->get['sku'] ?? null,
-            'title' => $this->request->get['title'] ?? null,
-            'created_after' => $this->request->get['created_after'] ?? null,
-            'created_before' => $this->request->get['created_before'] ?? null,
+            'sku'               => $this->request->get['sku'] ?? null,
+            'title'             => $this->request->get['title'] ?? null,
+            'created_after'     => $this->request->get['created_after'] ?? null,
+            'created_before'    => $this->request->get['created_before'] ?? null,
         ];
-        $sortBy = $this->request->get['sortBy'] ?? 'id';
-        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
-        return $this->json($this->svc->list(
+
+        $sortBy         = $this->request->get['sortBy'] ?? 'id';
+        $sortDirection  = $this->request->get['sortDirection'] ?? 'DESC';
+
+        // Fetch from service if not cached
+        $items = $this->svc->list(
             $limit,
             $offset,
             $filters,
             $sortBy,
             $sortDirection
-        ));
+        );
+
+        // Get total count for pagination metadata
+        $filteredTotal  = $this->svc->filteredCount($filters);
+        $total          = $this->svc->count();
+        $pages          = ceil($total / $limit);
+
+        $data = [
+            'data'          => $items,
+            'pagination'    => [
+                'count'             => count($items),
+                'current_page'      => floor($offset / $limit) + 1,
+                'filtered_total'    => $filteredTotal,
+                'per_page'          => $limit,
+                'total_pages'       => $pages,
+                'total'             => $total,
+            ]
+        ];
+
+        // Respond with item list
+        return $this->json($data);
     }
 
     /**
@@ -280,8 +304,8 @@ final class ItemController extends Controller
     )]
     public function update(array $p): array
     {
-        $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $u = $this->svc->update((int)$p['id'], $data);
+        $data   = json_decode($this->request->rawContent() ?: '[]', true);
+        $u      = $this->svc->update((int)$p['id'], $data);
         if (!$u) {
             return $this->json(['error' => 'Not Found'], 404);
         }

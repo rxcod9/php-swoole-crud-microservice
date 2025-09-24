@@ -189,6 +189,93 @@ final class ItemRepository
     }
 
     /**
+     * Filtered count of items.
+     *
+     * @return array An array of items, each represented as an associative array.
+     * @throws \RuntimeException If the query operation fails.
+     */
+    public function filteredCount(
+        array $filters = []
+    ): int {
+        /** @var \Swoole\Coroutine\Mysql $conn */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
+
+        $sql = "SELECT count(*) as total FROM items";
+        $where = [];
+        $params = [];
+
+        // filters
+        foreach ($filters as $field => $value) {
+            if(is_null($value)) {
+                continue;
+            }
+            switch ($field) {
+                case 'sku':
+                    $where[] = "sku = ?";
+                    $params[] = $value;
+                    break;
+                case 'title':
+                    $where[] = "title LIKE ?";
+                    $params[] = "%$value%";
+                    break;
+                case 'created_after':
+                    $where[] = "created_at > ?";
+                    $params[] = $value;
+                    break;
+                case 'created_before':
+                    $where[] = "created_at < ?";
+                    $params[] = $value;
+                    break;
+            }
+        }
+
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            throw new \RuntimeException("Prepare failed: " . $conn->error);
+        }
+
+        $result = $stmt->execute($params);
+        if ($result === false) {
+            throw new \RuntimeException("Execute failed: " . $conn->error);
+        }
+
+        return $result[0]['total'] ?? 0;
+    }
+
+    /**
+     * Count items.
+     */
+    public function count(): int
+    {
+        /**
+         * @var \Swoole\Coroutine\Mysql $conn
+         */
+        $conn = $this->pool->get();
+        defer(fn() => $conn->connected && $this->pool->put($conn));
+
+        $stmt = $conn->prepare("
+            SELECT count(*) as total
+            FROM items
+        ");
+
+        if ($stmt === false) {
+            throw new \RuntimeException("Prepare failed: " . $conn->error);
+        }
+
+        $result = $stmt->execute();
+        if ($result === false) {
+            throw new \RuntimeException("Execute failed: " . $conn->error);
+        }
+
+        return $result[0]['total'] ?? 0;
+    }
+
+    /**
      * Update an existing item.
      *
      * @param int $id The ID of the item to update.

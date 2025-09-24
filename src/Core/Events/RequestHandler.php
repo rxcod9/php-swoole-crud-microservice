@@ -3,6 +3,7 @@
 namespace App\Core\Events;
 
 use App\Core\Container;
+use App\Core\Dispatcher;
 use App\Core\Metrics;
 use App\Core\Router;
 use Swoole\Http\Request;
@@ -21,9 +22,6 @@ use Swoole\Table;
  * @package App\Core\Events
  * @version 1.0.0
  * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
  */
 final class RequestHandler
 {
@@ -32,7 +30,8 @@ final class RequestHandler
      *
      * @param Router $router Router instance for HTTP request routing
      * @param Server $server Swoole HTTP server instance
-     * @param Table $table Shared memory table for worker health checks
+     * @param Table  $table  Shared memory table for worker health checks
+     * @param Table  $rateLimitTable Shared table for rate limiting
      * @param Container $container Dependency injection container
      */
     public function __construct(
@@ -48,14 +47,11 @@ final class RequestHandler
     /**
      * Handle the incoming HTTP request.
      *
-     * @param Request $req The incoming HTTP request
+     * @param Request  $req The incoming HTTP request
      * @param Response $res The HTTP response to be sent
      */
     public function __invoke(Request $req, Response $res): void
     {
-        // $cors = new CorsHandler();
-        // if ($cors->handle($req, $res)) return;
-
         try {
             (new WorkerReadyChecker())->wait();
 
@@ -64,60 +60,91 @@ final class RequestHandler
 
             (new PoolBinder())->bind($this->server, $this->container);
 
-            // (new MiddlewarePipeline())->handle($req, $this->container);
+            // Prepare middleware pipeline
             $pipeline = new MiddlewarePipeline();
+            $this->registerGlobalMiddlewares($pipeline);
 
-            // register middleware in order
-            $pipeline->addMiddleware(new \App\Middlewares\CorsMiddleware());
-            // $pipeline->addMiddleware(new \App\Middlewares\AuthMiddleware());
-            $pipeline->addMiddleware(new \App\Middlewares\RateLimitMiddleware($this->rateLimitTable));
-            $pipeline->addMiddleware(new \App\Middlewares\SecurityHeadersMiddleware());
-            // $pipeline->addMiddleware(new \App\Middlewares\LoggingMiddleware());
-            // $pipeline->addMiddleware(new \App\Middlewares\MetricsMiddleware());
-            $pipeline->addMiddleware(new \App\Middlewares\HideServerHeaderMiddleware());
-            // $pipeline->addMiddleware(new \App\Middlewares\CompressionMiddleware());
+            // Route resolution
+            [$action, $params, $routeMiddlewares] = $this->router->match(
+                $req->server['request_method'],
+                $req->server['request_uri']
+            );
 
+            // Run pipeline + final dispatcher
             $pipeline->handle(
                 $req,
                 $res,
                 $this->container,
-                function () use ($req, $res, $reqId, $start) {
-                    $this->dispatch($req, $res, $reqId, $start);
-                }
+                $routeMiddlewares,
+                fn() => $this->dispatch($action, $params, $req, $reqId, $res, $start)
             );
         } catch (\Throwable $e) {
-            $status = $e->getCode() ?: 500;
-            $res->header('Content-Type', 'application/json');
-            $res->status($status);
-            $res->end(json_encode(['error' => $e->getMessage()]));
-
-            (new RequestLogger())->log(
-                $this->server,
-                $req,
-                [
-                    'error' => $e->getMessage()
-                ]
-            );
+            $this->handleException($req, $res, $e);
         }
     }
 
     /**
-     * Dispatch the request to the appropriate route handler and send the response.
+     * Register global middleware in the intended order.
+     */
+    private function registerGlobalMiddlewares(MiddlewarePipeline $pipeline): void
+    {
+        $pipeline->addMiddleware(new \App\Middlewares\CorsMiddleware());
+        // $pipeline->addMiddleware(new \App\Middlewares\AuthMiddleware());
+        // $pipeline->addMiddleware(new \App\Middlewares\RateLimitMiddleware($this->rateLimitTable));
+        $pipeline->addMiddleware(new \App\Middlewares\SecurityHeadersMiddleware());
+        // $pipeline->addMiddleware(new \App\Middlewares\LoggingMiddleware());
+        // $pipeline->addMiddleware(new \App\Middlewares\MetricsMiddleware());
+        $pipeline->addMiddleware(new \App\Middlewares\HideServerHeaderMiddleware());
+        // $pipeline->addMiddleware(new \App\Middlewares\CompressionMiddleware());
+    }
+
+    /**
+     * Centralized exception handler for all request failures.
+     */
+    private function handleException(Request $req, Response $res, \Throwable $e): void
+    {
+        $status = $e->getCode() ?: 500;
+
+        $res->header('Content-Type', 'application/json');
+        $res->status($status);
+        $res->end(json_encode([
+            'error' => $e->getMessage(),
+            'code'  => $status,
+            'trace' => $e->getTraceAsString(),
+            'file'  => $e->getFile(),
+            'line'  => $e->getLine(),
+        ]));
+
+        (new RequestLogger())->log($this->server, $req, [
+            'error' => $e->getMessage(),
+            'code'  => $status,
+            'trace' => $e->getTraceAsString(),
+            'file'  => $e->getFile(),
+            'line'  => $e->getLine(),
+        ]);
+    }
+
+    /**
+     * Dispatch the request to the appropriate controller action and send the response.
      *
-     * @param Request $req The incoming HTTP request
-     * @param Response $res The HTTP response to be sent
-     * @param string $reqId Unique request ID for logging
-     * @param float $start Timestamp when request processing started
+     * @param mixed   $action   The action handler (e.g. controller@method)
+     * @param array<string,string> $params Route parameters extracted from the URL
+     * @param Request $req      The incoming HTTP request
+     * @param string  $reqId    Unique request ID for logging
+     * @param Response $res     The HTTP response to be sent
+     * @param float   $start    Timestamp when the request handling started (for metrics)
      *
      * @return void
      */
-    public function dispatch(
+    private function dispatch(
+        string $action,
+        array $params,
         Request $req,
-        Response $res,
         string $reqId,
+        Response $res,
         float $start
     ): void {
-        // Metrics collection
+        // Metrics setup
         $reg = Metrics::reg();
         $counter = $reg->getOrRegisterCounter(
             'http_requests_total',
@@ -132,52 +159,47 @@ final class RequestHandler
             ['method', 'path']
         );
 
-        $payload = (new RequestDispatcher($this->router))->dispatch($req, $this->container);
+        // Execute controller/handler
+        $payload = (new Dispatcher($this->container))->dispatch($action, $params, $req);
 
-        $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path   = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = $payload['__status'] ?? 200;
-        $json = $payload['__json'] ?? null;
-        $html = $payload['__html'] ?? null;
-        $text = $payload['__text'] ?? null;
-        $contentType = $payload['__contentType'] ?? null;
+        $json   = $payload['__json'] ?? null;
+        $html   = $payload['__html'] ?? null;
+        $text   = $payload['__text'] ?? null;
+        $ctype  = $payload['__contentType'] ?? null;
 
-        # if $path ends with .html the non -json response
+        // Format response
         if ($html) {
-            $res->header('Content-Type', $contentType ?? 'text/html');
+            $res->header('Content-Type', $ctype ?? 'text/html');
             $res->end($status === 204 ? '' : $html);
         } elseif ($text) {
-            $res->header('Content-Type', $contentType ?? 'text/plain');
+            $res->header('Content-Type', $ctype ?? 'text/plain');
             $res->end($status === 204 ? '' : $text);
         } else {
-            $res->header('Content-Type', $contentType ?? 'application/json');
+            $res->header('Content-Type', $ctype ?? 'application/json');
             $res->end($status === 204 ? '' : json_encode($json ?: $payload));
         }
         $res->status($status);
 
-        // Metrics and async logging
+        // Metrics & Logging
         $dur = microtime(true) - $start;
 
-        // skip metrics and health routes
-        if ($path !== '/health' && $path !== '/health.html' && $path !== '/metrics') {
-            // get route name from path
-            [$route, $action] = $this->router->getRouteByPath(
+        if (!in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            [$route, $actionMeta] = $this->router->getRouteByPath(
                 $req->server['request_method'],
                 $path ?? '/'
             );
-            $counter->inc([$req->server['request_method'], $route['path'], (string)$status]);
+            $counter->inc([$req->server['request_method'], $route['path'], (string) $status]);
             $hist->observe($dur, [$req->server['request_method'], $route['path']]);
         }
 
-        (new RequestLogger())->log(
-            $this->server,
-            $req,
-            [
-                'id' => $reqId,
-                'method' => $req->server['request_method'],
-                'path' => $path,
-                'status' => $status,
-                'dur_ms' => (int)round($dur * 1000)
-            ]
-        );
+        (new RequestLogger())->log($this->server, $req, [
+            'id'     => $reqId,
+            'method' => $req->server['request_method'],
+            'path'   => $path,
+            'status' => $status,
+            'dur_ms' => (int) round($dur * 1000),
+        ]);
     }
 }
