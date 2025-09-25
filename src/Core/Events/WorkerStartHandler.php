@@ -3,7 +3,7 @@
 namespace App\Core\Events;
 
 use App\Core\Contexts\AppContext;
-use App\Core\Pools\MySQLPool;
+use App\Core\Pools\PDOPool;
 use App\Core\Pools\RedisPool;
 use App\Tables\TableWithLRUAndGC;
 use Swoole\Http\Server;
@@ -41,8 +41,8 @@ final class WorkerStartHandler
         ]);
 
         // Initialize pools per worker
-        $dbConf = $this->config['db']['mysql'];
-        $server->mysql = new MySQLPool($dbConf, $dbConf['pool']['min'] ?? 5, $dbConf['pool']['max'] ?? 200);
+        $dbConf = $this->config['db'][$this->config['db']['driver'] ?? 'mysql'];
+        $server->mysql = new PDOPool($dbConf, $dbConf['pool']['min'] ?? 5, $dbConf['pool']['max'] ?? 200);
         $redisConf = $this->config['redis'];
         $server->redis = new RedisPool($redisConf, $redisConf['pool']['min'], $redisConf['pool']['max'] ?? 200);
         AppContext::setWorkerReady(true);

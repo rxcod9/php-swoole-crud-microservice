@@ -2,6 +2,7 @@
 
 namespace App\Tables;
 
+use BadMethodCallException;
 use Swoole\Table;
 use Swoole\Timer;
 
@@ -136,7 +137,7 @@ class TableWithLRUAndGC
     public function __call($name, $arguments)
     {
         if (!method_exists($this->table, $name)) {
-            throw new \BadMethodCallException("Method {$name} does not exist on Swoole\Table");
+            throw new BadMethodCallException("Method {$name} does not exist on Swoole\Table");
         }
 
         return $this->table->$name(...$arguments);

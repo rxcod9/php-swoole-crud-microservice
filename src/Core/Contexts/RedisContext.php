@@ -2,7 +2,8 @@
 
 namespace App\Core\Contexts;
 
-use Swoole\Coroutine\Redis;
+use RuntimeException;
+use Redis;
 
 /**
  * Class RedisContext
@@ -90,7 +91,7 @@ final class RedisContext
 
         // Dynamically call Redis method
         if (!method_exists($this->conn, $cmd)) {
-            throw new \RuntimeException("Unsupported Redis command: {$cmd}");
+            throw new RuntimeException("Unsupported Redis command: {$cmd}");
         }
 
         return $this->conn->{$cmd}(...$args);

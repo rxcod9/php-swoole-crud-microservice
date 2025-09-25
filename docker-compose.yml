@@ -16,7 +16,7 @@ services:
       - ./docker/certs/server.key:/etc/ssl/private/server.key:ro
     environment:
       APP_ENV: prod                       # Application environment
-      DB_DRIVER: mysql                    # Database driver
+      DB_DRIVER: pdo                    # Database driver
       DB_DSN: mysql:host=mysql;dbname=app;charset=utf8mb4  # DSN for MySQL
       DB_USER: app                        # Database user
       DB_PASS: app                        # Database password

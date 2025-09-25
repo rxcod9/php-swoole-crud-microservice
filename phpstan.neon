@@ -1,0 +1,40 @@
+
+includes: 
+    # Add more configs (e.g. phpstan-strict-rules) here if needed 
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters: 
+    # Analysis 
+    # level: 0 (loose) → 9 (strict) 
+    level: 6 
+
+    # Directories to analyse 
+    paths:
+        - ./src 
+
+    bootstrapFiles:
+        - vendor/autoload.php 
+
+    # Exclude noisy / vendor / generated code 
+    excludePaths:
+        - .git/*
+        - .github/*
+        - .idea/*
+        - .vscode/*
+        - build/*
+        - tests/*
+        - vendor/*
+
+    # Cache directory (safe for CI/CD) 
+    tmpDir: build/phpstan-cache 
+
+    parallel: 
+        maximumNumberOfProcesses: 1 
+        processTimeout: 3600.0 
+
+
+    # Report unmatched ignored errors (helps keep ignore list clean) 
+    reportUnmatchedIgnoredErrors: true 
+
+    # Treat PHPDoc @var/@param types as real types 
+    treatPhpDocTypesAsCertain: true

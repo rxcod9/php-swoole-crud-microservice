@@ -3,6 +3,7 @@
 namespace App\Core\Events;
 
 use App\Core\Contexts\AppContext;
+use RuntimeException;
 
 final class WorkerReadyChecker
 {
@@ -16,7 +17,7 @@ final class WorkerReadyChecker
         }
 
         if ($waited >= $timeoutMs) {
-            throw new \RuntimeException("Worker not ready");
+            throw new RuntimeException("Worker not ready");
         }
     }
 }

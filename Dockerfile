@@ -1,6 +1,6 @@
 # Dockerfile for PHP Swoole CRUD Microservice
 #
-# This Dockerfile builds a PHP 8.2 CLI image with Swoole, Redis, Xdebug, and other required extensions.
+# This Dockerfile builds a PHP 8.4 CLI image with Swoole, Redis, Xdebug, Opcache, and other required extensions.
 # It uses a multi-stage build to compile Swoole and extensions, then creates a lightweight runtime image.
 #
 # Stages:
@@ -14,40 +14,47 @@
 #   docker run -p 9501:9501 php-swoole-crud-microservice
 
 # ================= Build Stage =================
-FROM php:8.2-cli AS build
+FROM php:8.4-cli AS build
 
 # --- System dependencies ---
 # Installs build tools and libraries required for compiling Swoole and PHP extensions.
+# Includes nghttp2 and zlib to ensure HTTP/2 and compression support are built in automatically.
 RUN apt-get update && apt-get install -y \
     git unzip libpq-dev libssl-dev libzip-dev zlib1g-dev \
     libbrotli-dev libsqlite3-dev autoconf build-essential \
     libcurl4-openssl-dev pkg-config libc-ares-dev \
+    libnghttp2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Build Swoole from source with Redis and full features ---
-# Clones Swoole source code and compiles with desired features.
-ENV SWOOLE_VERSION=5.1.3
-RUN docker-php-ext-install sockets
+RUN docker-php-ext-install sockets opcache
+
+# --- Build Swoole from source with required features ---
+# Deprecated options removed; HTTP/2, zlib, mysqlnd auto-enabled if dependencies are present.
+ARG SWOOLE_VERSION=6.0.0
 RUN git clone -b v${SWOOLE_VERSION} https://github.com/swoole/swoole-src.git /usr/src/swoole \
  && cd /usr/src/swoole \
  && phpize \
  && ./configure \
     --enable-openssl \
-    --enable-http2 \
     --enable-sockets \
     --enable-swoole-curl \
     --enable-cares \
-    --enable-redis \
-    --enable-async-redis \
-    --enable-cares \
-    --enable-swoole-mysqlnd \
-    --enable-swoole-zlib \
+    --enable-mysqlnd \
  && make -j$(nproc) && make install \
- && docker-php-ext-enable swoole
+ && docker-php-ext-enable swoole opcache
 
 # --- PHP extensions ---
 # Installs PDO extensions for MySQL and SQLite.
 RUN docker-php-ext-install pdo pdo_mysql pdo_sqlite
+
+# In build stage
+# RUN git clone https://github.com/OpenSwoole/mysql.git /usr/src/openswoole-mysql \
+#     && cd /usr/src/openswoole-mysql \
+#     && phpize \
+#     && ./configure \
+#     && make -j$(nproc) \
+#     && make install \
+#     && docker-php-ext-enable openswoole_mysql
 
 # --- phpredis extension ---
 # Installs and enables phpredis via PECL.
@@ -64,13 +71,13 @@ RUN pecl install xdebug \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # ================= Runtime Stage =================
-FROM php:8.2-cli
+FROM php:8.4-cli
 
 # --- Runtime system dependencies ---
 # Installs only the libraries required at runtime.
 RUN apt-get update && apt-get install -y \
     unzip git libbrotli-dev libpq-dev libssl-dev libzip-dev zlib1g-dev \
-    libsqlite3-dev libcurl4-openssl-dev pkg-config libc-ares-dev \
+    libsqlite3-dev libcurl4-openssl-dev pkg-config libc-ares-dev libnghttp2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Copy compiled PHP extensions and Composer ---
@@ -88,8 +95,9 @@ RUN if [ -f composer.lock ]; then cp composer.lock composer.lock; fi
 RUN composer install --no-dev --optimize-autoloader || true
 
 # --- PHP configuration ---
-# Copies custom PHP configuration.
+# Copies custom PHP configuration including opcache tuning.
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-preload.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # --- Copy application source code ---
 COPY . .

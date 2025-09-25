@@ -2,6 +2,8 @@
 
 namespace App\Core;
 
+use RuntimeException;
+
 /**
  * Class Container
  *
@@ -90,7 +92,7 @@ final class Container
     {
         $ref = new \ReflectionClass($class);
         if (!$ref->isInstantiable()) {
-            throw new \RuntimeException("Cannot instantiate $class");
+            throw new RuntimeException("Cannot instantiate $class");
         }
         $ctor = $ref->getConstructor();
         if (!$ctor) {

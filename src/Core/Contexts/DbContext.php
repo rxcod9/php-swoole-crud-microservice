@@ -2,7 +2,9 @@
 
 namespace App\Core\Contexts;
 
-use Swoole\Coroutine\Mysql;
+use PDO;
+use PDOException;
+use RuntimeException;
 
 /**
  * Class DbContext
@@ -17,16 +19,16 @@ final class DbContext
     /**
      * MySQL connection instance.
      *
-     * @var Mysql
+     * @var MySQL
      */
-    private Mysql $conn;
+    private MySQL $conn;
 
     /**
      * DbContext constructor.
      *
-     * @param Mysql $conn The Swoole Coroutine MySQL connection.
+     * @param MySQL $conn The Swoole Coroutine MySQL connection.
      */
-    public function __construct(Mysql $conn)
+    public function __construct(MySQL $conn)
     {
         $this->conn = $conn;
     }
@@ -34,9 +36,9 @@ final class DbContext
     /**
      * Get the underlying MySQL connection.
      *
-     * @return Mysql The Swoole Coroutine MySQL connection.
+     * @return MySQL The Swoole Coroutine MySQL connection.
      */
-    public function conn(): Mysql
+    public function conn(): MySQL
     {
         return $this->conn;
     }
@@ -88,7 +90,7 @@ final class DbContext
         if (!empty($params)) {
             $stmt = $this->conn->prepare($sql);
             if ($stmt === false) {
-                throw new \RuntimeException('Prepare failed: ' . $this->conn->error);
+                throw new RuntimeException('Prepare failed: ' . $this->conn->error);
             }
             $result = $stmt->execute($params);
         } else {

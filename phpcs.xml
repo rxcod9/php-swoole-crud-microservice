@@ -1,6 +1,108 @@
 <?xml version="1.0"?>
-<ruleset name="php-swoole-crud-microservice">
-  <file>src</file>
-  <!-- <file>app</file> -->
-  <rule ref="PSR12"/>
+<ruleset name="ProductionStrictStandard">
+    <description>
+        Strict production-ready PHP_CodeSniffer ruleset for PHP 8.4
+        - PSR-12 style baseline
+        - PHPCompatibility (8.4) 
+        - Slevomat strict rules (types, modern PHP, imports) 
+        - Enforces documentation comments 
+        - Optional Security sniffs (if package installed) 
+        - Skips vendor,
+        node_modules, build artifacts </description>
+    <!-- Target project root -->
+    <file>./src</file>
+
+    <!-- ========================================= -->
+    <!-- Base standard -->
+    <!-- ========================================= -->
+    <rule ref="PSR12" />
+
+    <!-- ========================================= -->
+    <!-- PHP Compatibility -->
+    <!-- ========================================= -->
+    <config name="testVersion" value="8.4" />
+    <!-- <rule ref="PHPCompatibility"/>-->
+    <rule ref="PHPCompatibility">
+        <exclude name="PHPCompatibility.Extensions.RemovedExtensions.mysql_DeprecatedRemoved" />
+        <exclude name="PHPCompatibility.FunctionUse.RemovedFunctions.eregDeprecatedRemoved" />
+    </rule>
+
+    <!--  ========================================= -->
+    <!--  Optional: Security checks (requires installed ruleset) -->
+    <!--  Uncomment if available -->
+    <rule ref="Security" />
+
+    <!-- ========================================= -->
+    <!-- Slevomat: Strict typing & modern PHP -->
+    <!-- ========================================= -->
+    <!-- Strict types required -->
+    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes" />
+    <!-- Require type hints  everywhere -->
+    <rule ref="SlevomatCodingStandard.TypeHints.ParameterTypeHint" />
+    <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint" />
+    <rule ref="SlevomatCodingStandard.TypeHints.PropertyTypeHint" />
+    <!-- Disallow weak typing -->
+    <rule ref="SlevomatCodingStandard.TypeHints.NullableTypeForNullDefaultValue" />
+    <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat" />
+    <!-- Enforce modern PHP    features -->
+    <rule ref="SlevomatCodingStandard.Classes.ModernClassNameReference" />
+    <rule ref="SlevomatCodingStandard.ControlStructures.NewWithParentheses" />
+    <rule ref="SlevomatCodingStandard.ControlStructures.RequireNullCoalesceEqualOperator" />
+    <rule ref="SlevomatCodingStandard.ControlStructures.RequireNullSafeObjectOperator" />
+    <rule ref="SlevomatCodingStandard.Functions.RequireArrowFunction" />
+    <!-- Namespaces & imports -->
+    <rule ref="SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses" />
+    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses" />
+    <rule ref="SlevomatCodingStandard.Namespaces.FullyQualifiedClassNameInAnnotation" />
+    <!--  Visibility & constants -->
+    <rule ref="SlevomatCodingStandard.Classes.RequireSelfReference" />
+    <rule ref="SlevomatCodingStandard.Classes.TraitUseDeclaration" />
+
+    <!--  ========================================= -->
+    <!-- Comments & Documentation -->
+
+    <!--  ========================================= -->
+    <!-- Require function/class  docblocks -->
+    <rule ref="Squiz.Commenting.FunctionComment" />
+    <rule ref="Squiz.Commenting.ClassComment" />
+    <rule ref="Squiz.Commenting.FileComment" />
+    <!-- Slevomat: enforce docblock accuracy -->
+    <rule ref="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment" />
+    <rule ref="SlevomatCodingStandard.Commenting.DocCommentSpacing" />
+    <rule ref="SlevomatCodingStandard.Commenting.EmptyComment" />
+
+    <!--  ========================================= -->
+    <!-- Security (optional, if  installed) -->
+
+    <!--  ========================================= -->
+    <!-- Uncomment if package  phpcs-security-audit is installed -->
+    <!-- <rule ref="Security"/>-->
+
+    <!--  ========================================= -->
+    <!-- Exclusions -->
+    <exclude-pattern>.git/*</exclude-pattern>
+    <exclude-pattern>.github/*</exclude-pattern>
+    <exclude-pattern>.idea/*</exclude-pattern>
+    <exclude-pattern>.vscode/*</exclude-pattern>
+    <exclude-pattern>build/*</exclude-pattern>
+    <exclude-pattern>tests/*</exclude-pattern>
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <!--  ========================================= -->
+
+    <!--  ========================================= -->
+    <!-- File types -->
+
+    <!--  ========================================= -->
+    <arg name="report" value="full"/>
+    <!-- <arg name="extensions" value="php,phtml,phpt,inc"/>-->
+    <arg name="extensions" value="php" />
+
+    <!-- ========================================= -->
+    <!-- CI-friendly output -->
+    <!-- ========================================= -->
+    <arg name="error-severity" value="1" />
+    <arg name="warning-severity" value="0" />
+    <arg name="parallel" value="4" />
+    <arg name="encoding" value="utf-8" />
+    <arg name="tab-width" value="4" />
 </ruleset>

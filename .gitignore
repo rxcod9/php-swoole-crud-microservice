@@ -1,6 +1,7 @@
 /vendor/
 /.php-cs-fixer.cache
 /.phpunit.result.cache
+/.phpmd.result-cache.php
 /.idea/
 /build/
 ab*.log

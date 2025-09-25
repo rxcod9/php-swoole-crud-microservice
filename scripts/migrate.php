@@ -1,75 +1,84 @@
 <?php
 
-use Swoole\Coroutine\MySQL;
-
 /**
  * Logs a message with a timestamp.
  *
  * @param string $msg The message to log.
  * @return void
  */
-function logMsg($msg) {
+function logMsg(string $msg): void
+{
     echo "[" . date('Y-m-d H:i:s') . "] $msg\n";
 }
 
-// Enable Swoole coroutine runtime for asynchronous operations.
-Swoole\Runtime::enableCoroutine();
-
 /**
- * Main coroutine for running database migrations.
+ * Main function for running database migrations.
  *
- * Loads configuration, connects to MySQL, and executes migration SQL files.
+ * Loads configuration, connects to MySQL using PDO, and executes migration SQL files.
  *
  * @return void
  */
-go(function () {
+function runMigrations(): void
+{
     logMsg("Starting migration...");
 
-    // Load application configuration.
+    // Load application configuration
     $cfg = require __DIR__ . "/../config/config.php";
     logMsg("Loaded config.");
 
-    // Extract MySQL database configuration.
-    $db  = $cfg["db"]["mysql"];
+    // Extract MySQL database configuration
+    $db = $cfg["db"][$cfg["db"]["driver"]];
     logMsg("Database config: host={$db['host']}, user={$db['user']}, db={$db['db']}, port={$db['port']}");
 
-    // Create a new Swoole Coroutine MySQL client and connect.
-    $mysql = new MySQL();
-    $res = $mysql->connect([
-        'host'     => $db['host'],
-        'user'     => $db['user'],
-        'password' => $db['pass'],
-        'database' => $db['db'],
-        'port'     => $db['port'],
-    ]);
-    if ($res === false) {
-        logMsg("MySQL connect error: " . $mysql->connect_error);
+    // Create a PDO connection
+    try {
+        $dsn = sprintf(
+            $db['dsn'] ?? "mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4",
+            $db['host'] ?? '127.0.0.1',
+            $db['port'] ?? 3306,
+            $db['db'] ?? 'app'
+        );
+        $pdo = new PDO($dsn, $db['user'], $db['pass'], [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
+    } catch (PDOException $e) {
+        logMsg("PDO connection error: " . $e->getMessage());
         exit(1);
     }
-    logMsg("Connected to MySQL.");
+    logMsg("Connected to MySQL via PDO.");
 
-    // Load migration file paths from configuration.
+    // Load migration files configuration
     $migrations = require __DIR__ . "/../config/database.php";
     logMsg("Loaded migrations config.");
 
-    // Iterate over migration groups and run each migration SQL file.
-    foreach ($migrations as $k => $migs) {
-        logMsg("Processing migration group: $k");
-        foreach ($migs as $m) {
-            logMsg("Running migration: $m");
-            $sql = file_get_contents($m);
+    // Execute each migration
+    foreach ($migrations as $group => $files) {
+        logMsg("Processing migration group: $group");
+
+        foreach ($files as $file) {
+            logMsg("Running migration: $file");
+
+            $sql = file_get_contents($file);
             if ($sql === false) {
-                logMsg("Error reading migration file: $m");
+                logMsg("Error reading migration file: $file");
                 exit(1);
             }
-            $result = $mysql->query($sql);
-            if ($result === false) {
-                logMsg("Error running $m: " . $mysql->error);
+
+            try {
+                $pdo->exec($sql);
+            } catch (PDOException $e) {
+                logMsg("Error running $file: " . $e->getMessage());
                 exit(1);
             }
-            logMsg("Migration succeeded: $m");
+
+            logMsg("Migration succeeded: $file");
         }
     }
 
     logMsg("All migrations completed.");
-});
+}
+
+// Run migrations
+runMigrations();

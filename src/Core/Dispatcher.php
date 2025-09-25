@@ -2,6 +2,9 @@
 
 namespace App\Core;
 
+use InvalidArgumentException;
+use RuntimeException;
+
 /**
  * Class Dispatcher
  *
@@ -39,26 +42,26 @@ final class Dispatcher
     public function dispatch(string $action, array $params, $req = null): array
     {
         if (strpos($action, '@') === false) {
-            throw new \InvalidArgumentException("Action must be in 'Controller@method' format.");
+            throw new InvalidArgumentException("Action must be in 'Controller@method' format.");
         }
 
         [$ctrl, $method] = explode('@', $action, 2);
         $fqcn = "\\App\\Controllers\\$ctrl";
 
         if (!class_exists($fqcn)) {
-            throw new \RuntimeException("Controller class $fqcn does not exist.");
+            throw new RuntimeException("Controller class $fqcn does not exist.");
         }
 
         $controller = $this->c->get($fqcn);
 
         if (!method_exists($controller, $method)) {
-            throw new \RuntimeException("Method $method does not exist in controller $fqcn.");
+            throw new RuntimeException("Method $method does not exist in controller $fqcn.");
         }
 
         if (method_exists($controller, 'setRequest')) {
             $controller->setRequest($req);
         }
 
-        return $controller->$method($params);
+        return $controller->{$method}($params);
     }
 }

@@ -3,19 +3,13 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
+use BadMethodCallException;
 
 /**
  * Class UserService
  *
  * Service layer for User entity.
  * Encapsulates business logic and interacts with UserRepository.
- *
- * @method int      count()
- * @method array    delete(int $id)
- * @method int      filteredCount(array $filters = [])
- * @method array    find(int $id)
- * @method array    findByEmail(string $email)
- * @method array    list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  *
  * @package App\Services
  */
@@ -66,13 +60,19 @@ final class UserService
 
     /**
      * Magic method to forward calls to the repository.
+     *
+     * @param string $name Name of the method being called.
+     * @param array<mixed> $arguments Arguments passed to the method.
+     *
+     * @return mixed Result of the repository method call.
+     * @throws BadMethodCallException If the method does not exist in the repository.
      */
-    public function __call($name, $arguments)
+    public function __call(string $name, array $arguments): mixed
     {
         if (!method_exists($this->repo, $name)) {
-            throw new \BadMethodCallException("Method {$name} does not exist in UserRepository");
+            throw new BadMethodCallException("Method {$name} does not exist in UserRepository");
         }
 
-        return $this->repo->$name(...$arguments);
+        return $this->repo->{$name}(...$arguments);
     }
 }

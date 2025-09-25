@@ -4,6 +4,7 @@ namespace App\Core;
 
 use App\Core\Container;
 use App\Tasks\TaskInterface;
+use RuntimeException;
 use Swoole\Server\Task;
 
 /**
@@ -43,7 +44,7 @@ final class TaskDispatcher
     public function dispatch(string $class, array $arguments, Task $task): bool
     {
         if (!class_exists($class)) {
-            throw new \RuntimeException("Task class $class does not exist.");
+            throw new RuntimeException("Task class $class does not exist.");
         }
 
         // check interface
@@ -51,7 +52,7 @@ final class TaskDispatcher
             // var_export($class instanceof TaskInterface);
             // var_export(class_implements($class));
             // var_export((new \ReflectionClass($class))->implementsInterface(TaskInterface::class));
-            throw new \RuntimeException("Implement TaskInterface in your Task class $class.");
+            throw new RuntimeException("Implement TaskInterface in your Task class $class.");
         }
 
         $instance = $this->c->get($class);
@@ -102,6 +103,6 @@ final class TaskDispatcher
             return $instance(...$arguments);
         }
 
-        throw new \RuntimeException("Task " . get_class($instance) .  " must have a handle() method or be invokable (__invoke)");
+        throw new RuntimeException("Task " . get_class($instance) .  " must have a handle() method or be invokable (__invoke)");
     }
 }

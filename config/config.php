@@ -247,6 +247,9 @@ return [
       'dsn'  => getenv('DB_DSN') ?: 'mysql:host=mysql;dbname=app;charset=utf8mb4',
       'user' => getenv('DB_USER') ?: 'app',
       'pass' => getenv('DB_PASS') ?: 'app',
+      'db'   => getenv('DB_DATABASE') ?: 'app',
+      'charset'   => getenv('DB_CHARSET') ?: 'utf8mb4',
+      'timeout'   => (int)(getenv('DB_TIMEOUT') ?: 2),
       'options' => [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
       'pool' => [
         'min' => (int)(getenv('DB_POOL_MIN') ?: 5),

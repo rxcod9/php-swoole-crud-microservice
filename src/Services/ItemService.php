@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\ItemRepository;
+use BadMethodCallException;
 
 /**
  * Class ItemService
@@ -69,7 +70,7 @@ final class ItemService
     public function __call($name, $arguments)
     {
         if (!method_exists($this->repo, $name)) {
-            throw new \BadMethodCallException("Method {$name} does not exist in ItemRepository");
+            throw new BadMethodCallException("Method {$name} does not exist in ItemRepository");
         }
 
         return $this->repo->$name(...$arguments);

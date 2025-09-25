@@ -2,9 +2,8 @@
 
 namespace App\Core\Pools;
 
-use Swoole\Coroutine;
+use RuntimeException;
 use Swoole\Coroutine\Channel;
-use Swoole\Coroutine\Mysql;
 
 /**
  * Class MySQLPool
@@ -60,11 +59,16 @@ final class MySQLPool
      * MySQLPool constructor.
      *
      * @param array $conf MySQL connection config (host, port, user, pass, db, charset, timeout)
-     * @param int $min Minimum connections to pre-create
-     * @param int $max Maximum connections allowed
+     * @param int   $min Minimum connections to pre-create
+     * @param int   $max Maximum connections allowed
      */
-    public function __construct(array $conf, int $min = 5, int $max = 200, float $idleBuffer = 0.05, float $margin = 0.05)
-    {
+    public function __construct(
+        array $conf,
+        int $min = 5,
+        int $max = 200,
+        float $idleBuffer = 0.05,
+        float $margin = 0.05
+    ) {
         $this->conf = $conf;
         $this->min = $min;
         $this->max = $max;
@@ -89,13 +93,13 @@ final class MySQLPool
      *
      * @param int $retry Current retry attempt count.
      *
-     * @return Mysql
+     * @return MySQL
      * @throws \RuntimeException If connection fails.
      */
-    private function make(int $retry = 0): Mysql
+    private function make(int $retry = 0): MySQL
     {
         try {
-            $mysql = new Mysql();
+            $mysql = new MySQL();
             $ok = $mysql->connect([
                 'host' => $this->conf['host'] ?? '127.0.0.1',
                 'port' => $this->conf['port'] ?? 3306,
@@ -108,7 +112,7 @@ final class MySQLPool
 
             if ($ok === false) {
                 error_log(sprintf('[%s] [ERROR] MySQL connection failed: %s | MySQL Pool created: %d', date('Y-m-d H:i:s'), $mysql->connect_error, $this->created));
-                throw new \RuntimeException("MySQL connection failed: {$mysql->connect_error} | MySQL Pool created: {$this->created}");
+                throw new RuntimeException("MySQL connection failed: {$mysql->connect_error} | MySQL Pool created: {$this->created}");
             }
 
             $this->created++;
@@ -120,13 +124,13 @@ final class MySQLPool
             return $mysql;
         } catch (\Throwable $e) {
             // retry with exponential backoff
-            if ($retry <= 10) {
-                $backoff = (1 << $retry) * 100000; // exponential backoff in microseconds
-                error_log(sprintf('[%s] [RETRY] Retrying MySQL connection in %.2f seconds...', date('Y-m-d H:i:s'), $backoff / 1000000));
-                Coroutine::sleep($backoff / 1000000);
-                $retry++;
-                return $this->make($retry);
-            }
+            // if ($retry <= 10) {
+            //     $backoff = (1 << $retry) * 100000; // exponential backoff in microseconds
+            //     error_log(sprintf('[%s] [RETRY] Retrying MySQL connection in %.2f seconds...', date('Y-m-d H:i:s'), $backoff / 1000000));
+            //     Coroutine::sleep($backoff / 1000000);
+            //     $retry++;
+            //     return $this->make($retry);
+            // }
             // after retries, throw exception
             // give up and let the caller handle it
 
@@ -136,7 +140,7 @@ final class MySQLPool
                 $e->getMessage(),
                 $this->created
             ));
-            throw new \RuntimeException("MySQL connection error: {$e->getMessage()} | MySQL Pool created: {$this->created}");
+            throw new RuntimeException("MySQL connection error: {$e->getMessage()} | MySQL Pool created: {$this->created}");
         }
     }
 
@@ -145,13 +149,13 @@ final class MySQLPool
      * Auto-scales pool size based on usage patterns.
      *
      * @param float $timeout Timeout in seconds to wait for a connection.
-     * @return Mysql
+     * @return MySQL
      * @throws \RuntimeException If pool is exhausted or not initialized.
      */
-    public function get(float $timeout = 1.0): Mysql
+    public function get(float $timeout = 1.0): MySQL
     {
         if (!$this->initialized) {
-            throw new \RuntimeException('MySQL pool not initialized yet');
+            throw new RuntimeException('MySQL pool not initialized yet');
         }
 
         $available = $this->channel->length();
@@ -160,7 +164,7 @@ final class MySQLPool
         // Auto-scale up
         if (($available <= 1) && $this->created < $this->max) {
             $toCreate = 1; //min($this->max - $this->created, max(1, (int)($this->max * 0.05)));
-            error_log(sprintf('[%s] [SCALE-UP Mysql] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
+            error_log(sprintf('[%s] [SCALE-UP MySQL] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
             for ($i = 0; $i < $toCreate; $i++) {
                 $this->channel->push($this->make());
             }
@@ -169,7 +173,7 @@ final class MySQLPool
         $conn = $this->channel->pop($timeout);
         if (!$conn) {
             error_log(sprintf('[%s] [ERROR] DB pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', date('Y-m-d H:i:s'), $timeout, $available, $used, $this->created));
-            throw new \RuntimeException('DB pool exhausted', 503);
+            throw new RuntimeException('DB pool exhausted', 503);
         }
 
         // // Ping to check health
@@ -184,52 +188,12 @@ final class MySQLPool
     }
 
     /**
-     * Manually trigger auto-scaling logic.
-     * Can be called periodically to adjust pool size.
-     *
-     * @return void
-     * @throws \RuntimeException If pool is exhausted or not initialized.
-     */
-    public function autoScale(): void
-    {
-        $available = $this->channel->length();
-        $used = max(0, $this->created - $available);
-        $idleBufferCount = (int)($this->max * $this->idleBuffer);
-        $upperThreshold = (int)($idleBufferCount * (1 + $this->margin)); // scale down threshold
-        $lowerThreshold = min($this->min, (int)($idleBufferCount * (1 - $this->margin))); // scale up threshold
-
-        // ----------- Scale UP if idle connections are below lowerThreshold -----------
-        if ($available < $lowerThreshold && $this->created < $this->max) {
-            $toCreate = min($this->max - $this->created, $lowerThreshold - $available);
-            error_log(sprintf('[%s] [SCALE-UP Mysql] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
-            for ($i = 0; $i < $toCreate; $i++) {
-                $this->channel->push($this->make());
-            }
-        }
-
-        // ----------- Scale DOWN if idle connections exceed upperThreshold -----------
-        if ($available > $upperThreshold && $this->created > $this->min) {
-            $excessIdle = $available - $upperThreshold;
-            $toClose = min($this->created - $this->min, $excessIdle);
-            error_log(sprintf('[%s] [SCALE-DOWN Mysql] Auto-scaling DOWN: Closing %d idle Redis connections', date('Y-m-d H:i:s'), $toClose));
-            for ($i = 0; $i < $toClose; $i++) {
-                $conn = $this->channel->pop(0.01); // non-blocking pop
-                if ($conn) {
-                    $conn->close();
-                    $this->created--;
-                    error_log(sprintf('[%s] [CLOSE] MySQL Connection closed. Total connections: %d', date('Y-m-d H:i:s'), $this->created));
-                }
-            }
-        }
-    }
-
-    /**
      * Return a MySQL connection back to the pool.
      *
-     * @param Mysql $conn The MySQL connection to return.
+     * @param MySQL $conn The MySQL connection to return.
      * @return void
      */
-    public function put(Mysql $conn): void
+    public function put(MySQL $conn): void
     {
         if (!$this->channel->isFull()) {
             $this->channel->push($conn);
@@ -259,7 +223,7 @@ final class MySQLPool
             $stmt = $conn->prepare($sql);
             if ($stmt === false) {
                 error_log(sprintf('[%s] [ERROR] Prepare failed: %s', date('Y-m-d H:i:s'), $conn->error));
-                throw new \RuntimeException('Prepare failed: ' . $conn->error);
+                throw new RuntimeException('Prepare failed: ' . $conn->error);
             }
             $result = $stmt->execute($params);
             error_log(sprintf('[%s] [QUERY] Executed prepared statement: %s', date('Y-m-d H:i:s'), $sql));
@@ -286,5 +250,45 @@ final class MySQLPool
         ];
         // error_log(sprintf('[%s] [STATS] MySQL Pool stats: %s', date('Y-m-d H:i:s'), json_encode($stats)));
         return $stats;
+    }
+
+    /**
+     * Manually trigger auto-scaling logic.
+     * Can be called periodically to adjust pool size.
+     *
+     * @return void
+     * @throws \RuntimeException If pool is exhausted or not initialized.
+     */
+    public function autoScale(): void
+    {
+        $available = $this->channel->length();
+        $used = max(0, $this->created - $available);
+        $idleBufferCount = (int)($this->max * $this->idleBuffer);
+        $upperThreshold = (int)($idleBufferCount * (1 + $this->margin)); // scale down threshold
+        $lowerThreshold = min($this->min, (int)($idleBufferCount * (1 - $this->margin))); // scale up threshold
+
+        // ----------- Scale UP if idle connections are below lowerThreshold -----------
+        if ($available < $lowerThreshold && $this->created < $this->max) {
+            $toCreate = min($this->max - $this->created, $lowerThreshold - $available);
+            error_log(sprintf('[%s] [SCALE-UP MySQL] Creating %d new connections (used: %d, available: %d)', date('Y-m-d H:i:s'), $toCreate, $used, $available));
+            for ($i = 0; $i < $toCreate; $i++) {
+                $this->channel->push($this->make());
+            }
+        }
+
+        // ----------- Scale DOWN if idle connections exceed upperThreshold -----------
+        if ($available > $upperThreshold && $this->created > $this->min) {
+            $excessIdle = $available - $upperThreshold;
+            $toClose = min($this->created - $this->min, $excessIdle);
+            error_log(sprintf('[%s] [SCALE-DOWN MySQL] Auto-scaling DOWN: Closing %d idle Redis connections', date('Y-m-d H:i:s'), $toClose));
+            for ($i = 0; $i < $toClose; $i++) {
+                $conn = $this->channel->pop(0.01); // non-blocking pop
+                if ($conn) {
+                    $conn->close();
+                    $this->created--;
+                    error_log(sprintf('[%s] [CLOSE] MySQL Connection closed. Total connections: %d', date('Y-m-d H:i:s'), $this->created));
+                }
+            }
+        }
     }
 }

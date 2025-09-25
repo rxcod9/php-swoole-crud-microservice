@@ -3,7 +3,7 @@
 namespace App\Services\Cache;
 
 use App\Core\Pools\RedisPool;
-use Swoole\Coroutine\Redis;
+use Redis;
 
 /**
  * RedisCacheService
@@ -22,6 +22,11 @@ final class RedisCacheService
         //
     }
 
+    /**
+     * ---------------------------
+     * RECORD CACHE
+     * ---------------------------
+     */
     public function getRecordByColumn(string $entity, string $column, int|string $value): mixed
     {
         $redis = $this->pool->get(); // returns Swoole\Coroutine\Redis

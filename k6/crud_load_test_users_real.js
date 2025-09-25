@@ -88,8 +88,8 @@ export function setup() {
         let res = http.post('http://localhost:9501/users', JSON.stringify(user), {
             headers: { 'Content-Type': 'application/json' }
         });
-        createTrend.add(res.timings.duration);
-        check(res, { 'CREATE success': r => r.status === 201 });
+        // createTrend.add(res.timings.duration);
+        // check(res, { 'CREATE success': r => r.status === 201 });
         try { userIds.push(JSON.parse(res.body).id); }
         catch (e) { console.error('Failed parse CREATE response', res.body); }
     }

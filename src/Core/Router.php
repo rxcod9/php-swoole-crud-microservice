@@ -2,6 +2,8 @@
 
 namespace App\Core;
 
+use RuntimeException;
+
 /**
  * Class Router
  *
@@ -103,7 +105,7 @@ final class Router
                 return [$action, $params, $middlewares];
             }
         }
-        throw new \RuntimeException('Not Found', 404);
+        throw new RuntimeException('Not Found', 404);
     }
 
     /**
