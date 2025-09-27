@@ -24,6 +24,9 @@ A high-performance CRUD microservice built with PHP and Swoole, featuring MySQL,
 ### Quick Start
 
 ```bash
+# Copy .env
+cp .env.example .env
+
 # Install composer
 composer install
 

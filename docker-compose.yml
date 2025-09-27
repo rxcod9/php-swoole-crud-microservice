@@ -1,6 +1,7 @@
 # docker-compose.yml
 # Docker Compose configuration for PHP Swoole CRUD Microservice stack
 # Includes: app, metrics, MySQL, Prometheus, Grafana, Redis, Caddy, Swagger UI
+# version: "3.9"
 
 services:
   # Main PHP Swoole application service
@@ -15,23 +16,8 @@ services:
       - ./docker/certs/server.crt:/etc/ssl/certs/server.crt:ro
       - ./docker/certs/server.key:/etc/ssl/private/server.key:ro
     environment:
-      APP_ENV: prod                       # Application environment
-      DB_DRIVER: pdo                    # Database driver
-      DB_DSN: mysql:host=mysql;dbname=app;charset=utf8mb4  # DSN for MySQL
-      DB_USER: app                        # Database user
-      DB_PASS: app                        # Database password
-      DB_POOL_MIN: 5                      # Min DB pool size
-      DB_POOL_MAX: 200                    # Max DB pool size
-      REDIS_HOST: redis                   # Redis host
-      REDIS_PORT: 6379                    # Redis port
-      REDIS_POOL_MIN: 5                   # Min Redis pool size
-      REDIS_POOL_MAX: 200                 # Max Redis pool size
-      SWOOLE_WORKER_NUM: 4                # Swoole worker processes
-      SWOOLE_TASK_WORKER_NUM: 4           # Swoole task worker processes
-      SWOOLE_MAX_REQUEST: 10000           # Max requests per worker
-      SSL_ENABLE: false
-      XDEBUG_MODE: debug                  # Xdebug mode
-      XDEBUG_CONFIG: client_host=host.docker.internal client_port=9003 # Xdebug config
+      XDEBUG_MODE: ${XDEBUG_MODE:-debug}             # Xdebug mode
+      XDEBUG_CONFIG: ${XDEBUG_CONFIG:-client_host=host.docker.internal client_port=9003} # Xdebug config
     ports:
       - "9501:9501"                       # Expose Swoole HTTP port
     depends_on: [mysql, redis]            # Wait for MySQL and Redis
@@ -46,9 +32,9 @@ services:
     build: .
     command: php public/metrics-server.php
     ports:
-      - "9310:9310"
+      - "${METRICS_PORT:-9310}:${METRICS_PORT:-9310}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9310"]
+      test: ["CMD", "curl", "-f", "http://localhost:${METRICS_PORT:-9310}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -58,15 +44,15 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: app
-      MYSQL_USER: app
-      MYSQL_PASSWORD: app
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-app}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     ports: ["3306:3306"]
     volumes:
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
     healthcheck:
-      test: ["CMD","mysqladmin","ping","-h","localhost","-uapp","-papp"]
+      test: ["CMD","mysqladmin","ping","-h","localhost","-u${MYSQL_USER:-app}","-p${MYSQL_PASSWORD:-app}"]
       interval: 5s
       timeout: 2s
       retries: 20
@@ -76,7 +62,7 @@ services:
     image: prom/mysqld-exporter:latest
     container_name: mysqld_exporter
     environment:
-      DATA_SOURCE_NAME: "root:root@(mysql:3306)/"
+      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD:-root}@(mysql:3306)/"
     volumes:
       - ./docker/mysql/.my.cnf:/etc/mysql/.my.cnf:ro
     command:
@@ -111,9 +97,9 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=secret
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-secret}
+      - GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP:-false}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       # - grafana-data:/var/lib/grafana   # persist dashboards, users, settings
@@ -145,8 +131,8 @@ services:
       - "443:443/udp"   # <- needed for QUIC / HTTP3
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
-      # - caddy_data:/data
-      # - caddy_config:/config
+      # - caddy_data:
+      # - caddy_config:
     depends_on: [app]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "https://localhost/health"]
@@ -159,7 +145,7 @@ services:
     image: swaggerapi/swagger-ui:latest
     container_name: swagger_ui
     environment:
-      SWAGGER_JSON: /app/swagger.json
+      SWAGGER_JSON: ${SWAGGER_JSON_PATH:-/app/swagger.json}
     volumes:
       - ./public/swagger.json:/app/swagger.json:ro
     ports:

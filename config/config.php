@@ -21,12 +21,20 @@ return [
    * @var array
    */
   'app' => [
+
+    /**
+     * Application name.
+     *
+     * @var string
+     */
+    'name' => getenv('APP_NAME') ?: 'php-swoole-crud-microservice',
+
     /**
      * Application environment (e.g., local, production).
      *
      * @var string
      */
-    'env' => getenv('APP_ENV') ?: 'local',
+    'env' => getenv('APP_ENV') ?: 'production',
 
     /**
      * Enable debug mode.
@@ -36,18 +44,11 @@ return [
     'debug' => (bool)(getenv('APP_DEBUG') ?: false),
 
     /**
-     * Application name.
-     *
-     * @var string
-     */
-    'name' => 'php-swoole-crud-microservice',
-
-    /**
      * Default timezone.
      *
      * @var string
      */
-    'timezone' => 'Asia/Kolkata',
+    'timezone' => getenv('APP_TIMEZONE') ?: 'Asia/Kolkata',
   ],
 
   /**
@@ -263,10 +264,15 @@ return [
      * @var array
      */
     'sqlite' => [
-      'dsn' => 'sqlite::memory:',
+      'dsn' => 'sqlite:database.sqlite',
       'user' => null,
       'pass' => null,
-      'options' => [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+      'charset'   => getenv('DB_CHARSET') ?: 'utf8mb4',
+      'options' => [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+      'pool' => [
+        'min' => (int)(getenv('DB_POOL_MIN') ?: 5),
+        'max' => (int)(getenv('DB_POOL_MAX') ?: 200),
+      ],
     ]
   ],
 
@@ -278,6 +284,8 @@ return [
   'redis' => [
     'host' => getenv('REDIS_HOST') ?: 'redis',
     'port' => (int)(getenv('REDIS_PORT') ?: 6379),
+    'password' => getenv('REDIS_PASSWORD') ?: null,
+    'database' => getenv('REDIS_DATABASE') ?: null,
     'pool' => [
       'min' => (int)(getenv('REDIS_POOL_MIN') ?: 5),
       'max' => (int)(getenv('REDIS_POOL_MAX') ?: 200),

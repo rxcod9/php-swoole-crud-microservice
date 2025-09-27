@@ -15,16 +15,26 @@
  * @license    MIT
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Servers\MetricsServer;
+use Dotenv\Dotenv;
+
+// Load .env file from project root
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+
+// Optional: validate required env variables
+$dotenv->required([
+    'METRICS_PORT'
+])->notEmpty();
 
 /**
  * Load application configuration.
  *
  * @var array $config Application configuration array.
  */
-$config = require __DIR__ . '/../config/config.php';
+$config = require_once __DIR__ . '/../config/config.php';
 
 /**
  * Metrics server port.

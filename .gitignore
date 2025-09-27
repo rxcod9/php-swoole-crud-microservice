@@ -10,3 +10,7 @@ ab*.log
 # vscode
 .vscode/*
 !.vscode/launch.json
+phpmd.csv
+.phpunit.cache
+database.sqlite
+tests/logs/

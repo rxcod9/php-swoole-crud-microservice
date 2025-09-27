@@ -20,10 +20,20 @@ FROM php:8.4-cli AS build
 # Installs build tools and libraries required for compiling Swoole and PHP extensions.
 # Includes nghttp2 and zlib to ensure HTTP/2 and compression support are built in automatically.
 RUN apt-get update && apt-get install -y \
-    git unzip libpq-dev libssl-dev libzip-dev zlib1g-dev \
-    libbrotli-dev libsqlite3-dev autoconf build-essential \
-    libcurl4-openssl-dev pkg-config libc-ares-dev \
+    autoconf \
+    build-essential \
+    git \
+    libbrotli-dev \
+    libc-ares-dev \
+    libcurl4-openssl-dev \
     libnghttp2-dev \
+    libpq-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libzip-dev \
+    pkg-config \
+    unzip \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-install sockets opcache
@@ -76,8 +86,18 @@ FROM php:8.4-cli
 # --- Runtime system dependencies ---
 # Installs only the libraries required at runtime.
 RUN apt-get update && apt-get install -y \
-    unzip git libbrotli-dev libpq-dev libssl-dev libzip-dev zlib1g-dev \
-    libsqlite3-dev libcurl4-openssl-dev pkg-config libc-ares-dev libnghttp2-dev \
+    git \
+    libbrotli-dev \
+    libc-ares-dev \
+    libcurl4-openssl-dev \
+    libnghttp2-dev \
+    libpq-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libzip-dev \
+    pkg-config \
+    unzip \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Copy compiled PHP extensions and Composer ---
@@ -91,8 +111,10 @@ WORKDIR /app
 # --- Composer install ---
 # Copies composer.json and optionally composer.lock, then installs dependencies.
 COPY composer.json ./
-RUN if [ -f composer.lock ]; then cp composer.lock composer.lock; fi
-RUN composer install --no-dev --optimize-autoloader || true
+RUN if [ -f composer.lock ]; then \
+      cp composer.lock composer.lock && \
+      composer install --no-dev --optimize-autoloader || true; \
+    fi
 
 # --- PHP configuration ---
 # Copies custom PHP configuration including opcache tuning.

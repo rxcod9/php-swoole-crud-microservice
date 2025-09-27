@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Core\Pools\PDOPool;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -37,7 +38,9 @@ final class ItemRepository
 
         // Prepare INSERT statement with named parameters
         $stmt = $conn->prepare("INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)");
-        if (!$stmt) throw new RuntimeException("Failed to prepare statement");
+        if (!$stmt) {
+            throw new RuntimeException("Failed to prepare statement");
+        }
 
         // Bind values safely
         $stmt->bindValue(':sku', $d['sku'], \PDO::PARAM_STR);
@@ -64,7 +67,9 @@ final class ItemRepository
         defer(fn() => $conn && $this->pool->put($conn));
 
         $stmt = $conn->prepare("SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1");
-        if (!$stmt) throw new RuntimeException("Failed to prepare statement");
+        if (!$stmt) {
+            throw new RuntimeException("Failed to prepare statement");
+        }
 
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
         $stmt->execute();
@@ -85,7 +90,9 @@ final class ItemRepository
         defer(fn() => $conn && $this->pool->put($conn));
 
         $stmt = $conn->prepare("SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1");
-        if (!$stmt) throw new RuntimeException("Failed to prepare statement");
+        if (!$stmt) {
+            throw new RuntimeException("Failed to prepare statement");
+        }
 
         $stmt->bindValue(':sku', $sku, \PDO::PARAM_STR);
         $stmt->execute();
@@ -141,14 +148,20 @@ final class ItemRepository
                     $where[] = "created_at < :created_before";
                     $params['created_before'] = $value;
                     break;
+                default:
+                    throw new InvalidArgumentException("Invalid filter {$field}");
             }
         }
 
-        if ($where) $sql .= " WHERE " . implode(" AND ", $where);
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
 
         // Sorting
         $allowedSort = ['id', 'sku', 'title', 'price', 'created_at', 'updated_at'];
-        if (!in_array($sortBy, $allowedSort, true)) $sortBy = 'id';
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'id';
+        }
         $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
         $sql .= " ORDER BY $sortBy $sortDir";
 
@@ -156,7 +169,9 @@ final class ItemRepository
         $sql .= " LIMIT :offset, :limit";
 
         $stmt = $conn->prepare($sql);
-        if (!$stmt) throw new RuntimeException("Prepare failed");
+        if (!$stmt) {
+            throw new RuntimeException("Prepare failed");
+        }
 
         // Bind filter parameters
         foreach ($params as $key => $val) {
@@ -205,13 +220,19 @@ final class ItemRepository
                     $where[] = "created_at < :created_before";
                     $params['created_before'] = $value;
                     break;
+                default:
+                    throw new InvalidArgumentException("Invalid filter {$field}");
             }
         }
 
-        if ($where) $sql .= " WHERE " . implode(" AND ", $where);
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
 
         $stmt = $conn->prepare($sql);
-        if (!$stmt) throw new RuntimeException("Prepare failed");
+        if (!$stmt) {
+            throw new RuntimeException("Prepare failed");
+        }
 
         foreach ($params as $key => $val) {
             $type = is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR;
@@ -234,7 +255,9 @@ final class ItemRepository
         defer(fn() => $conn && $this->pool->put($conn));
 
         $stmt = $conn->prepare("SELECT count(*) as total FROM items");
-        if (!$stmt) throw new RuntimeException("Prepare failed");
+        if (!$stmt) {
+            throw new RuntimeException("Prepare failed");
+        }
 
         $stmt->execute();
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -256,7 +279,9 @@ final class ItemRepository
         defer(fn() => $conn && $this->pool->put($conn));
 
         $stmt = $conn->prepare("UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id");
-        if (!$stmt) throw new RuntimeException("Prepare failed");
+        if (!$stmt) {
+            throw new RuntimeException("Prepare failed");
+        }
 
         $stmt->bindValue(':sku', $d['sku'], \PDO::PARAM_STR);
         $stmt->bindValue(':title', $d['title'], \PDO::PARAM_STR);
@@ -280,7 +305,9 @@ final class ItemRepository
         defer(fn() => $conn && $this->pool->put($conn));
 
         $stmt = $conn->prepare("DELETE FROM items WHERE id=:id");
-        if (!$stmt) throw new RuntimeException("Prepare failed");
+        if (!$stmt) {
+            throw new RuntimeException("Prepare failed");
+        }
 
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
         $stmt->execute();

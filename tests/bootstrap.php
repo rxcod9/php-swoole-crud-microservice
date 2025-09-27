@@ -1,13 +1,11 @@
 <?php
-/**
- * Bootstrap file for initializing the test environment.
- *
- * Loads Composer's autoloader and sets the default timezone.
- *
- * @package php-swoole-crud-microservice
- */
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load configuration settings.
+$config = require_once __DIR__ . '/../config/config.php';
 
 // Set the default timezone for all date/time functions.
-date_default_timezone_set('Asia/Kolkata');
+date_default_timezone_set($config['app']['timezone'] ?? 'Asia/Kolkata');
+
+define('TEST_ENV', true);

@@ -5,7 +5,8 @@
     "license": "MIT",
     "require": {
         "monolog/monolog": "^3.6",
-        "promphp/prometheus_client_php": "^2.10"
+        "promphp/prometheus_client_php": "^2.10",
+        "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
@@ -14,7 +15,7 @@
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^10",
+        "phpunit/phpunit": "^10.5",
         "slevomat/coding-standard": "^8.20",
         "squizlabs/php_codesniffer": "^3.13",
         "swoole/ide-helper": "~5.0.0",
@@ -27,16 +28,12 @@
         "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
         "phpcs": "vendor/bin/phpcs -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
         "phpmd": "vendor/bin/phpmd ./src text phpmd.xml --report-file=phpmd.csv",
-        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v",
-        "lint": [
-            "@phpcs",
-            "@phpmd",
-            "@phpstan"
-        ]
+        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v"
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "App\\": "src/",
+            "Tests\\": "tests/"
         }
     },
     "config": {

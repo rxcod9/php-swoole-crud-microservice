@@ -1,8 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="tests/bootstrap.php" colors="true">
-  <testsuites>
-    <testsuite name="unit">
-      <directory>tests</directory>
-    </testsuite>
-  </testsuites>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" bootstrap="tests/bootstrap.php" colors="true" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" cacheDirectory=".phpunit.cache">
+    <!-- Logging configuration -->
+    <logging>
+        <junit outputFile="tests/logs/junit.xml"/>
+        <testdoxText outputFile="tests/logs/testdox.txt"/>
+    </logging>
+    <!-- Environment variables for tests -->
+    <php>
+        <env name="DB_DRIVER" value="sqlite"/>
+        <env name="DB_DSN" value="sqlite:database.sqlite"/>
+        <env name="DB_USER" value=""/>
+        <env name="DB_PASS" value=""/>
+        <env name="DB_HOST" value=""/>
+        <env name="DB_PORT" value=""/>
+        <env name="DB_DB" value=""/>
+        <env name="DB_CHARSET" value=""/>
+        <env name="DB_POOL_MIN" value="1"/>
+        <env name="DB_POOL_MAX" value="1"/>
+    </php>
+    <!-- Testsuites -->
+    <testsuites>
+        <testsuite name="unit">
+            <directory suffix="Test.php">tests</directory>
+        </testsuite>
+    </testsuites>
+    <source/>
 </phpunit>

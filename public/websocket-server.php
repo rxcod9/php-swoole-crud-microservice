@@ -14,16 +14,26 @@
  * @license   MIT
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Servers\WebSocketServer;
+use Dotenv\Dotenv;
+
+// Load .env file from project root
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+
+// Optional: validate required env variables
+$dotenv->required([
+    'WS_PORT'
+])->notEmpty();
 
 /**
  * Load application configuration.
  *
  * @var array $config
  */
-$config = require __DIR__ . '/../config/config.php';
+$config = require_once __DIR__ . '/../config/config.php';
 
 /**
  * Get WebSocket server port from environment or use default.
