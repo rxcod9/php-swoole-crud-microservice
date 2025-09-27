@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b5777c0c86130cec7d2d263949979dec",
+    "content-hash": "8a0d41c096a8769ef08a4fae275e8237",
     "packages": [
         {
             "name": "graham-campbell/result-type",
@@ -4097,16 +4097,16 @@
         },
         {
             "name": "swoole/ide-helper",
-            "version": "5.0.3",
+            "version": "5.1.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/swoole/ide-helper.git",
-                "reference": "4b6e615cb27c251b6248b8bd9501edbd02a45c18"
+                "reference": "2806169ec7385e3b5eb484efef1f4764af46d995"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swoole/ide-helper/zipball/4b6e615cb27c251b6248b8bd9501edbd02a45c18",
-                "reference": "4b6e615cb27c251b6248b8bd9501edbd02a45c18",
+                "url": "https://api.github.com/repos/swoole/ide-helper/zipball/2806169ec7385e3b5eb484efef1f4764af46d995",
+                "reference": "2806169ec7385e3b5eb484efef1f4764af46d995",
                 "shasum": ""
             },
             "type": "library",
@@ -4123,9 +4123,9 @@
             "description": "IDE help files for Swoole.",
             "support": {
                 "issues": "https://github.com/swoole/ide-helper/issues",
-                "source": "https://github.com/swoole/ide-helper/tree/5.0.3"
+                "source": "https://github.com/swoole/ide-helper/tree/5.1.8"
             },
-            "time": "2023-04-28T22:20:18+00:00"
+            "time": "2025-08-04T05:40:28+00:00"
         },
         {
             "name": "symfony/config",
