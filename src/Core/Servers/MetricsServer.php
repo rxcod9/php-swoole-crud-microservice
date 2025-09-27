@@ -1,12 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Servers;
 
 use App\Core\Metrics;
+
+use function define;
+use function defined;
+
 use Prometheus\RenderTextFormat;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
+use Throwable;
 
 /**
  * MetricsServer
@@ -44,7 +51,6 @@ final class MetricsServer
     /**
      * Starts the Swoole HTTP server to serve metrics.
      *
-     * @return void
      */
     public function start(): void
     {
@@ -53,7 +59,7 @@ final class MetricsServer
         /**
          * Handles incoming HTTP requests and serves Prometheus metrics.
          *
-         * @param Request  $_        The incoming HTTP request (unused).
+         * @param Request $_ The incoming HTTP request (unused).
          * @param Response $response The HTTP response object.
          *
          * @return void
@@ -66,7 +72,7 @@ final class MetricsServer
 
                 $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
                 $response->end($metrics);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $response->status(500);
                 $response->end(json_encode(['error' => $e->getMessage()]));
             }

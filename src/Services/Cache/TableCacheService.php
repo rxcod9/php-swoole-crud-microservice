@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Cache;
 
 use App\Tables\TableWithLRUAndGC;
@@ -84,7 +86,7 @@ final class TableCacheService
         $row = $this->table->get($versionKey);
         $version = $row ? (int)$row['value'] : 1;
         $this->table->set($versionKey, [
-            'value' => (string)($version + 1),
+            'value'      => (string)($version + 1),
             'expires_at' => time() + 86400, // keep version for a day
         ]);
     }
@@ -96,7 +98,7 @@ final class TableCacheService
 
         if (!$row) {
             $this->table->set($versionKey, [
-                'value' => '1',
+                'value'      => '1',
                 'expires_at' => time() + 86400,
             ]);
             return 1;
@@ -135,7 +137,7 @@ final class TableCacheService
     private function setWithTtl(string $key, mixed $data, int $ttl): void
     {
         $this->table->set($key, [
-            'value' => json_encode($data),
+            'value'      => json_encode($data),
             'expires_at' => time() + $ttl,
         ]);
     }

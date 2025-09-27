@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Contexts;
 
-use PDO;
-use PDOException;
+use function is_array;
+
 use RuntimeException;
 
 /**
@@ -19,7 +21,6 @@ final class DbContext
     /**
      * MySQL connection instance.
      *
-     * @var MySQL
      */
     private MySQL $conn;
 
@@ -78,12 +79,12 @@ final class DbContext
      *
      * If parameters are provided, a prepared statement is used.
      *
-     * @param string $sql    The SQL query to execute.
-     * @param array  $params Optional query parameters for prepared statements.
+     * @param string $sql The SQL query to execute.
+     * @param array $params Optional query parameters for prepared statements.
      *
      * @return array The result set as an array, or an empty array on failure.
      *
-     * @throws \RuntimeException If statement preparation fails.
+     * @throws RuntimeException If statement preparation fails.
      */
     public function query(string $sql, array $params = []): array
     {

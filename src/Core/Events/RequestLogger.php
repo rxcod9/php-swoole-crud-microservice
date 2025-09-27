@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Events;
 
 use App\Tasks\LogTask;
@@ -15,8 +17,8 @@ final class RequestLogger
         //     'data' => $data
         // ]);
         $server->task([
-            'class' => LogTask::class,
-            'arguments' => [$data]
+            'class'     => LogTask::class,
+            'arguments' => [$data],
         ]);
     }
 }

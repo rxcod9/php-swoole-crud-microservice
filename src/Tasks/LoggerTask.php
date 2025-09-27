@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tasks;
 
-use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 /**
  * LoggerTask handles logging of request payloads to a file.
@@ -17,7 +19,6 @@ final class LoggerTask
      *
      * @param array $payload The data to be logged.
      *
-     * @return void
      */
     public static function handle(array $payload): void
     {

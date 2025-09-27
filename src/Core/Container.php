@@ -1,7 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
+use function array_key_exists;
+
+use Closure;
+use ReflectionClass;
 use RuntimeException;
 
 /**
@@ -14,7 +20,7 @@ use RuntimeException;
 final class Container
 {
     /**
-     * @var array<string, \Closure> Factory bindings for services.
+     * @var array<string, Closure> Factory bindings for services.
      */
     private array $bindings = [];
 
@@ -27,10 +33,9 @@ final class Container
      * Bind a factory closure to an identifier.
      *
      * @param string $id Identifier for the service.
-     * @param \Closure $factory Factory function that returns the service instance.
-     * @return void
+     * @param Closure $factory Factory function that returns the service instance.
      */
-    public function bind(string $id, \Closure $factory): void
+    public function bind(string $id, Closure $factory): void
     {
         $this->bindings[$id] = $factory;
     }
@@ -40,10 +45,9 @@ final class Container
      * The service will be instantiated only once.
      *
      * @param string $id Identifier for the service.
-     * @param \Closure $factory Factory function that returns the service instance.
-     * @return void
+     * @param Closure $factory Factory function that returns the service instance.
      */
-    public function singleton(string $id, \Closure $factory): void
+    public function singleton(string $id, Closure $factory): void
     {
         $this->bindings[$id] = $factory;
         $this->instances[$id] = null;
@@ -65,7 +69,7 @@ final class Container
      *
      * @param string $id Identifier for the service.
      * @return mixed The resolved service instance.
-     * @throws \RuntimeException If the identifier cannot be resolved.
+     * @throws RuntimeException If the identifier cannot be resolved.
      */
     public function get(string $id)
     {
@@ -86,11 +90,11 @@ final class Container
      *
      * @param string $class Class name to instantiate.
      * @return mixed The instantiated class.
-     * @throws \RuntimeException If the class cannot be instantiated.
+     * @throws RuntimeException If the class cannot be instantiated.
      */
     private function autowire(string $class)
     {
-        $ref = new \ReflectionClass($class);
+        $ref = new ReflectionClass($class);
         if (!$ref->isInstantiable()) {
             throw new RuntimeException("Cannot instantiate $class");
         }

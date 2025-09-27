@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
 use Prometheus\CollectorRegistry;
@@ -19,7 +21,6 @@ final class Metrics
     /**
      * Singleton instance of CollectorRegistry.
      *
-     * @var CollectorRegistry|null
      */
     private static ?CollectorRegistry $r = null;
 
@@ -29,7 +30,6 @@ final class Metrics
      * Uses Redis adapter for shared metrics storage between workers.
      * To use in-memory storage (not shared), uncomment the InMemory adapter.
      *
-     * @return CollectorRegistry
      */
     public static function reg(): CollectorRegistry
     {

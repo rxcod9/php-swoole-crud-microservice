@@ -1,9 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Pools;
 
+use function is_array;
+
 use RuntimeException;
+
+use function sprintf;
+
 use Swoole\Coroutine\Channel;
+use Throwable;
 
 /**
  * Class MySQLPool
@@ -59,8 +67,8 @@ final class MySQLPool
      * MySQLPool constructor.
      *
      * @param array $conf MySQL connection config (host, port, user, pass, db, charset, timeout)
-     * @param int   $min Minimum connections to pre-create
-     * @param int   $max Maximum connections allowed
+     * @param int $min Minimum connections to pre-create
+     * @param int $max Maximum connections allowed
      */
     public function __construct(
         array $conf,
@@ -93,21 +101,20 @@ final class MySQLPool
      *
      * @param int $retry Current retry attempt count.
      *
-     * @return MySQL
-     * @throws \RuntimeException If connection fails.
+     * @throws RuntimeException If connection fails.
      */
     private function make(int $retry = 0): MySQL
     {
         try {
             $mysql = new MySQL();
             $ok = $mysql->connect([
-                'host' => $this->conf['host'] ?? '127.0.0.1',
-                'port' => $this->conf['port'] ?? 3306,
-                'user' => $this->conf['user'] ?? 'root',
+                'host'     => $this->conf['host'] ?? '127.0.0.1',
+                'port'     => $this->conf['port'] ?? 3306,
+                'user'     => $this->conf['user'] ?? 'root',
                 'password' => $this->conf['pass'] ?? '',
                 'database' => $this->conf['db'] ?? '',
-                'charset' => $this->conf['charset'] ?? 'utf8mb4',
-                'timeout' => $this->conf['timeout'] ?? 2,
+                'charset'  => $this->conf['charset'] ?? 'utf8mb4',
+                'timeout'  => $this->conf['timeout'] ?? 2,
             ]);
 
             if ($ok === false) {
@@ -122,7 +129,7 @@ final class MySQLPool
                 $this->created
             ));
             return $mysql;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // retry with exponential backoff
             // if ($retry <= 10) {
             //     $backoff = (1 << $retry) * 100000; // exponential backoff in microseconds
@@ -149,8 +156,7 @@ final class MySQLPool
      * Auto-scales pool size based on usage patterns.
      *
      * @param float $timeout Timeout in seconds to wait for a connection.
-     * @return MySQL
-     * @throws \RuntimeException If pool is exhausted or not initialized.
+     * @throws RuntimeException If pool is exhausted or not initialized.
      */
     public function get(float $timeout = 1.0): MySQL
     {
@@ -191,7 +197,6 @@ final class MySQLPool
      * Return a MySQL connection back to the pool.
      *
      * @param MySQL $conn The MySQL connection to return.
-     * @return void
      */
     public function put(MySQL $conn): void
     {
@@ -212,12 +217,12 @@ final class MySQLPool
      * @param string $sql The SQL query to execute.
      * @param array $params Optional parameters for prepared statements.
      * @return array The result set as an array.
-     * @throws \RuntimeException If query or prepare fails.
+     * @throws RuntimeException If query or prepare fails.
      */
     public function query(string $sql, array $params = []): array
     {
         $conn = $this->get();
-        defer(fn() => isset($conn) && $conn->connected && $this->put($conn));
+        defer(fn () => isset($conn) && $conn->connected && $this->put($conn));
 
         if ($params) {
             $stmt = $conn->prepare($sql);
@@ -243,10 +248,10 @@ final class MySQLPool
     public function stats(): array
     {
         $stats = [
-            'capacity'   => $this->channel->capacity,
-            'available'  => $this->channel->length(),
-            'created'    => $this->created,
-            'in_use'     => $this->created - $this->channel->length(),
+            'capacity'  => $this->channel->capacity,
+            'available' => $this->channel->length(),
+            'created'   => $this->created,
+            'in_use'    => $this->created - $this->channel->length(),
         ];
         // error_log(sprintf('[%s] [STATS] MySQL Pool stats: %s', date('Y-m-d H:i:s'), json_encode($stats)));
         return $stats;
@@ -256,8 +261,7 @@ final class MySQLPool
      * Manually trigger auto-scaling logic.
      * Can be called periodically to adjust pool size.
      *
-     * @return void
-     * @throws \RuntimeException If pool is exhausted or not initialized.
+     * @throws RuntimeException If pool is exhausted or not initialized.
      */
     public function autoScale(): void
     {

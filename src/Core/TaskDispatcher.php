@@ -1,11 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
-use App\Core\Container;
 use App\Tasks\TaskInterface;
+
+use function get_class;
+
+use InvalidArgumentException;
+
+use function is_callable;
+
+use ReflectionClass;
 use RuntimeException;
 use Swoole\Server\Task;
+use Throwable;
 
 /**
  * Class TaskDispatcher
@@ -38,8 +48,8 @@ final class TaskDispatcher
      * @param Task $task Request object
      * @return bool Response from the task method
      *
-     * @throws \InvalidArgumentException If the class format is invalid
-     * @throws \RuntimeException If the task or handle method does not exist
+     * @throws InvalidArgumentException If the class format is invalid
+     * @throws RuntimeException If the task or handle method does not exist
      */
     public function dispatch(string $class, array $arguments, Task $task): bool
     {
@@ -48,7 +58,7 @@ final class TaskDispatcher
         }
 
         // check interface
-        if (!(new \ReflectionClass($class))->implementsInterface(TaskInterface::class)) {
+        if (!new ReflectionClass($class)->implementsInterface(TaskInterface::class)) {
             // var_export($class instanceof TaskInterface);
             // var_export(class_implements($class));
             // var_export((new \ReflectionClass($class))->implementsInterface(TaskInterface::class));
@@ -64,11 +74,11 @@ final class TaskDispatcher
                 'class'     => $class,
                 'arguments' => $arguments,
                 'result'    => $result,
-                'error'     => null
+                'error'     => null,
             ]);
 
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             if (method_exists($instance, 'error')) {
                 $result = $instance->error($e, ...$arguments);
 
@@ -76,7 +86,7 @@ final class TaskDispatcher
                     'class'     => $class,
                     'arguments' => $arguments,
                     'result'    => $result,
-                    'error'     => null
+                    'error'     => null,
                 ]);
                 return true;
             }
@@ -85,7 +95,7 @@ final class TaskDispatcher
                 'class'     => $class,
                 'arguments' => $arguments,
                 'result'    => null,
-                'error'     => $e->getMessage()
+                'error'     => $e->getMessage(),
             ]);
 
             return false;
@@ -103,6 +113,6 @@ final class TaskDispatcher
             return $instance(...$arguments);
         }
 
-        throw new RuntimeException("Task " . get_class($instance) .  " must have a handle() method or be invokable (__invoke)");
+        throw new RuntimeException('Task ' . get_class($instance) . ' must have a handle() method or be invokable (__invoke)');
     }
 }

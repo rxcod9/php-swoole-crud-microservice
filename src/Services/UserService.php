@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Repositories\UserRepository;
@@ -18,7 +20,6 @@ final class UserService
     /**
      * UserRepository instance for data access operations.
      *
-     * @var UserRepository
      */
     private UserRepository $repo;
 

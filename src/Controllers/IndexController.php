@@ -1,18 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Core\Controller;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(
-    version: "1.0.0",
-    title: "PHP Swoole CRUD Microservice API",
-    description: "OpenAPI docs for PHP Swoole CRUD Microservice"
+    version: '1.0.0',
+    title: 'PHP Swoole CRUD Microservice API',
+    description: 'OpenAPI docs for PHP Swoole CRUD Microservice'
 )]
 #[OA\Server(
-    url: "http://localhost:9501",
-    description: "Local dev server"
+    url: 'http://localhost:9501',
+    description: 'Local dev server'
 )]
 
 final class IndexController extends Controller
@@ -37,7 +39,7 @@ final class IndexController extends Controller
                         new OA\Property(property: 'message', type: 'string'),
                     ]
                 )
-            )
+            ),
         ]
     )]
     public function index(): array

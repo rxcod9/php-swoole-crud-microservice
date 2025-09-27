@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Pools;
 
 use PDO;
 use PDOException;
 use RuntimeException;
-use Swoole\Coroutine\Channel;
+
+use function sprintf;
+
 use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
 
 /**
  * Class PDOPool
@@ -64,7 +69,6 @@ final class PDOPool
     /**
      * Create a new PDO connection.
      *
-     * @return PDO
      * @throws RuntimeException
      */
     private function make(): PDO
@@ -83,9 +87,9 @@ final class PDOPool
                 $this->conf['user'] ?? 'root',
                 $this->conf['pass'] ?? '',
                 [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_PERSISTENT => false, // we manage pool manually
+                    PDO::ATTR_PERSISTENT         => false, // we manage pool manually
                 ]
             );
 
@@ -111,7 +115,6 @@ final class PDOPool
      * Get a PDO connection from the pool.
      *
      * @param float $timeout Timeout in seconds to wait for a connection
-     * @return PDO
      * @throws RuntimeException
      */
     public function get(float $timeout = 1.0): PDO
@@ -143,7 +146,6 @@ final class PDOPool
     /**
      * Return a PDO connection to the pool.
      *
-     * @param PDO $conn
      */
     public function put(PDO $conn): void
     {
@@ -168,7 +170,7 @@ final class PDOPool
     public function query(string $sql, array $params = []): array
     {
         $conn = $this->get();
-        defer(fn() => $this->put($conn));
+        defer(fn () => $this->put($conn));
 
         try {
             if ($params) {

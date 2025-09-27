@@ -1,15 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Core\Dispatcher;
 use App\Core\Metrics;
 use App\Core\Router;
+
+use function in_array;
+
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Table;
+use Throwable;
 
 /**
  * Handles incoming HTTP requests, including routing, middleware, and response generation.
@@ -18,7 +24,7 @@ use Swoole\Table;
  * Logs request details asynchronously.
  * Provides health check endpoints.
  * Ensures worker readiness before processing requests.
- * 
+ *
  * @package App\Core\Events
  * @version 1.0.0
  * @since 1.0.0
@@ -30,8 +36,8 @@ final class RequestHandler
      *
      * @param Router $router Router instance for HTTP request routing
      * @param Server $server Swoole HTTP server instance
-     * @param Table  $table  Shared memory table for worker health checks
-     * @param Table  $rateLimitTable Shared table for rate limiting
+     * @param Table $table Shared memory table for worker health checks
+     * @param Table $rateLimitTable Shared table for rate limiting
      * @param Container $container Dependency injection container
      */
     public function __construct(
@@ -47,18 +53,18 @@ final class RequestHandler
     /**
      * Handle the incoming HTTP request.
      *
-     * @param Request  $req The incoming HTTP request
+     * @param Request $req The incoming HTTP request
      * @param Response $res The HTTP response to be sent
      */
     public function __invoke(Request $req, Response $res): void
     {
         try {
-            (new WorkerReadyChecker())->wait();
+            new WorkerReadyChecker()->wait();
 
             $reqId = bin2hex(random_bytes(8));
             $start = microtime(true);
 
-            (new PoolBinder())->bind($this->server, $this->container);
+            new PoolBinder()->bind($this->server, $this->container);
 
             // Prepare middleware pipeline
             $pipeline = new MiddlewarePipeline();
@@ -76,9 +82,9 @@ final class RequestHandler
                 $res,
                 $this->container,
                 $routeMiddlewares,
-                fn() => $this->dispatch($action, $params, $req, $reqId, $res, $start)
+                fn () => $this->dispatch($action, $params, $req, $reqId, $res, $start)
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->handleException($req, $res, $e);
         }
     }
@@ -101,7 +107,7 @@ final class RequestHandler
     /**
      * Centralized exception handler for all request failures.
      */
-    private function handleException(Request $req, Response $res, \Throwable $e): void
+    private function handleException(Request $req, Response $res, Throwable $e): void
     {
         $status = $e->getCode() ?: 500;
 
@@ -115,7 +121,7 @@ final class RequestHandler
             'line'  => $e->getLine(),
         ]));
 
-        (new RequestLogger())->log($this->server, $req, [
+        new RequestLogger()->log($this->server, $req, [
             'error' => $e->getMessage(),
             'code'  => $status,
             'trace' => $e->getTraceAsString(),
@@ -127,14 +133,13 @@ final class RequestHandler
     /**
      * Dispatch the request to the appropriate controller action and send the response.
      *
-     * @param mixed   $action   The action handler (e.g. controller@method)
+     * @param mixed $action The action handler (e.g. controller@method)
      * @param array<string,string> $params Route parameters extracted from the URL
-     * @param Request $req      The incoming HTTP request
-     * @param string  $reqId    Unique request ID for logging
-     * @param Response $res     The HTTP response to be sent
-     * @param float   $start    Timestamp when the request handling started (for metrics)
+     * @param Request $req The incoming HTTP request
+     * @param string $reqId Unique request ID for logging
+     * @param Response $res The HTTP response to be sent
+     * @param float $start Timestamp when the request handling started (for metrics)
      *
-     * @return void
      */
     private function dispatch(
         string $action,
@@ -160,14 +165,14 @@ final class RequestHandler
         );
 
         // Execute controller/handler
-        $payload = (new Dispatcher($this->container))->dispatch($action, $params, $req);
+        $payload = new Dispatcher($this->container)->dispatch($action, $params, $req);
 
-        $path   = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = $payload['__status'] ?? 200;
-        $json   = $payload['__json'] ?? null;
-        $html   = $payload['__html'] ?? null;
-        $text   = $payload['__text'] ?? null;
-        $ctype  = $payload['__contentType'] ?? null;
+        $json = $payload['__json'] ?? null;
+        $html = $payload['__html'] ?? null;
+        $text = $payload['__text'] ?? null;
+        $ctype = $payload['__contentType'] ?? null;
 
         // Format response
         if ($html) {
@@ -194,7 +199,7 @@ final class RequestHandler
             $hist->observe($dur, [$req->server['request_method'], $route['path']]);
         }
 
-        (new RequestLogger())->log($this->server, $req, [
+        new RequestLogger()->log($this->server, $req, [
             'id'     => $reqId,
             'method' => $req->server['request_method'],
             'path'   => $path,

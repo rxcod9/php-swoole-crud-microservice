@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Events;
 
 use App\Core\Container;
@@ -19,7 +21,7 @@ final class TaskRequestDispatcher
         $data = $task->data;
         $class = $data['class'] ?? null;
         $arguments = $data['arguments'] ?? null;
-        return (new TaskDispatcher($this->container))->dispatch(
+        return new TaskDispatcher($this->container)->dispatch(
             $class,
             $arguments,
             $task

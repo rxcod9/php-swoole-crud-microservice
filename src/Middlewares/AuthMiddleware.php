@@ -1,7 +1,13 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Middlewares;
 
 use App\Core\Container;
+
+use function in_array;
+
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -14,17 +20,13 @@ final class AuthMiddleware implements MiddlewareInterface
         '/health.html',
         '/metrics',
         '/login',
-        '/signup'
+        '/signup',
     ];
 
     /**
      * Handle the incoming request.
      *
-     * @param Request $req
-     * @param Response $res
-     * @param Container $c
      * @param callable $next Middleware must call $next() to continue the chain
-     * @return void
      */
     public function handle(Request $req, Response $res, Container $c, callable $next): void
     {
@@ -33,7 +35,7 @@ final class AuthMiddleware implements MiddlewareInterface
             $next();
             return;
         }
-    
+
         // Simple auth check (e.g., check for Authorization header)
         $authHeader = $req->header['authorization'] ?? null;
 
@@ -47,8 +49,8 @@ final class AuthMiddleware implements MiddlewareInterface
 
         // Bind authenticated user
         $c->bind('currentUser', fn () => [
-            'id' => 1,
-            'role' => 'admin'
+            'id'   => 1,
+            'role' => 'admin',
         ]);
 
         // Must call $next() to continue the chain

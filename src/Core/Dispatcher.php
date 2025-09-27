@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
 use InvalidArgumentException;
@@ -24,7 +26,6 @@ final class Dispatcher
         //
     }
 
-
     /**
      * Dispatch a controller action.
      *
@@ -36,8 +37,8 @@ final class Dispatcher
      * @param mixed $req Request object (optional)
      * @return array Response from the controller method
      *
-     * @throws \InvalidArgumentException If the action format is invalid
-     * @throws \RuntimeException If the controller or method does not exist
+     * @throws InvalidArgumentException If the action format is invalid
+     * @throws RuntimeException If the controller or method does not exist
      */
     public function dispatch(string $action, array $params, $req = null): array
     {

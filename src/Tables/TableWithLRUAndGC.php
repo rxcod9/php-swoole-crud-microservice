@@ -1,8 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tables;
 
 use BadMethodCallException;
+
+use function count;
+
 use Swoole\Table;
 use Swoole\Timer;
 
@@ -24,9 +29,9 @@ class TableWithLRUAndGC
         protected int $bufferSize = 10
     ) {
         $table = new Table($maxSize);
-        $table->column("value", Table::TYPE_STRING, 256);
-        $table->column("last_access", Table::TYPE_INT, 8);
-        $table->column("expires_at", Table::TYPE_INT, 8);
+        $table->column('value', Table::TYPE_STRING, 256);
+        $table->column('last_access', Table::TYPE_INT, 8);
+        $table->column('expires_at', Table::TYPE_INT, 8);
         // $table->create();
 
         $this->table = $table;
@@ -90,14 +95,14 @@ class TableWithLRUAndGC
      */
     protected function evict(): void
     {
-        $oldestKey  = null;
+        $oldestKey = null;
         $oldestTime = PHP_INT_MAX;
 
         foreach ($this->table as $key => $row) {
             $lastAccess = $row['last_access'] ?? 0;
             if ($lastAccess < $oldestTime) {
                 $oldestTime = $lastAccess;
-                $oldestKey  = $key;
+                $oldestKey = $key;
             }
         }
 
@@ -137,7 +142,7 @@ class TableWithLRUAndGC
     public function __call($name, $arguments)
     {
         if (!method_exists($this->table, $name)) {
-            throw new BadMethodCallException("Method {$name} does not exist on Swoole\Table");
+            throw new BadMethodCallException("Method {$name} does not exist on Swoole\\Table");
         }
 
         return $this->table->$name(...$arguments);

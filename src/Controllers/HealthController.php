@@ -1,8 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Core\Controller;
+
+use function count;
+
 use OpenApi\Attributes as OA;
 use Swoole\Table;
 
@@ -41,7 +46,7 @@ final class HealthController extends Controller
                         new OA\Property(property: 'ok', type: 'bool'),
                     ]
                 )
-            )
+            ),
         ]
     )]
     public function check(): array
@@ -50,23 +55,23 @@ final class HealthController extends Controller
         foreach ($this->table as $wid => $row) {
             $data[$wid] = [
                 ...$row,
-                "alive" => (time() - $row["last_heartbeat"] < 10),
-                "since" => (time() - $row["last_heartbeat"] < 10)
-                    ? (time() - $row["last_heartbeat"]) . "s"
-                    : "dead",
-                "uptime" => (time() - ($row['first_heartbeat'] ?? time())) . " seconds",
+                'alive' => (time() - $row['last_heartbeat'] < 10),
+                'since' => (time() - $row['last_heartbeat'] < 10)
+                    ? (time() - $row['last_heartbeat']) . 's'
+                    : 'dead',
+                'uptime' => (time() - ($row['first_heartbeat'] ?? time())) . ' seconds',
             ];
         }
 
-        usort($data, fn($a, $b) => $b['mysql_in_use'] <=> $a['mysql_in_use'] ?: $b['redis_in_use'] <=> $a['redis_in_use']);
+        usort($data, fn ($a, $b) => $b['mysql_in_use'] <=> $a['mysql_in_use'] ?: $b['redis_in_use'] <=> $a['redis_in_use']);
 
         return $this->json([
-            'ok' => true,
-            'uptime' => time() - ($_SERVER['REQUEST_TIME'] ?? time()),
-            'ts' => time(),
-            'pid' => posix_getpid(),
+            'ok'            => true,
+            'uptime'        => time() - ($_SERVER['REQUEST_TIME'] ?? time()),
+            'ts'            => time(),
+            'pid'           => posix_getpid(),
             'workers_count' => count($data),
-            'workers' => $data,
+            'workers'       => $data,
         ]);
     }
 
@@ -79,15 +84,15 @@ final class HealthController extends Controller
         foreach ($this->table as $wid => $row) {
             $data[$wid] = [
                 ...$row,
-                "alive" => (time() - $row["last_heartbeat"] < 10),
-                "since" => (time() - $row["last_heartbeat"] < 10)
-                    ? (time() - $row["last_heartbeat"]) . "s"
-                    : "dead",
-                "uptime" => (time() - ($row['first_heartbeat'] ?? time())) . " seconds",
+                'alive' => (time() - $row['last_heartbeat'] < 10),
+                'since' => (time() - $row['last_heartbeat'] < 10)
+                    ? (time() - $row['last_heartbeat']) . 's'
+                    : 'dead',
+                'uptime' => (time() - ($row['first_heartbeat'] ?? time())) . ' seconds',
             ];
         }
 
-        usort($data, fn($a, $b) => $b['mysql_in_use'] <=> $a['mysql_in_use'] ?: $b['redis_in_use'] <=> $a['redis_in_use']);
+        usort($data, fn ($a, $b) => $b['mysql_in_use'] <=> $a['mysql_in_use'] ?: $b['redis_in_use'] <=> $a['redis_in_use']);
 
         return $this->html($this->renderHtml($data));
     }
@@ -115,12 +120,12 @@ final class HealthController extends Controller
         </tr>';
         foreach ($data as $wid => $row) {
             $statusClass = $row['alive'] ? 'alive' : 'dead';
-            $statusText  = $row['alive'] ? 'Alive' : 'Dead';
+            $statusText = $row['alive'] ? 'Alive' : 'Dead';
             $rows .= "<tr>
                 <td>{$wid}</td>
                 <td>{$row['pid']}</td>
-                <td>" . date('Y-m-d H:i:s', $row['first_heartbeat']) . "</td>
-                <td>" . date('Y-m-d H:i:s', $row['last_heartbeat']) . "</td>
+                <td>" . date('Y-m-d H:i:s', $row['first_heartbeat']) . '</td>
+                <td>' . date('Y-m-d H:i:s', $row['last_heartbeat']) . "</td>
                 <td class=\"{$statusClass}\">{$statusText}</td>
                 <td>" . (time() - ($row['first_heartbeat'] ?? time())) . " seconds</td>
                 <td>{$row['mysql_capacity']}</td>
@@ -152,10 +157,10 @@ final class HealthController extends Controller
             </head>
             <body>
             <h1>Health Check</h1>
-            <p>Uptime: " . (time() - ($_SERVER['REQUEST_TIME'] ?? time())) . " seconds</p>
-            <p>Timestamp: " . date('Y-m-d H:i:s') . "</p>
-            <p>PID: " . posix_getpid() . "</p>
-            <p>Workers Count: " . count($data)  . "</p>
+            <p>Uptime: " . (time() - ($_SERVER['REQUEST_TIME'] ?? time())) . ' seconds</p>
+            <p>Timestamp: ' . date('Y-m-d H:i:s') . '</p>
+            <p>PID: ' . posix_getpid() . '</p>
+            <p>Workers Count: ' . count($data) . "</p>
             <table>{$rows}</table>
             </body>
             </html>";

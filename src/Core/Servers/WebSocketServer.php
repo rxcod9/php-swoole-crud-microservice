@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Servers;
 
 use Swoole\WebSocket\Server;
@@ -16,14 +18,12 @@ final class WebSocketServer
     /**
      * The host address to bind the WebSocket server.
      *
-     * @var string
      */
     private string $host;
 
     /**
      * The port number to bind the WebSocket server.
      *
-     * @var int
      */
     private int $port;
 
@@ -42,15 +42,14 @@ final class WebSocketServer
     /**
      * Start the WebSocket server.
      *
-     * @return void
      */
     public function start(): void
     {
         $ws = new Server($this->host, $this->port);
         $ws->set([
-            'worker_num' => 1,
-            'task_worker_num' => 1,
-            'task_enable_coroutine' => true
+            'worker_num'            => 1,
+            'task_worker_num'       => 1,
+            'task_enable_coroutine' => true,
         ]);
 
         // Event: Server start

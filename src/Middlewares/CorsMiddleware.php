@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Middlewares;
 
 use App\Core\Container;
@@ -11,18 +13,14 @@ final class CorsMiddleware implements MiddlewareInterface
     /**
      * Handle the incoming request.
      *
-     * @param Request $req
-     * @param Response $res
-     * @param Container $c
      * @param callable $next Middleware must call $next() to continue the chain
      *
-     * @return void
      */
     public function handle(Request $req, Response $res, Container $c, callable $next): void
     {
-        $res->header("Access-Control-Allow-Origin", "*");
-        $res->header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        $res->header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        $res->header('Access-Control-Allow-Origin', '*');
+        $res->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        $res->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         // respond immediately to OPTIONS
         if ($req->server['request_method'] === 'OPTIONS') {
             $res->status(204);

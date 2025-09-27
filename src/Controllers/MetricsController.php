@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Metrics;
 use OpenApi\Attributes as OA;
 use Prometheus\RenderTextFormat;
+use Throwable;
 
 /**
  * MetricsController handles metrics check endpoints for the application.
@@ -28,7 +31,7 @@ final class MetricsController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Successful operation'
-            )
+            ),
         ]
     )]
     public function check(): array
@@ -38,7 +41,7 @@ final class MetricsController extends Controller
             $metrics = $renderer->render(Metrics::reg()->getMetricFamilySamples());
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->text($e->getMessage(), 500, RenderTextFormat::MIME_TYPE);
         }
     }

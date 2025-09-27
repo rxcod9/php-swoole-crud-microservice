@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Repositories\ItemRepository;
@@ -11,12 +13,12 @@ use BadMethodCallException;
  * Service layer for Item entity.
  * Encapsulates business logic and interacts with ItemRepository.
  *
- * @method int      count()
- * @method array    delete(int $id)
- * @method int      filteredCount()
- * @method array    find(int $id)
- * @method array    findBySku(string $sku)
- * @method array    list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method int count()
+ * @method array delete(int $id)
+ * @method int filteredCount()
+ * @method array find(int $id)
+ * @method array findBySku(string $sku)
+ * @method array list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  *
  * @package App\Services
  */
@@ -25,7 +27,6 @@ final class ItemService
     /**
      * The repository instance for item data access.
      *
-     * @var ItemRepository
      */
     private ItemRepository $repo;
 

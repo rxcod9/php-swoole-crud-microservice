@@ -1,16 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Middlewares\MiddlewareInterface;
+
+use function count;
+
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
 /**
  * Middleware pipeline to process HTTP requests through a series of middleware components.
  * Each middleware can modify the request/response and decide whether to continue the chain.
- * 
+ *
  * @package App\Core\Events
  * @version 1.0.0
  * @since 1.0.0
@@ -44,7 +49,7 @@ final class MiddlewarePipeline
 
         $runner = function (int $index = 0) use ($req, $res, $container, $allMiddlewares, $total, $finalHandler, &$runner) {
             if ($index < $total) {
-                $allMiddlewares[$index]->handle($req, $res, $container, fn() => $runner($index + 1));
+                $allMiddlewares[$index]->handle($req, $res, $container, fn () => $runner($index + 1));
             } else {
                 $finalHandler();
             }

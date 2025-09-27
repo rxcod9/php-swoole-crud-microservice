@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Events;
 
 use App\Core\Contexts\AppContext;
@@ -9,6 +11,7 @@ use App\Tables\TableWithLRUAndGC;
 use Swoole\Http\Server;
 use Swoole\Table;
 use Swoole\Timer;
+use Throwable;
 
 /**
  * Handles WorkerStart event
@@ -34,10 +37,10 @@ final class WorkerStartHandler
         echo "Worker {$workerId} started with {$pid}\n";
 
         // Write initial health
-        $this->table->set($workerId, [
-            "pid" => $pid,
-            "first_heartbeat" => time(),
-            "last_heartbeat" => time()
+        $this->table->set((string) $workerId, [
+            'pid'             => $pid,
+            'first_heartbeat' => time(),
+            'last_heartbeat'  => time(),
         ]);
 
         // Initialize pools per worker
@@ -66,7 +69,9 @@ final class WorkerStartHandler
      */
     public function clearTimers(int $workerId): void
     {
-        if (!isset($this->workerTimers[$workerId])) return;
+        if (!isset($this->workerTimers[$workerId])) {
+            return;
+        }
 
         foreach ($this->workerTimers[$workerId] as $t) {
             Timer::clear($t);
@@ -88,41 +93,41 @@ final class WorkerStartHandler
         // echo "Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n";
         try {
             $server->mysql->autoScale();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo "[Worker {$workerId}] MySQL autoScale error: " . $e->getMessage() . "\n";
         }
 
         try {
             $server->redis->autoScale();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo "[Worker {$workerId}] Redis autoScale error: " . $e->getMessage() . "\n";
         }
 
-        $mysqlStats     = $server->mysql->stats();
-        $mysqlCapacity  = $mysqlStats['capacity'];
+        $mysqlStats = $server->mysql->stats();
+        $mysqlCapacity = $mysqlStats['capacity'];
         $mysqlAvailable = $mysqlStats['available'];
-        $mysqlCreated   = $mysqlStats['created'];
-        $mysqlInUse     = $mysqlStats['in_use'];
+        $mysqlCreated = $mysqlStats['created'];
+        $mysqlInUse = $mysqlStats['in_use'];
 
-        $redisStats     = $server->redis->stats();
-        $redisCapacity  = $redisStats['capacity'];
+        $redisStats = $server->redis->stats();
+        $redisCapacity = $redisStats['capacity'];
         $redisAvailable = $redisStats['available'];
-        $redisCreated   = $redisStats['created'];
-        $redisInUse     = $redisStats['in_use'];
+        $redisCreated = $redisStats['created'];
+        $redisInUse = $redisStats['in_use'];
 
-        $row = $this->table->get($workerId) ?? [];
-        $this->table->set($workerId, [
-            "pid"               => $pid,
-            "first_heartbeat"   => $row['first_heartbeat'] ?? time(),
-            "last_heartbeat"    => time(),
-            "mysql_capacity"    => $mysqlCapacity,
-            "mysql_available"   => $mysqlAvailable,
-            "mysql_created"     => $mysqlCreated,
-            "mysql_in_use"      => $mysqlInUse,
-            "redis_capacity"    => $redisCapacity,
-            "redis_available"   => $redisAvailable,
-            "redis_created"     => $redisCreated,
-            "redis_in_use"      => $redisInUse,
+        $row = $this->table->get((string) $workerId) ?? [];
+        $this->table->set((string) $workerId, [
+            'pid'             => $pid,
+            'first_heartbeat' => $row['first_heartbeat'] ?? time(),
+            'last_heartbeat'  => time(),
+            'mysql_capacity'  => $mysqlCapacity,
+            'mysql_available' => $mysqlAvailable,
+            'mysql_created'   => $mysqlCreated,
+            'mysql_in_use'    => $mysqlInUse,
+            'redis_capacity'  => $redisCapacity,
+            'redis_available' => $redisAvailable,
+            'redis_created'   => $redisCreated,
+            'redis_in_use'    => $redisInUse,
         ]);
 
         $this->cacheTable->gc(); // run garbage collection on cache table

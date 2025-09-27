@@ -1,11 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Pools;
 
+use Redis;
 use RuntimeException;
+
+use function sprintf;
+
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
-use Redis;
+use Throwable;
 
 /**
  * Class RedisPool
@@ -98,7 +104,6 @@ final class RedisPool
      * Uses exponential backoff for retry on failure.
      *
      * @param int $retry Current retry attempt count.
-     * @return Redis
      * @throws RuntimeException If connection fails after retries.
      */
     private function make(int $retry = 0): Redis
@@ -126,7 +131,7 @@ final class RedisPool
             $this->created++;
             error_log(sprintf('[%s] Redis connection created. Total connections: %d', date('Y-m-d H:i:s'), $this->created));
             return $redis;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Retry with exponential backoff
             $retry++;
             if ($retry <= 3) {
@@ -147,7 +152,6 @@ final class RedisPool
      * Auto-scales pool size if needed.
      *
      * @param float $timeout Seconds to wait for a connection
-     * @return Redis
      * @throws RuntimeException If pool is exhausted or not initialized
      */
     public function get(float $timeout = 1.0): Redis
@@ -182,7 +186,6 @@ final class RedisPool
      * Return a Redis connection back to the pool.
      *
      * @param Redis $conn The Redis connection to return.
-     * @return void
      */
     public function put(Redis $conn): void
     {
@@ -213,7 +216,7 @@ final class RedisPool
     {
         $conn = $this->get();
         // Ensure connection is returned after use
-        defer(fn() => isset($conn) && $this->put($conn));
+        defer(fn () => isset($conn) && $this->put($conn));
 
         $cmd = strtolower($cmd);
 
@@ -245,7 +248,6 @@ final class RedisPool
      * Manual trigger for auto-scaling logic.
      * Can be called periodically (e.g., via a timer) to adjust pool size.
      *
-     * @return void
      */
     public function autoScale(): void
     {

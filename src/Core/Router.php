@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
 use RuntimeException;
@@ -15,7 +17,7 @@ final class Router
 {
     /**
      * @var array<string, array<int, array{regex: string, vars: array<int, string>, path: string}, string, array>> $routes
-     * Stores the registered routes grouped by HTTP method.
+     *                                                                                                             Stores the registered routes grouped by HTTP method.
      */
     private array $routes = [];
 
@@ -26,7 +28,6 @@ final class Router
      * @param string $path Route path, e.g. '/users/{id}'
      * @param string $action The action handler (e.g. controller@method)
      * @param array<class-string> $middlewares List of middlewares class names
-     * @return void
      */
     public function add(string $method, string $path, string $action, array $middlewares = []): void
     {
@@ -39,7 +40,6 @@ final class Router
      * @param string $a Action handler
      * @param array<class-string> $mw List of middlewares class names
      *
-     * @return void
      */
     public function get(string $p, string $a, array $mw = []): void
     {
@@ -52,7 +52,6 @@ final class Router
      * @param string $a Action handler
      * @param array<class-string> $mw List of middlewares class names
      *
-     * @return void
      */
     public function post(string $p, string $a, array $mw = []): void
     {
@@ -65,7 +64,6 @@ final class Router
      * @param string $a Action handler
      * @param array<class-string> $mw List of middlewares class names
      *
-     * @return void
      */
     public function put(string $p, string $a, array $mw = []): void
     {
@@ -78,7 +76,6 @@ final class Router
      * @param string $a Action handler
      * @param array<class-string> $mw List of middlewares class names
      *
-     * @return void
      */
     public function delete(string $p, string $a, array $mw = []): void
     {
@@ -91,7 +88,7 @@ final class Router
      * @param string $method HTTP method
      * @param string $uri Request URI
      * @return array{0: string, 1: array<string, string>, 2: array<class-string>} Matched action, parameters, and middlewares
-     * @throws \RuntimeException If no route matches (404)
+     * @throws RuntimeException If no route matches (404)
      */
     public function match(string $method, string $uri): array
     {
@@ -123,8 +120,8 @@ final class Router
         }, $path);
         return [
             'regex' => '#^' . $regex . '$#',
-            'path' => $path,
-            'vars' => $vars
+            'path'  => $path,
+            'vars'  => $vars,
         ];
     }
 

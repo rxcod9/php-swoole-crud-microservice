@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Contexts;
 
-use RuntimeException;
 use Redis;
+use RuntimeException;
 
 /**
  * Class RedisContext
@@ -18,7 +20,6 @@ final class RedisContext
     /**
      * The Swoole Coroutine Redis connection instance.
      *
-     * @var Redis
      */
     private Redis $conn;
 
@@ -35,7 +36,6 @@ final class RedisContext
     /**
      * Get the underlying Redis connection.
      *
-     * @return Redis
      */
     public function conn(): Redis
     {
@@ -79,10 +79,10 @@ final class RedisContext
      *   $redis->command('set', ['foo', 'bar']);
      *   $val = $redis->command('get', ['foo']);
      *
-     * @param string $cmd  The Redis command name.
-     * @param array  $args Arguments for the command.
+     * @param string $cmd The Redis command name.
+     * @param array $args Arguments for the command.
      * @return mixed The result of the Redis command.
-     * @throws \RuntimeException If the command is not supported.
+     * @throws RuntimeException If the command is not supported.
      */
     public function command(string $cmd, array $args = []): mixed
     {
@@ -112,7 +112,7 @@ final class RedisContext
      * Set the value of a key.
      *
      * @param string $key The key name.
-     * @param mixed  $val The value to set.
+     * @param mixed $val The value to set.
      * @return mixed True if successful, false otherwise.
      */
     public function set(string $key, $val): mixed
@@ -134,9 +134,9 @@ final class RedisContext
     /**
      * Scan the Redis database for keys matching a pattern.
      *
-     * @param mixed  $it      The iterator (pass null for the first call).
+     * @param mixed $it The iterator (pass null for the first call).
      * @param string $pattern The pattern to match.
-     * @param int    $count   The number of keys to return per iteration.
+     * @param int $count The number of keys to return per iteration.
      * @return mixed Array of keys, or false when iteration is complete.
      */
     public function scan($it, string $pattern, int $count = 100): mixed
@@ -148,7 +148,6 @@ final class RedisContext
      * Delete all keys matching a given pattern.
      *
      * @param string $pattern The pattern to match.
-     * @return void
      */
     public function deleteByPattern(string $pattern): void
     {

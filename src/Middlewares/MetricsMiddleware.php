@@ -1,10 +1,13 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Middlewares;
 
 use App\Core\Container;
+use App\Core\Metrics;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
-use App\Core\Metrics;
 
 final class MetricsMiddleware implements MiddlewareInterface
 {

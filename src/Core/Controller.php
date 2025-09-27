@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core;
 
 /**
@@ -23,7 +25,6 @@ abstract class Controller
      * Assigns the request object to the controller.
      *
      * @param mixed $req The request object.
-     * @return void
      */
     public function setRequest($req): void
     {
@@ -47,7 +48,7 @@ abstract class Controller
         return [
             '__status'      => $status,
             '__json'        => $data,
-            '__contentType' => $contentType
+            '__contentType' => $contentType,
         ];
     }
 
@@ -68,7 +69,7 @@ abstract class Controller
         return [
             '__status'      => $status,
             '__html'        => $data,
-            '__contentType' => $contentType
+            '__contentType' => $contentType,
         ];
     }
 
@@ -89,7 +90,7 @@ abstract class Controller
         return [
             '__status'      => $status,
             '__text'        => $data,
-            '__contentType' => $contentType
+            '__contentType' => $contentType,
         ];
     }
 }

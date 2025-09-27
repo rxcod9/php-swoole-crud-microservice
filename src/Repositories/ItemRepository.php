@@ -1,9 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories;
 
 use App\Core\Pools\PDOPool;
+
+use function in_array;
+
 use InvalidArgumentException;
+
+use function is_int;
+
+use PDO;
 use RuntimeException;
 
 /**
@@ -32,23 +41,23 @@ final class ItemRepository
      */
     public function create(array $d): int
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
         // Prepare INSERT statement with named parameters
-        $stmt = $conn->prepare("INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)");
+        $stmt = $conn->prepare('INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)');
         if (!$stmt) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
         // Bind values safely
-        $stmt->bindValue(':sku', $d['sku'], \PDO::PARAM_STR);
-        $stmt->bindValue(':title', $d['title'], \PDO::PARAM_STR);
-        $stmt->bindValue(':price', isset($d['price']) ? (float)$d['price'] : null, \PDO::PARAM_STR);
+        $stmt->bindValue(':sku', $d['sku'], PDO::PARAM_STR);
+        $stmt->bindValue(':title', $d['title'], PDO::PARAM_STR);
+        $stmt->bindValue(':price', isset($d['price']) ? (float)$d['price'] : null, PDO::PARAM_STR);
 
         if (!$stmt->execute()) {
-            throw new RuntimeException("Insert failed: " . implode(' | ', $stmt->errorInfo()));
+            throw new RuntimeException('Insert failed: ' . implode(' | ', $stmt->errorInfo()));
         }
 
         return (int)$conn->lastInsertId();
@@ -62,19 +71,19 @@ final class ItemRepository
      */
     public function find(int $id): ?array
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1");
+        $stmt = $conn->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1');
         if (!$stmt) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     /**
@@ -85,19 +94,19 @@ final class ItemRepository
      */
     public function findBySku(string $sku): ?array
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1");
+        $stmt = $conn->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1');
         if (!$stmt) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
-        $stmt->bindValue(':sku', $sku, \PDO::PARAM_STR);
+        $stmt->bindValue(':sku', $sku, PDO::PARAM_STR);
         $stmt->execute();
 
-        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     /**
@@ -117,35 +126,37 @@ final class ItemRepository
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
         $limit = max(1, min($limit, 1000));
         $offset = max(0, $offset);
 
-        $sql = "SELECT id, sku, title, price, created_at, updated_at FROM items";
+        $sql = 'SELECT id, sku, title, price, created_at, updated_at FROM items';
         $where = [];
         $params = [];
 
         // Apply filters
         foreach ($filters as $field => $value) {
-            if ($value === null) continue;
+            if ($value === null) {
+                continue;
+            }
             switch ($field) {
                 case 'sku':
-                    $where[] = "sku = :sku";
+                    $where[] = 'sku = :sku';
                     $params['sku'] = $value;
                     break;
                 case 'title':
-                    $where[] = "title LIKE :title";
+                    $where[] = 'title LIKE :title';
                     $params['title'] = "%$value%";
                     break;
                 case 'created_after':
-                    $where[] = "created_at > :created_after";
+                    $where[] = 'created_at > :created_after';
                     $params['created_after'] = $value;
                     break;
                 case 'created_before':
-                    $where[] = "created_at < :created_before";
+                    $where[] = 'created_at < :created_before';
                     $params['created_before'] = $value;
                     break;
                 default:
@@ -154,7 +165,7 @@ final class ItemRepository
         }
 
         if ($where) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
         // Sorting
@@ -166,23 +177,23 @@ final class ItemRepository
         $sql .= " ORDER BY $sortBy $sortDir";
 
         // Pagination
-        $sql .= " LIMIT :offset, :limit";
+        $sql .= ' LIMIT :offset, :limit';
 
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         // Bind filter parameters
         foreach ($params as $key => $val) {
-            $type = is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR;
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
             $stmt->bindValue(":$key", $val, $type);
         }
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
         $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -193,31 +204,33 @@ final class ItemRepository
      */
     public function filteredCount(array $filters = []): int
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $sql = "SELECT count(*) as total FROM items";
+        $sql = 'SELECT count(*) as total FROM items';
         $where = [];
         $params = [];
 
         foreach ($filters as $field => $value) {
-            if ($value === null) continue;
+            if ($value === null) {
+                continue;
+            }
             switch ($field) {
                 case 'sku':
-                    $where[] = "sku = :sku";
+                    $where[] = 'sku = :sku';
                     $params['sku'] = $value;
                     break;
                 case 'title':
-                    $where[] = "title LIKE :title";
+                    $where[] = 'title LIKE :title';
                     $params['title'] = "%$value%";
                     break;
                 case 'created_after':
-                    $where[] = "created_at > :created_after";
+                    $where[] = 'created_at > :created_after';
                     $params['created_after'] = $value;
                     break;
                 case 'created_before':
-                    $where[] = "created_at < :created_before";
+                    $where[] = 'created_at < :created_before';
                     $params['created_before'] = $value;
                     break;
                 default:
@@ -226,21 +239,21 @@ final class ItemRepository
         }
 
         if ($where) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         foreach ($params as $key => $val) {
-            $type = is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR;
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
             $stmt->bindValue(":$key", $val, $type);
         }
 
         $stmt->execute();
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int)($row['total'] ?? 0);
     }
@@ -250,17 +263,17 @@ final class ItemRepository
      */
     public function count(): int
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("SELECT count(*) as total FROM items");
+        $stmt = $conn->prepare('SELECT count(*) as total FROM items');
         if (!$stmt) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         $stmt->execute();
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int)($row['total'] ?? 0);
     }
@@ -274,19 +287,19 @@ final class ItemRepository
      */
     public function update(int $id, array $d): bool
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id");
+        $stmt = $conn->prepare('UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id');
         if (!$stmt) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
-        $stmt->bindValue(':sku', $d['sku'], \PDO::PARAM_STR);
-        $stmt->bindValue(':title', $d['title'], \PDO::PARAM_STR);
-        $stmt->bindValue(':price', (float)$d['price'], \PDO::PARAM_STR);
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':sku', $d['sku'], PDO::PARAM_STR);
+        $stmt->bindValue(':title', $d['title'], PDO::PARAM_STR);
+        $stmt->bindValue(':price', (float)$d['price'], PDO::PARAM_STR);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         $stmt->execute();
         return $stmt->rowCount() > 0;
@@ -300,16 +313,16 @@ final class ItemRepository
      */
     public function delete(int $id): bool
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("DELETE FROM items WHERE id=:id");
+        $stmt = $conn->prepare('DELETE FROM items WHERE id=:id');
         if (!$stmt) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->rowCount() > 0;

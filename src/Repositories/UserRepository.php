@@ -1,9 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories;
 
 use App\Core\Pools\PDOPool;
+
+use function in_array;
+
 use InvalidArgumentException;
+
+use function is_int;
+
+use PDO;
 use RuntimeException;
 
 /**
@@ -12,14 +21,14 @@ use RuntimeException;
  * Repository for managing users in the database.
  * Provides CRUD operations: create, read, update, delete, and list users.
  *
- * @method int          create(array $d)
- * @method array|null   find(int $id)
- * @method array|null   findByEmail(string $email)
- * @method array        list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
- * @method array        filteredCount(array $filters = [])
- * @method int          count()
- * @method bool         update(int $id, array $d)
- * @method bool         delete(int $id)
+ * @method int create(array $d)
+ * @method array|null find(int $id)
+ * @method array|null findByEmail(string $email)
+ * @method array list(int $limit = 100, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method array filteredCount(array $filters = [])
+ * @method int count()
+ * @method bool update(int $id, array $d)
+ * @method bool delete(int $id)
  *
  * @package App\Repositories
  */
@@ -45,23 +54,23 @@ final class UserRepository
      */
     public function create(array $data): int
     {
-        /** @var \PDO $conn Get PDO connection from pool */
+        /** @var PDO $conn Get PDO connection from pool */
         $conn = $this->pool->get();
         // Ensure connection is returned to pool when done
-        defer(fn() => isset($conn) && $this->pool->put($conn));
+        defer(fn () => isset($conn) && $this->pool->put($conn));
 
         // Prepare INSERT statement with named parameters
-        $stmt = $conn->prepare("INSERT INTO users (name, email) VALUES (:name, :email)");
+        $stmt = $conn->prepare('INSERT INTO users (name, email) VALUES (:name, :email)');
         if ($stmt === false) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
         // Bind values safely to prevent SQL injection
-        $stmt->bindValue(':name', $data['name'], \PDO::PARAM_STR);
-        $stmt->bindValue(':email', $data['email'], \PDO::PARAM_STR);
+        $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
+        $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
 
         if (!$stmt->execute()) {
-            throw new RuntimeException("Insert failed: " . implode(' | ', $stmt->errorInfo()));
+            throw new RuntimeException('Insert failed: ' . implode(' | ', $stmt->errorInfo()));
         }
 
         // Return ID of the newly created user
@@ -77,21 +86,21 @@ final class UserRepository
      */
     public function find(int $id): ?array
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
         // Prepare SELECT query
-        $stmt = $conn->prepare("SELECT id, name, email, created_at, updated_at FROM users WHERE id=:id LIMIT 1");
+        $stmt = $conn->prepare('SELECT id, name, email, created_at, updated_at FROM users WHERE id=:id LIMIT 1');
         if ($stmt === false) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
         // Bind ID parameter
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     /**
@@ -103,31 +112,31 @@ final class UserRepository
      */
     public function findByEmail(string $email): ?array
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("SELECT id, name, email, created_at, updated_at FROM users WHERE email=:email LIMIT 1");
+        $stmt = $conn->prepare('SELECT id, name, email, created_at, updated_at FROM users WHERE email=:email LIMIT 1');
         if ($stmt === false) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
-        $stmt->bindValue(':email', $email, \PDO::PARAM_STR);
+        $stmt->bindValue(':email', $email, PDO::PARAM_STR);
         $stmt->execute();
 
-        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     /**
      * List users with optional filters, sorting, and pagination.
      *
-     * @param int       $limit Max rows (default 100, max 1000)
-     * @param int       $offset Offset for pagination
-     * @param array     $filters Associative array of filters
-     * @param string    $sortBy Column to sort by
-     * @param string    $sortDir Sort direction ('ASC' or 'DESC')
+     * @param int $limit Max rows (default 100, max 1000)
+     * @param int $offset Offset for pagination
+     * @param array $filters Associative array of filters
+     * @param string $sortBy Column to sort by
+     * @param string $sortDir Sort direction ('ASC' or 'DESC')
      *
-     * @return array    Array of users
+     * @return array Array of users
      */
     public function list(
         int $limit = 100,
@@ -136,15 +145,15 @@ final class UserRepository
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
         // Validate pagination values
-        $limit  = max(1, min($limit, 1000));
+        $limit = max(1, min($limit, 1000));
         $offset = max(0, $offset);
 
-        $sql = "SELECT id, name, email, created_at, updated_at FROM users";
+        $sql = 'SELECT id, name, email, created_at, updated_at FROM users';
 
         $where = [];
         $params = [];
@@ -157,19 +166,19 @@ final class UserRepository
 
             switch ($field) {
                 case 'email':
-                    $where[] = "email = :email";
+                    $where[] = 'email = :email';
                     $params['email'] = $value;
                     break;
                 case 'name':
-                    $where[] = "name LIKE :name";
+                    $where[] = 'name LIKE :name';
                     $params['name'] = "%$value%";
                     break;
                 case 'created_after':
-                    $where[] = "created_at > :created_after";
+                    $where[] = 'created_at > :created_after';
                     $params['created_after'] = $value;
                     break;
                 case 'created_before':
-                    $where[] = "created_at < :created_before";
+                    $where[] = 'created_at < :created_before';
                     $params['created_before'] = $value;
                     break;
                 default:
@@ -178,7 +187,7 @@ final class UserRepository
         }
 
         if ($where) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
         // Validate sorting column
@@ -190,25 +199,25 @@ final class UserRepository
         $sql .= " ORDER BY $sortBy $sortDir";
 
         // Add pagination parameters
-        $sql .= " LIMIT :offset, :limit";
+        $sql .= ' LIMIT :offset, :limit';
 
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         // Bind filter parameters
         foreach ($params as $key => $val) {
-            $type = is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR;
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
             $stmt->bindValue(":$key", $val, $type);
         }
 
         // Bind limit and offset
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
         $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -219,11 +228,11 @@ final class UserRepository
      */
     public function filteredCount(array $filters = []): int
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $sql = "SELECT count(*) as total FROM users";
+        $sql = 'SELECT count(*) as total FROM users';
 
         // Build dynamic WHERE clause using filters
         foreach ($filters as $field => $value) {
@@ -233,19 +242,19 @@ final class UserRepository
 
             switch ($field) {
                 case 'email':
-                    $where[] = "email = :email";
+                    $where[] = 'email = :email';
                     $params['email'] = $value;
                     break;
                 case 'name':
-                    $where[] = "name LIKE :name";
+                    $where[] = 'name LIKE :name';
                     $params['name'] = "%$value%";
                     break;
                 case 'created_after':
-                    $where[] = "created_at > :created_after";
+                    $where[] = 'created_at > :created_after';
                     $params['created_after'] = $value;
                     break;
                 case 'created_before':
-                    $where[] = "created_at < :created_before";
+                    $where[] = 'created_at < :created_before';
                     $params['created_before'] = $value;
                     break;
                 default:
@@ -254,22 +263,22 @@ final class UserRepository
         }
 
         if ($where) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         // Bind filter parameters
         foreach ($params as $key => $val) {
-            $type = is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR;
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
             $stmt->bindValue(":$key", $val, $type);
         }
 
         $stmt->execute();
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int)($row['total'] ?? 0);
     }
@@ -279,17 +288,17 @@ final class UserRepository
      */
     public function count(): int
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("SELECT count(*) as total FROM users");
+        $stmt = $conn->prepare('SELECT count(*) as total FROM users');
         if ($stmt === false) {
-            throw new RuntimeException("Prepare failed");
+            throw new RuntimeException('Prepare failed');
         }
 
         $stmt->execute();
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int)($row['total'] ?? 0);
     }
@@ -304,18 +313,18 @@ final class UserRepository
      */
     public function update(int $id, array $d): bool
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("UPDATE users SET name=:name, email=:email WHERE id=:id");
+        $stmt = $conn->prepare('UPDATE users SET name=:name, email=:email WHERE id=:id');
         if ($stmt === false) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
-        $stmt->bindValue(':name', $d['name'], \PDO::PARAM_STR);
-        $stmt->bindValue(':email', $d['email'], \PDO::PARAM_STR);
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':name', $d['name'], PDO::PARAM_STR);
+        $stmt->bindValue(':email', $d['email'], PDO::PARAM_STR);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         $stmt->execute();
         return $stmt->rowCount() > 0;
@@ -330,16 +339,16 @@ final class UserRepository
      */
     public function delete(int $id): bool
     {
-        /** @var \PDO $conn */
+        /** @var PDO $conn */
         $conn = $this->pool->get();
-        defer(fn() => $conn && $this->pool->put($conn));
+        defer(fn () => $conn && $this->pool->put($conn));
 
-        $stmt = $conn->prepare("DELETE FROM users WHERE id=:id");
+        $stmt = $conn->prepare('DELETE FROM users WHERE id=:id');
         if ($stmt === false) {
-            throw new RuntimeException("Failed to prepare statement");
+            throw new RuntimeException('Failed to prepare statement');
         }
 
-        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->rowCount() > 0;

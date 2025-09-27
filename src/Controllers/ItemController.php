@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Services\ItemService;
+
+use function count;
+
 use OpenApi\Attributes as OA;
 
 /**
@@ -41,7 +46,7 @@ final class ItemController extends Controller
         ),
         responses: [
             new OA\Response(response: 201, description: 'Item created'),
-            new OA\Response(response: 400, description: 'Invalid input')
+            new OA\Response(response: 400, description: 'Invalid input'),
         ]
     )]
     public function create(): array
@@ -103,7 +108,7 @@ final class ItemController extends Controller
                 required: false,
                 schema: new OA\Schema(
                     type: 'string',
-                    enum: ["id", "sku", "created_at", "updated_at"], // allowed columns
+                    enum: ['id', 'sku', 'created_at', 'updated_at'], // allowed columns
                     default: 'id'
                 )
             ),
@@ -113,10 +118,10 @@ final class ItemController extends Controller
                 required: false,
                 schema: new OA\Schema(
                     type: 'string',
-                    enum: ["ASC", "DESC"], // allowed columns
+                    enum: ['ASC', 'DESC'], // allowed columns
                     default: 'DESC'
                 )
-            )
+            ),
         ],
         responses: [
             new OA\Response(
@@ -153,29 +158,29 @@ final class ItemController extends Controller
                         ),
                     ]
                 )
-            )
+            ),
         ]
     )]
     public function index(): array
     {
         // Pagination params
-        $page   = (int)($this->request->get['page'] ?? 1);
-        $limit  = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $page = (int)($this->request->get['page'] ?? 1);
+        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override with direct offset if provided
-        $limit  = (int)($this->request->get['limit'] ?? $limit);
+        $limit = (int)($this->request->get['limit'] ?? $limit);
         $offset = (int)($this->request->get['offset'] ?? $offset);
 
         $filters = [
-            'sku'               => $this->request->get['sku'] ?? null,
-            'title'             => $this->request->get['title'] ?? null,
-            'created_after'     => $this->request->get['created_after'] ?? null,
-            'created_before'    => $this->request->get['created_before'] ?? null,
+            'sku'            => $this->request->get['sku'] ?? null,
+            'title'          => $this->request->get['title'] ?? null,
+            'created_after'  => $this->request->get['created_after'] ?? null,
+            'created_before' => $this->request->get['created_before'] ?? null,
         ];
 
-        $sortBy         = $this->request->get['sortBy'] ?? 'id';
-        $sortDirection  = $this->request->get['sortDirection'] ?? 'DESC';
+        $sortBy = $this->request->get['sortBy'] ?? 'id';
+        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Fetch from service if not cached
         $items = $this->svc->list(
@@ -187,20 +192,20 @@ final class ItemController extends Controller
         );
 
         // Get total count for pagination metadata
-        $filteredTotal  = $this->svc->filteredCount($filters);
-        $total          = $this->svc->count();
-        $pages          = ceil($total / $limit);
+        $filteredTotal = $this->svc->filteredCount($filters);
+        $total = $this->svc->count();
+        $pages = ceil($total / $limit);
 
         $data = [
-            'data'          => $items,
-            'pagination'    => [
-                'count'             => count($items),
-                'current_page'      => floor($offset / $limit) + 1,
-                'filtered_total'    => $filteredTotal,
-                'per_page'          => $limit,
-                'total_pages'       => $pages,
-                'total'             => $total,
-            ]
+            'data'       => $items,
+            'pagination' => [
+                'count'          => count($items),
+                'current_page'   => floor($offset / $limit) + 1,
+                'filtered_total' => $filteredTotal,
+                'per_page'       => $limit,
+                'total_pages'    => $pages,
+                'total'          => $total,
+            ],
         ];
 
         // Respond with item list
@@ -221,7 +226,7 @@ final class ItemController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         responses: [
             new OA\Response(
@@ -236,7 +241,7 @@ final class ItemController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: 'Item not found')
+            new OA\Response(response: 404, description: 'Item not found'),
         ]
     )]
     public function show(array $params): array
@@ -262,7 +267,7 @@ final class ItemController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'string')
-            )
+            ),
         ],
         responses: [
             new OA\Response(
@@ -277,7 +282,7 @@ final class ItemController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: 'Item not found')
+            new OA\Response(response: 404, description: 'Item not found'),
         ]
     )]
     public function showBySku(array $params): array
@@ -304,7 +309,7 @@ final class ItemController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         requestBody: new OA\RequestBody(
             required: true,
@@ -318,13 +323,13 @@ final class ItemController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'Item updated'),
-            new OA\Response(response: 404, description: 'Item not found')
+            new OA\Response(response: 404, description: 'Item not found'),
         ]
     )]
     public function update(array $p): array
     {
-        $data   = json_decode($this->request->rawContent() ?: '[]', true);
-        $u      = $this->svc->update((int)$p['id'], $data);
+        $data = json_decode($this->request->rawContent() ?: '[]', true);
+        $u = $this->svc->update((int)$p['id'], $data);
         if (!$u) {
             return $this->json(['error' => 'Not Found'], 404);
         }
@@ -345,11 +350,11 @@ final class ItemController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         responses: [
             new OA\Response(response: 204, description: 'Item deleted'),
-            new OA\Response(response: 404, description: 'Item not found')
+            new OA\Response(response: 404, description: 'Item not found'),
         ]
     )]
     public function destroy(array $p): array

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Core\Servers;
 
 use App\Core\Container;
@@ -64,17 +66,17 @@ final class HttpServer
     ) {
         // Shared memory table for worker health
         $table = new Table(64);
-        $table->column("pid", Table::TYPE_INT, 8);
-        $table->column("first_heartbeat", Table::TYPE_INT, 8);
-        $table->column("last_heartbeat", Table::TYPE_INT, 8);
-        $table->column("mysql_capacity", Table::TYPE_INT, 8);
-        $table->column("mysql_available", Table::TYPE_INT, 8);
-        $table->column("mysql_created", Table::TYPE_INT, 8);
-        $table->column("mysql_in_use", Table::TYPE_INT, 8);
-        $table->column("redis_capacity", Table::TYPE_INT, 8);
-        $table->column("redis_available", Table::TYPE_INT, 8);
-        $table->column("redis_created", Table::TYPE_INT, 8);
-        $table->column("redis_in_use", Table::TYPE_INT, 8);
+        $table->column('pid', Table::TYPE_INT, 8);
+        $table->column('first_heartbeat', Table::TYPE_INT, 8);
+        $table->column('last_heartbeat', Table::TYPE_INT, 8);
+        $table->column('mysql_capacity', Table::TYPE_INT, 8);
+        $table->column('mysql_available', Table::TYPE_INT, 8);
+        $table->column('mysql_created', Table::TYPE_INT, 8);
+        $table->column('mysql_in_use', Table::TYPE_INT, 8);
+        $table->column('redis_capacity', Table::TYPE_INT, 8);
+        $table->column('redis_available', Table::TYPE_INT, 8);
+        $table->column('redis_created', Table::TYPE_INT, 8);
+        $table->column('redis_in_use', Table::TYPE_INT, 8);
         $table->create();
 
         // Shared memory table for worker health
@@ -83,7 +85,7 @@ final class HttpServer
 
         // Shared memory table for worker health
         $rateLimitTable = new Table(64);
-        $rateLimitTable->column("count", Table::TYPE_INT, 8);
+        $rateLimitTable->column('count', Table::TYPE_INT, 8);
         $rateLimitTable->create();
 
         $host = $config['server']['host'];
@@ -99,8 +101,8 @@ final class HttpServer
         // Optional TLS/HTTP2 support
         if (($config['server']['ssl']['enable'] ?? false) === true) {
             $this->server->set([
-                'ssl_cert_file' => $config['server']['ssl']['cert_file'],
-                'ssl_key_file' => $config['server']['ssl']['key_file'],
+                'ssl_cert_file'       => $config['server']['ssl']['cert_file'],
+                'ssl_key_file'        => $config['server']['ssl']['key_file'],
                 'open_http2_protocol' => true, // optional
             ]);
         }
@@ -110,13 +112,13 @@ final class HttpServer
         // Server start event
         $this->server->on(
             'Start',
-            fn() => print("HTTP listening on {$host}:{$port}\n")
+            fn () => print("HTTP listening on {$host}:{$port}\n")
         );
 
         $container = new Container();
-        $container->bind(Server::class, fn() => $this->server);
-        $container->bind(TableWithLRUAndGC::class, fn() => $cacheTable);
-        $container->bind(Table::class, fn() => $table);
+        $container->bind(Server::class, fn () => $this->server);
+        $container->bind(TableWithLRUAndGC::class, fn () => $cacheTable);
+        $container->bind(Table::class, fn () => $table);
         // $container->bind(RedisCacheService::class, fn() => $table);
         // $container->bind(TableCacheService::class, fn() => $table);
         // $container->bind(CacheService::class, fn() => $table);
@@ -194,7 +196,7 @@ final class HttpServer
         );
 
         // Task finish event (no-op)
-        $this->server->on("finish", new TaskFinishHandler());
+        $this->server->on('finish', new TaskFinishHandler());
     }
 
     /**
@@ -202,7 +204,6 @@ final class HttpServer
      *
      * Boots the Swoole HTTP server and begins accepting requests.
      *
-     * @return void
      */
     public function start(): void
     {
@@ -213,10 +214,9 @@ final class HttpServer
      * Disable a worker and remove its entry from the health table.
      *
      * @param string $workerId The ID of the worker to disable
-     * @return void
      */
     private function disableWorker(
-        string $workerId,
+        int $workerId,
         Table $table
     ): void {
         AppContext::setWorkerReady(false);
