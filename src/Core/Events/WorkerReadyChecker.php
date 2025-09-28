@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Contexts\AppContext;
-use RuntimeException;
+use App\Exceptions\WorkerNotReadyException;
 
 final class WorkerReadyChecker
 {
@@ -13,13 +13,13 @@ final class WorkerReadyChecker
     {
         $waited = 0;
         while (!AppContext::isWorkerReady() && $waited < $timeoutMs) {
-            echo 'Waitinng for worker to be ready...';
+            echo 'Waiting for worker to be ready...' . PHP_EOL;
             usleep(10000);
             $waited += 10;
         }
 
         if ($waited >= $timeoutMs) {
-            throw new RuntimeException('Worker not ready');
+            throw new WorkerNotReadyException('Worker not ready');
         }
     }
 }

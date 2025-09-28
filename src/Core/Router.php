@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\RouteNotFoundException;
 use RuntimeException;
 
 /**
@@ -102,7 +103,7 @@ final class Router
                 return [$action, $params, $middlewares];
             }
         }
-        throw new RuntimeException('Not Found', 404);
+        throw new RouteNotFoundException(Messages::ERROR_NOT_FOUND, 404);
     }
 
     /**
@@ -113,7 +114,7 @@ final class Router
      */
     private function compile(string $path): array
     {
-        $vars = [];
+        $vars  = [];
         $regex = preg_replace_callback('#\{(\w+)\}#', function ($m) use (&$vars) {
             $vars[] = $m[1];
             return '([^/]+)';

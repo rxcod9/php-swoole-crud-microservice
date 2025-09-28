@@ -18,8 +18,8 @@ final class TaskRequestDispatcher
 
     public function dispatch(Task $task): bool
     {
-        $data = $task->data;
-        $class = $data['class'] ?? null;
+        $data      = $task->data;
+        $class     = $data['class'] ?? null;
         $arguments = $data['arguments'] ?? null;
         return new TaskDispatcher($this->container)->dispatch(
             $class,

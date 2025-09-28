@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\ControllerMethodNotFoundException;
 use InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\VarExporter\Exception\ClassNotFoundException;
 
 /**
  * Class Dispatcher
@@ -19,9 +21,9 @@ final class Dispatcher
     /**
      * Dispatcher constructor.
      *
-     * @param Container $c Dependency Injection Container
+     * @param Container $app Dependency Injection Container
      */
-    public function __construct(private Container $c)
+    public function __construct(private Container $app)
     {
         //
     }
@@ -47,16 +49,20 @@ final class Dispatcher
         }
 
         [$ctrl, $method] = explode('@', $action, 2);
-        $fqcn = "\\App\\Controllers\\$ctrl";
+        $fqcn            = "\\App\\Controllers\\$ctrl";
 
         if (!class_exists($fqcn)) {
-            throw new RuntimeException("Controller class $fqcn does not exist.");
+            throw new ClassNotFoundException("Controller class $fqcn does not exist.");
         }
 
-        $controller = $this->c->get($fqcn);
+        $controller = $this->app->get($fqcn);
 
         if (!method_exists($controller, $method)) {
-            throw new RuntimeException("Method $method does not exist in controller $fqcn.");
+            throw new ControllerMethodNotFoundException("Method $method does not exist in controller $fqcn.");
+        }
+
+        if (method_exists($controller, 'setContainer')) {
+            $controller->setContainer($this->app);
         }
 
         if (method_exists($controller, 'setRequest')) {

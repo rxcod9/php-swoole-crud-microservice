@@ -25,7 +25,9 @@ const CONFIG = {
             { duration: '1m', target: 1.0 },
             { duration: '20s', target: 0 }
         ]
-    }
+    },
+    TOTAL_EXECUTIONS: 2000,    // total default() executions across all VUs
+    MAX_DURATION: '2m'          // maximum test duration
 };
 
 // --------------------
@@ -52,7 +54,8 @@ export let options = {
         'READ_latency_ms': ['avg<50'],
         'UPDATE_latency_ms': ['avg<100'],
         // 'DELETE_latency_ms': ['avg<100']
-    }
+    },
+    maxDuration: CONFIG.MAX_DURATION
 };
 
 // --------------------
@@ -77,6 +80,11 @@ function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // PER-VU ITEM IDS
 // --------------------
 let VU_itemIds = [];
+
+// --------------------
+// TOTAL EXECUTIONS TRACKER
+// --------------------
+let globalExecutions = 0;
 
 // --------------------
 // SETUP
@@ -105,6 +113,10 @@ export function setup() {
 // DEFAULT FUNCTION
 // --------------------
 export default function (data) {
+    // Stop once global execution limit is reached
+    if (globalExecutions >= CONFIG.TOTAL_EXECUTIONS) return;
+    globalExecutions++;
+
     // Initialize per-VU copy of item IDs on first iteration
     if (VU_itemIds.length === 0) {
         VU_itemIds = data.itemIds.slice();

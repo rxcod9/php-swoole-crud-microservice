@@ -89,10 +89,7 @@ final class DbContext
     public function query(string $sql, array $params = []): array
     {
         if (!empty($params)) {
-            $stmt = $this->conn->prepare($sql);
-            if ($stmt === false) {
-                throw new RuntimeException('Prepare failed: ' . $this->conn->error);
-            }
+            $stmt   = $this->conn->prepare($sql);
             $result = $stmt->execute($params);
         } else {
             $result = $this->conn->query($sql);

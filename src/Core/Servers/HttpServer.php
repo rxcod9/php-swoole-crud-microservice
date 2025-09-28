@@ -6,14 +6,15 @@ namespace App\Core\Servers;
 
 use App\Core\Container;
 use App\Core\Contexts\AppContext;
+use App\Core\Events\PoolBinder;
 use App\Core\Events\RequestHandler;
 use App\Core\Events\TaskFinishHandler;
 use App\Core\Events\TaskRequestHandler;
 use App\Core\Events\WorkerStartHandler;
+use App\Core\Pools\PDOPool;
+use App\Core\Pools\RedisPool;
 use App\Core\Router;
 use App\Services\Cache\CacheService;
-use App\Services\Cache\RedisCacheService;
-use App\Services\Cache\TableCacheService;
 use App\Tables\TableWithLRUAndGC;
 use Swoole\Http\Server;
 use Swoole\Table;
@@ -65,10 +66,11 @@ final class HttpServer
         private Router $router
     ) {
         // Shared memory table for worker health
-        $table = new Table(64);
-        $table->column('pid', Table::TYPE_INT, 8);
-        $table->column('first_heartbeat', Table::TYPE_INT, 8);
-        $table->column('last_heartbeat', Table::TYPE_INT, 8);
+        $table = new Table(64, 128);
+        $table->column('pid', Table::TYPE_INT, 4);
+        $table->column('timer_id', Table::TYPE_INT, 4);
+        $table->column('first_heartbeat', Table::TYPE_INT, 10);
+        $table->column('last_heartbeat', Table::TYPE_INT, 10);
         $table->column('mysql_capacity', Table::TYPE_INT, 8);
         $table->column('mysql_available', Table::TYPE_INT, 8);
         $table->column('mysql_created', Table::TYPE_INT, 8);
@@ -80,50 +82,67 @@ final class HttpServer
         $table->create();
 
         // Shared memory table for worker health
-        $cacheTable = new TableWithLRUAndGC(5000, 300, 100);
+        $cacheTable = new TableWithLRUAndGC(500, 600);
         $cacheTable->create();
 
         // Shared memory table for worker health
-        $rateLimitTable = new Table(64);
+        $rateLimitTable = new Table(64, 128);
         $rateLimitTable->column('count', Table::TYPE_INT, 8);
         $rateLimitTable->create();
 
-        $host = $config['server']['host'];
-        $port = $config['server']['http_port'];
+        $host = $this->config['server']['host'];
+        $port = $this->config['server']['http_port'];
 
         $this->server = new Server(
             $host,
             $port,
             SWOOLE_PROCESS,
-            SWOOLE_SOCK_TCP | ((($config['server']['ssl']['enable'] ?? false) === true) ? SWOOLE_SSL : 0)
+            SWOOLE_SOCK_TCP | ((($this->config['server']['ssl']['enable'] ?? false) === true) ? SWOOLE_SSL : 0)
         );
 
         // Optional TLS/HTTP2 support
-        if (($config['server']['ssl']['enable'] ?? false) === true) {
+        if (($this->config['server']['ssl']['enable'] ?? false) === true) {
             $this->server->set([
-                'ssl_cert_file'       => $config['server']['ssl']['cert_file'],
-                'ssl_key_file'        => $config['server']['ssl']['key_file'],
+                'ssl_cert_file'       => $this->config['server']['ssl']['cert_file'],
+                'ssl_key_file'        => $this->config['server']['ssl']['key_file'],
                 'open_http2_protocol' => true, // optional
             ]);
         }
 
-        $this->server->set($config['server']['settings'] ?? []);
+        $this->server->set($this->config['server']['settings'] ?? []);
 
         // Server start event
         $this->server->on(
             'Start',
-            fn () => print("HTTP listening on {$host}:{$port}\n")
+            fn () => print "HTTP listening on {$host}:{$port}\n"
         );
 
         $container = new Container();
         $container->bind(Server::class, fn () => $this->server);
-        $container->bind(TableWithLRUAndGC::class, fn () => $cacheTable);
         $container->bind(Table::class, fn () => $table);
-        // $container->bind(RedisCacheService::class, fn() => $table);
-        // $container->bind(TableCacheService::class, fn() => $table);
-        // $container->bind(CacheService::class, fn() => $table);
+        $container->bind(TableWithLRUAndGC::class, fn () => $cacheTable);
 
-        $workerStartHandler = new WorkerStartHandler($config, $table, $cacheTable);
+        // Initialize pools per worker
+        $dbConf = $this->config['db'][$this->config['db']['driver'] ?? 'mysql'];
+        $mysql  = new PDOPool($dbConf, $dbConf['pool']['min'] ?? 5, $dbConf['pool']['max'] ?? 200);
+
+        \Swoole\Coroutine\run(function () use ($mysql) {
+            $mysql->init(); // now inside coroutine
+        });
+
+        $redisConf = $this->config['redis'];
+        $redis     = new RedisPool($redisConf, $redisConf['pool']['min'], $redisConf['pool']['max'] ?? 200);
+
+        \Swoole\Coroutine\run(function () use ($redis) {
+            $redis->init(); // now inside coroutine
+        });
+
+        new PoolBinder($mysql, $redis)->bind($container);
+
+        $cacheService = $container->get(CacheService::class);
+        $container->bind(CacheService::class, fn () => $cacheService);
+
+        $workerStartHandler = new WorkerStartHandler($config, $table, $cacheService, $mysql, $redis);
 
         // Worker start event
         $this->server->on(

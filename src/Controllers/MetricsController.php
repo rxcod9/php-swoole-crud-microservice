@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Messages;
 use App\Core\Metrics;
 use OpenApi\Attributes as OA;
 use Prometheus\RenderTextFormat;
@@ -38,11 +39,12 @@ final class MetricsController extends Controller
     {
         try {
             $renderer = new RenderTextFormat();
-            $metrics = $renderer->render(Metrics::reg()->getMetricFamilySamples());
+            $metrics  = $renderer->render(Metrics::reg()->getMetricFamilySamples());
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
         } catch (Throwable $e) {
-            return $this->text($e->getMessage(), 500, RenderTextFormat::MIME_TYPE);
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+            return $this->text(Messages::ERROR_INTERNAL_ERROR, 500, RenderTextFormat::MIME_TYPE);
         }
     }
 }

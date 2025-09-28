@@ -1,10 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests;
 
 use App\Core\Pools\PDOPool;
 use PDO;
-use PDOStatement;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Swoole\Coroutine;
 
@@ -75,10 +76,10 @@ abstract class TestCase extends BaseTestCase
         parent::tearDown();
 
         // only handle SQLite
-        $dsn  = getenv('DB_DSN') ?: 'sqlite:database.sqlite';
+        $dsn = getenv('DB_DSN') ?: 'sqlite:database.sqlite';
         if (isset($dsn) && str_starts_with($dsn, 'sqlite:')) {
             $dbFile = substr($dsn, 7); // remove "sqlite:"
-            
+
             // if it's not in-memory
             if ($dbFile !== ':memory:' && file_exists($dbFile)) {
                 unlink($dbFile); // delete old file so we start fresh

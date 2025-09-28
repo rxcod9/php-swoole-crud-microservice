@@ -7,7 +7,8 @@ namespace App\Core\Events;
 use App\Core\Contexts\AppContext;
 use App\Core\Pools\PDOPool;
 use App\Core\Pools\RedisPool;
-use App\Tables\TableWithLRUAndGC;
+use App\Exceptions\CacheSetException;
+use App\Services\Cache\CacheService;
 use Swoole\Http\Server;
 use Swoole\Table;
 use Swoole\Timer;
@@ -26,7 +27,9 @@ final class WorkerStartHandler
     public function __construct(
         private array $config,
         private Table $table,
-        private TableWithLRUAndGC $cacheTable
+        private CacheService $cacheService,
+        private PDOPool &$mysql,
+        private RedisPool &$redis
     ) {
         //
     }
@@ -37,17 +40,15 @@ final class WorkerStartHandler
         echo "Worker {$workerId} started with {$pid}\n";
 
         // Write initial health
-        $this->table->set((string) $workerId, [
+        $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
             'first_heartbeat' => time(),
             'last_heartbeat'  => time(),
         ]);
+        if (!$success) {
+            throw new CacheSetException('Unable to set Cache');
+        }
 
-        // Initialize pools per worker
-        $dbConf = $this->config['db'][$this->config['db']['driver'] ?? 'mysql'];
-        $server->mysql = new PDOPool($dbConf, $dbConf['pool']['min'] ?? 5, $dbConf['pool']['max'] ?? 200);
-        $redisConf = $this->config['redis'];
-        $server->redis = new RedisPool($redisConf, $redisConf['pool']['min'], $redisConf['pool']['max'] ?? 200);
         AppContext::setWorkerReady(true);
         echo "Worker {$workerId} started with {$pid} ready\n";
 
@@ -90,34 +91,24 @@ final class WorkerStartHandler
         $workerId,
         $pid
     ) {
-        // echo "Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n";
-        try {
-            $server->mysql->autoScale();
-        } catch (Throwable $e) {
-            echo "[Worker {$workerId}] MySQL autoScale error: " . $e->getMessage() . "\n";
-        }
+        error_log("Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
 
-        try {
-            $server->redis->autoScale();
-        } catch (Throwable $e) {
-            echo "[Worker {$workerId}] Redis autoScale error: " . $e->getMessage() . "\n";
-        }
-
-        $mysqlStats = $server->mysql->stats();
-        $mysqlCapacity = $mysqlStats['capacity'];
+        $mysqlStats     = $this->mysql->stats();
+        $mysqlCapacity  = $mysqlStats['capacity'];
         $mysqlAvailable = $mysqlStats['available'];
-        $mysqlCreated = $mysqlStats['created'];
-        $mysqlInUse = $mysqlStats['in_use'];
+        $mysqlCreated   = $mysqlStats['created'];
+        $mysqlInUse     = $mysqlStats['in_use'];
 
-        $redisStats = $server->redis->stats();
-        $redisCapacity = $redisStats['capacity'];
+        $redisStats     = $this->redis->stats();
+        $redisCapacity  = $redisStats['capacity'];
         $redisAvailable = $redisStats['available'];
-        $redisCreated = $redisStats['created'];
-        $redisInUse = $redisStats['in_use'];
+        $redisCreated   = $redisStats['created'];
+        $redisInUse     = $redisStats['in_use'];
 
-        $row = $this->table->get((string) $workerId) ?? [];
-        $this->table->set((string) $workerId, [
+        $row     = $this->table->get((string) $workerId) ?? [];
+        $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
+            'timer_id'        => $timerId,
             'first_heartbeat' => $row['first_heartbeat'] ?? time(),
             'last_heartbeat'  => time(),
             'mysql_capacity'  => $mysqlCapacity,
@@ -129,7 +120,22 @@ final class WorkerStartHandler
             'redis_created'   => $redisCreated,
             'redis_in_use'    => $redisInUse,
         ]);
+        if (!$success) {
+            throw new CacheSetException('Unable to set Cache');
+        }
 
-        $this->cacheTable->gc(); // run garbage collection on cache table
+        try {
+            $this->mysql->autoScale();
+        } catch (Throwable $e) {
+            error_log("[Worker {$workerId}] MySQL autoScale error: " . $e->getMessage() . "\n");
+        }
+
+        try {
+            $this->redis->autoScale();
+        } catch (Throwable $e) {
+            error_log("[Worker {$workerId}] Redis autoScale error: " . $e->getMessage() . "\n");
+        }
+
+        $this->cacheService->gc(); // run garbage collection on cache table
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\InstantiableException;
+
 use function array_key_exists;
 
 use Closure;
@@ -49,7 +51,7 @@ final class Container
      */
     public function singleton(string $id, Closure $factory): void
     {
-        $this->bindings[$id] = $factory;
+        $this->bindings[$id]  = $factory;
         $this->instances[$id] = null;
     }
 
@@ -90,13 +92,13 @@ final class Container
      *
      * @param string $class Class name to instantiate.
      * @return mixed The instantiated class.
-     * @throws RuntimeException If the class cannot be instantiated.
+     * @throws InstantiableException If the class cannot be instantiated.
      */
     private function autowire(string $class)
     {
         $ref = new ReflectionClass($class);
         if (!$ref->isInstantiable()) {
-            throw new RuntimeException("Cannot instantiate $class");
+            throw new InstantiableException("Cannot instantiate $class");
         }
         $ctor = $ref->getConstructor();
         if (!$ctor) {

@@ -1,29 +1,44 @@
 name: Check & fix styling
 
-on: [push]
+on:
+  push:
+    branches:
+      - '**' # run on all branches
 
 jobs:
-    style:
-        runs-on: ubuntu-latest
+  style:
+    runs-on: ubuntu-latest
 
-        steps:
-            -   name: Checkout code
-                uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            -   name: Fix style
-                uses: docker://oskarstark/php-cs-fixer-ga
-                with:
-                    args: --config=.php-cs-fixer.php --allow-risky=yes
+      # Optional: set up PHP if needed (e.g. for local composer plugins)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer
 
-            -   name: Extract branch name
-                shell: bash
-                run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-                id: extract_branch
+      # Run PHP-CS-Fixer
+      - name: Fix style
+        uses: docker://oskarstark/php-cs-fixer-ga
+        with:
+          args: --config=.php-cs-fixer.php --allow-risky=yes --verbose
 
-            -   name: Commit changes
-                uses: stefanzweifel/git-auto-commit-action@v4.14.1
-                with:
-                    commit_message: Fix styling
-                    branch: ${{ steps.extract_branch.outputs.branch }}
-                env:
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Extract branch name safely
+      - name: Extract branch name
+        id: extract_branch
+        run: |
+          branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "branch=$branch_name" >> $GITHUB_OUTPUT
+
+      # Commit back changes if fixer modified files
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: fix styling via php-cs-fixer"
+          branch: ${{ steps.extract_branch.outputs.branch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

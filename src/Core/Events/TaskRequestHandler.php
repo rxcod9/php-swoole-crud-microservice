@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Container;
+use App\Core\Messages;
 use App\Core\Metrics;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
@@ -41,12 +42,10 @@ final class TaskRequestHandler
             new WorkerReadyChecker()->wait();
 
             $taskId = bin2hex(random_bytes(8));
-            $start = microtime(true);
-
-            new PoolBinder()->bind($server, $this->container);
+            $start  = microtime(true);
 
             // Metrics collection
-            $reg = Metrics::reg();
+            $reg     = Metrics::reg();
             $counter = $reg->getOrRegisterCounter(
                 'task_requests_total',
                 'Tasks',
@@ -61,38 +60,18 @@ final class TaskRequestHandler
             );
 
             $status = new TaskRequestDispatcher($this->container)->dispatch($task);
-            // echo __CLASS__ . "Payload: " . PHP_EOL;
-            // var_dump($status);
-
             // Metrics and async logging
             $dur = microtime(true) - $start;
 
-            $data = $task->data;
+            $data  = $task->data;
             $class = $data['class'] ?? null;
             $counter->inc([$class, (string)$status]);
             $hist->observe($dur, [$class]);
 
-            // (new TaskRequestLogger())->log(
-            //     $server,
-            //     $task,
-            //     [
-            //         'id' => $taskId,
-            //         'path' => $path,
-            //         'status' => $status,
-            //         'dur_ms' => (int)round($dur * 1000)
-            //     ]
-            // );
-
             return $status;
         } catch (Throwable $e) {
-            echo $e->getMessage();
-            // (new TaskRequestLogger())->log(
-            //     $server,
-            //     $task,
-            //     [
-            //         'error' => $e->getMessage()
-            //     ]
-            // );
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+            echo Messages::ERROR_INTERNAL_ERROR;
         }
 
         return false;

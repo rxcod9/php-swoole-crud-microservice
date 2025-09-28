@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Entry point for the Swoole CRUD Microservice.
  *
@@ -13,10 +15,6 @@
  * @copyright Copyright (c) 2024
  * @license   MIT
  */
-
-ini_set('display_errors', 'On');
-ini_set('display_startup_errors', 'On');
-error_reporting(E_ALL & ~E_DEPRECATED);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -37,6 +35,7 @@ $dotenv->required([
     // 'SWOOLE_MAX_REQUEST',
     // 'SSL_ENABLE',
     'DB_DRIVER',
+    'DB_HOST',
     'DB_DSN',
     'DB_USER',
     'DB_PASS',

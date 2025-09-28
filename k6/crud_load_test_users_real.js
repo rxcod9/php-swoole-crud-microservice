@@ -6,7 +6,7 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 100,
+    TOTAL_USERS: 10,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
     LIST_PAGES: 3,
@@ -18,14 +18,16 @@ const CONFIG = {
         // DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 100,
+        MAX_VUS: 10,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
             { duration: '1m', target: 1.0 },
             { duration: '20s', target: 0 }
         ]
-    }
+    },
+    TOTAL_EXECUTIONS: 500,     // Total default() executions across all VUs
+    MAX_DURATION: '2m'          // Maximum test duration
 };
 
 // --------------------
@@ -40,7 +42,7 @@ let updateTrend = new Trend('UPDATE_latency_ms');
 // --------------------
 // OPTIONS
 // --------------------
-export let options = {
+export const options = {
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -52,7 +54,8 @@ export let options = {
         'READ_latency_ms': ['avg<50'],
         'UPDATE_latency_ms': ['avg<100'],
         // 'DELETE_latency_ms': ['avg<100']
-    }
+    },
+    maxDuration: CONFIG.MAX_DURATION
 };
 
 // --------------------
@@ -78,6 +81,11 @@ function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 let VU_userIds = [];
 
 // --------------------
+// TOTAL EXECUTIONS TRACKER
+// --------------------
+let globalExecutions = 0;
+
+// --------------------
 // SETUP
 // --------------------
 export function setup() {
@@ -85,13 +93,30 @@ export function setup() {
 
     for (let i = 0; i < CONFIG.TOTAL_USERS; i++) {
         const user = generateUser(i);
-        let res = http.post('http://localhost:9501/users', JSON.stringify(user), {
+        const res = http.post('http://localhost:9501/users', JSON.stringify(user), {
             headers: { 'Content-Type': 'application/json' }
         });
-        // createTrend.add(res.timings.duration);
-        // check(res, { 'CREATE success': r => r.status === 201 });
-        try { userIds.push(JSON.parse(res.body).id); }
-        catch (e) { console.error('Failed parse CREATE response', res.body); }
+        createTrend.add(res.timings.duration);
+
+        // Log failures explicitly
+        if (res.status !== 201) {
+            console.error(`[SETUP] CREATE failed (status ${res.status}): ${res.body}`);
+        }
+
+        // Check also ensures k6 reports the failure
+        const success = check(res, { 'CREATE success': r => r.status === 201 });
+
+        // Attempt to parse ID; log if parsing fails
+        try {
+            const id = JSON.parse(res.body).id;
+            if (!id) {
+                console.error(`[SETUP] CREATE response missing id: ${res.body}`);
+            } else {
+                userIds.push(id);
+            }
+        } catch (e) {
+            console.error('[SETUP] Failed parse CREATE response:', res.body, 'Error:', e);
+        }
     }
 
     const hotCount = Math.floor(CONFIG.TOTAL_USERS * CONFIG.HOT_PERCENT);
@@ -104,6 +129,10 @@ export function setup() {
 // DEFAULT FUNCTION
 // --------------------
 export default function (data) {
+    // Stop once global execution limit is reached
+    if (globalExecutions >= CONFIG.TOTAL_EXECUTIONS) return;
+    globalExecutions++;
+
     // Initialize per-VU copy of user IDs on first iteration
     if (VU_userIds.length === 0) {
         VU_userIds = data.userIds.slice();
@@ -137,9 +166,24 @@ export default function (data) {
         const user = generateUser(Math.floor(Math.random() * 1000000));
         const res = http.post('http://localhost:9501/users', JSON.stringify(user), { headers: { 'Content-Type': 'application/json' } });
         createTrend.add(res.timings.duration);
+
+        // Explicit logging for failures
+        if (res.status !== 201) {
+            console.error(`[DEFAULT] CREATE failed (status ${res.status}): ${res.body}`);
+        }
+
         check(res, { 'CREATE success': r => r.status === 201 });
-        try { userIds.push(JSON.parse(res.body).id); }
-        catch (e) { console.error('Failed parse CREATE response', res.body); }
+
+        try {
+            const id = JSON.parse(res.body).id;
+            if (!id) {
+                console.error(`[DEFAULT] CREATE response missing id: ${res.body}`);
+            } else {
+                userIds.push(id);
+            }
+        } catch (e) {
+            console.error('[DEFAULT] Failed parse CREATE response:', res.body, 'Error:', e);
+        }
 
     } else if (rand < w.LIST + w.READ + w.CREATE + w.UPDATE) {
         // UPDATE

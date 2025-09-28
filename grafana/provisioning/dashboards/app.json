@@ -1,8 +1,8 @@
 {
-    "title": "PHP App Metrics",
-    "uid": "php_full_dashboard",
+    "title": "PHP Swoole CRUD Microservice",
+    "uid": "php-swoole-crud-microservice",
     "timezone": "browser",
-    "refresh": "15s",
+    "refresh": "5s",
     "schemaVersion": 36,
     "version": 1,
     "panels": [

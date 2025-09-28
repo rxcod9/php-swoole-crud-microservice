@@ -17,12 +17,12 @@ final class MetricsMiddleware implements MiddlewareInterface
 
         $next(); // call next middleware
 
-        $dur = microtime(true) - $start;
-        $reg = Metrics::reg();
+        $dur     = microtime(true) - $start;
+        $reg     = Metrics::reg();
         $counter = $reg->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-        $hist = $reg->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
+        $hist    = $reg->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
 
-        $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path   = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = $res->status ?? 200;
 
         $counter->inc([$req->server['request_method'], $path, (string)$status]);

@@ -15,6 +15,23 @@ namespace App\Core;
 abstract class Controller
 {
     /**
+     * The container object associated with the controller.
+     *
+     * @var mixed
+     */
+    protected $container;
+
+    /**
+     * Assigns the container object to the controller.
+     *
+     * @param mixed $app The container object.
+     */
+    public function setContainer($app): void
+    {
+        $this->container = $app;
+    }
+
+    /**
      * The request object associated with the controller.
      *
      * @var mixed
@@ -43,12 +60,14 @@ abstract class Controller
     protected function json(
         $data,
         int $status = 200,
-        string $contentType = 'application/json'
+        string $contentType = 'application/json',
+        ?string $cacheTagType = null
     ): array {
         return [
-            '__status'      => $status,
-            '__json'        => $data,
-            '__contentType' => $contentType,
+            '__status'       => $status,
+            '__json'         => $data,
+            '__contentType'  => $contentType,
+            '__cacheTagType' => $cacheTagType,
         ];
     }
 
@@ -64,12 +83,14 @@ abstract class Controller
     protected function html(
         $data,
         int $status = 200,
-        string $contentType = 'text/html'
+        string $contentType = 'text/html',
+        ?string $cacheTagType = null
     ): array {
         return [
-            '__status'      => $status,
-            '__html'        => $data,
-            '__contentType' => $contentType,
+            '__status'       => $status,
+            '__html'         => $data,
+            '__contentType'  => $contentType,
+            '__cacheTagType' => $cacheTagType,
         ];
     }
 
@@ -85,12 +106,14 @@ abstract class Controller
     protected function text(
         $data,
         int $status = 200,
-        string $contentType = 'text/plain'
+        string $contentType = 'text/plain',
+        ?string $cacheTagType = null
     ): array {
         return [
-            '__status'      => $status,
-            '__text'        => $data,
-            '__contentType' => $contentType,
+            '__status'       => $status,
+            '__text'         => $data,
+            '__contentType'  => $contentType,
+            '__cacheTagType' => $cacheTagType,
         ];
     }
 }

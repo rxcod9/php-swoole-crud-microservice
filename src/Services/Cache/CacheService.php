@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Cache;
 
+use Exception;
+
 /**
  * CacheService
  *
@@ -30,29 +32,42 @@ final class CacheService
         // 1. Check local table cache first
         $data = $this->tableCache->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
-            return $data;
+            return [TableCacheService::TAG, $data];
         }
 
         // 2. Fallback to Redis
         $data = $this->redisCache->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
             // warm local cache for faster next access
-            $this->tableCache->setRecordByColumn($entity, $column, $value, $data);
+            try {
+                $this->tableCache->setRecordByColumn($entity, $column, $value, $data);
+            } catch (Exception $e) {
+                error_log('Exception: ' . $e->getMessage()); // logged internally
+            }
+            return [RedisCacheService::TAG, $data];
         }
 
-        return $value;
+        return [null, $data];
     }
 
     public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data): void
     {
         // Write-through both caches
-        $this->tableCache->setRecordByColumn($entity, $column, $value, $data);
+        try {
+            $this->tableCache->setRecordByColumn($entity, $column, $value, $data);
+        } catch (Exception $e) {
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+        }
         $this->redisCache->setRecordByColumn($entity, $column, $value, $data);
     }
 
     public function invalidateRecordByColumn(string $entity, string $column, int|string $value): void
     {
-        $this->tableCache->invalidateRecordByColumn($entity, $column, $value);
+        try {
+            $this->tableCache->invalidateRecordByColumn($entity, $column, $value);
+        } catch (Exception $e) {
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+        }
         $this->redisCache->invalidateRecordByColumn($entity, $column, $value);
     }
 
@@ -80,20 +95,29 @@ final class CacheService
     {
         $value = $this->tableCache->getList($entity, $query);
         if ($value !== null) {
-            return $value;
+            return [TableCacheService::TAG, $value];
         }
 
         $value = $this->redisCache->getList($entity, $query);
         if ($value !== null) {
-            $this->tableCache->setList($entity, $query, $value);
+            try {
+                $this->tableCache->setList($entity, $query, $value);
+            } catch (Exception $e) {
+                error_log('Exception: ' . $e->getMessage()); // logged internally
+            }
+            return [RedisCacheService::TAG, $value];
         }
 
-        return $value;
+        return [null, $value];
     }
 
     public function setList(string $entity, array $query, mixed $data): void
     {
-        $this->tableCache->setList($entity, $query, $data);
+        try {
+            $this->tableCache->setList($entity, $query, $data);
+        } catch (Exception $e) {
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+        }
         $this->redisCache->setList($entity, $query, $data);
     }
 
@@ -101,5 +125,32 @@ final class CacheService
     {
         $this->tableCache->invalidateLists($entity);
         $this->redisCache->invalidateLists($entity);
+    }
+
+    /**
+     * Garbage collect old list versions for an entity.
+     *
+     * @param int $keepVersions Number of latest versions to keep
+     */
+    public function gcOldListVersions(array $entities, int $keepVersions = 2): void
+    {
+        // Table cache cleanup
+        $this->tableCache->gcOldListVersions($entities, $keepVersions);
+
+        // Redis cache cleanup
+        $this->redisCache->gcOldListVersions($entities, $keepVersions);
+    }
+
+    /**
+     * Garbage collect old list versions for an entity.
+     *
+     */
+    public function gc(): void
+    {
+        // Table cache cleanup
+        $this->tableCache->gc();
+
+        // Redis cache cleanup
+        $this->redisCache->gc();
     }
 }

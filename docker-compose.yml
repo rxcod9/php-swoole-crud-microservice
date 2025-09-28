@@ -44,38 +44,61 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-app}
-      MYSQL_USER: ${MYSQL_USER:-app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_EXPORTER_USER: ${MYSQL_EXPORTER_USER}
+      MYSQL_EXPORTER_PASS: ${MYSQL_EXPORTER_PASS}
     ports: ["3306:3306"]
     volumes:
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD","mysqladmin","ping","-h","localhost","-u${MYSQL_USER:-app}","-p${MYSQL_PASSWORD:-app}"]
+      test: ["CMD","mysqladmin","ping","-h","localhost","-u${DB_USER}","-p${DB_PASS}"]
       interval: 5s
       timeout: 2s
       retries: 20
 
   # MySQL exporter for Prometheus
   mysqld-exporter:
-    image: prom/mysqld-exporter:latest
+    build:
+      context: ./docker/mysql-exporter
+      dockerfile: Dockerfile
+    # image: prom/mysqld-exporter:latest
     container_name: mysqld_exporter
     environment:
-      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD:-root}@(mysql:3306)/"
-    volumes:
-      - ./docker/mysql/.my.cnf:/etc/mysql/.my.cnf:ro
-    command:
-      - '--config.my-cnf=/etc/mysql/.my.cnf'
+      MYSQL_EXPORTER_USER: ${MYSQL_EXPORTER_USER}
+      MYSQL_EXPORTER_PASS: ${MYSQL_EXPORTER_PASS}
+      MYSQL_EXPORTER_HOST: ${MYSQL_EXPORTER_HOST}
     ports:
       - "9104:9104"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9104/metrics"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9104/metrics || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
     depends_on:
       - mysql
+
+
+  # Redis exporter for Prometheus
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis_exporter
+    environment:
+      # Connect to Redis instance (with password)
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      - redis
 
   # Prometheus monitoring service
   prometheus:
@@ -90,7 +113,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    depends_on: [mysqld-exporter, metrics, app]
+    depends_on: [mysqld-exporter, redis-exporter, metrics, app]
 
   # Grafana dashboard service
   grafana:
@@ -115,9 +138,10 @@ services:
   # Redis in-memory data store
   redis:
     image: redis:7
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]  # 👈 Enable AUTH
     ports: ["6379:6379"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 2s
       retries: 20

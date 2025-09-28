@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middlewares;
 
 use App\Core\Container;
+use App\Exceptions\CacheSetException;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Table;
@@ -20,9 +21,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
     public function handle(Request $req, Response $res, Container $c, callable $next): void
     {
-        $ip = $req->server['remote_addr'] ?? 'unknown';
+        $ip    = $req->server['remote_addr'] ?? 'unknown';
         $limit = 10; // requests per minute
-        $key = "rate:{$ip}";
+        $key   = "rate:{$ip}";
 
         $count = $this->table->get($key)['count'] ?? 0;
         if ($count >= $limit) {
@@ -32,7 +33,10 @@ final class RateLimitMiddleware implements MiddlewareInterface
             return;
         }
 
-        $this->table->set($key, ['count' => $count + 1]);
+        $success = $this->table->set($key, ['count' => $count + 1]);
+        if (!$success) {
+            throw new CacheSetException('Unable to set Cache');
+        }
         $next();
     }
 }

@@ -9,6 +9,10 @@ use App\Middlewares\MiddlewareInterface;
 
 use function count;
 
+use InvalidArgumentException;
+
+use function sprintf;
+
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -34,22 +38,34 @@ final class MiddlewarePipeline
     }
 
     /**
+     * Register multiple middlewares at once.
+     */
+    public function addMiddlewares(array $middlewares): void
+    {
+        foreach ($middlewares as $middleware) {
+            if (!$middleware instanceof MiddlewareInterface) {
+                throw new InvalidArgumentException(
+                    sprintf('Expected instance of MiddlewareInterface, got %s', get_debug_type($middleware))
+                );
+            }
+            $this->addMiddleware($middleware);
+        }
+    }
+
+    /**
      * Start the middleware chain
      */
     public function handle(
         Request $req,
         Response $res,
         Container $container,
-        array $routeMiddlewares,
         callable $finalHandler
     ): void {
-        // Merge once, not on every $next()
-        $allMiddlewares = [...$this->middlewares, ...$routeMiddlewares];
-        $total = count($allMiddlewares);
+        $total = count($this->middlewares);
 
-        $runner = function (int $index = 0) use ($req, $res, $container, $allMiddlewares, $total, $finalHandler, &$runner) {
+        $runner = function (int $index = 0) use ($req, $res, $container, $total, $finalHandler, &$runner) {
             if ($index < $total) {
-                $allMiddlewares[$index]->handle($req, $res, $container, fn () => $runner($index + 1));
+                $this->middlewares[$index]->handle($req, $res, $container, fn () => $runner($index + 1));
             } else {
                 $finalHandler();
             }

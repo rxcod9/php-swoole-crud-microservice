@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Contexts;
 
+use App\Exceptions\UnsupportedRedisCommandException;
 use Redis;
 use RuntimeException;
 
@@ -91,7 +92,7 @@ final class RedisContext
 
         // Dynamically call Redis method
         if (!method_exists($this->conn, $cmd)) {
-            throw new RuntimeException("Unsupported Redis command: {$cmd}");
+            throw new UnsupportedRedisCommandException("Unsupported Redis command: {$cmd}");
         }
 
         return $this->conn->{$cmd}(...$args);

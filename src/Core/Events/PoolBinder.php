@@ -7,18 +7,24 @@ namespace App\Core\Events;
 use App\Core\Container;
 use App\Core\Pools\PDOPool;
 use App\Core\Pools\RedisPool;
-use RuntimeException;
-use Swoole\Http\Server;
+use App\Exceptions\DatabasePoolNotInitializedException;
 
 final class PoolBinder
 {
-    public function bind(Server $server, Container $container): void
+    public function __construct(
+        private PDOPool &$mysql,
+        private RedisPool &$redis
+    ) {
+        //
+    }
+
+    public function bind(Container $container): void
     {
-        if (!isset($server->mysql) || !isset($server->redis)) {
-            throw new RuntimeException('Database pools not initialized');
+        if (!isset($this->mysql) || !isset($this->redis)) {
+            throw new DatabasePoolNotInitializedException('Database pools not initialized');
         }
 
-        $container->bind(PDOPool::class, fn () => $server->mysql);
-        $container->bind(RedisPool::class, fn () => $server->redis);
+        $container->bind(PDOPool::class, fn () => $this->mysql);
+        $container->bind(RedisPool::class, fn () => $this->redis);
     }
 }

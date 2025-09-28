@@ -1,0 +1,21 @@
+# Normalize line endings
+* text=auto
+
+# Treat PHP files as text
+*.php text eol=lf
+
+# Composer files
+composer.json text
+composer.lock text
+
+# SQL
+*.sql text eol=lf
+
+# JSON, YAML, ENV files
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env text eol=lf
+
+# Ignore generated logs in git diff
+*.log linguist-generated=true

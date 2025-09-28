@@ -6,10 +6,12 @@ namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Core\Dispatcher;
+use App\Core\Messages;
 use App\Core\Metrics;
 use App\Core\Router;
 
 use function in_array;
+use function is_int;
 
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -64,25 +66,16 @@ final class RequestHandler
             $reqId = bin2hex(random_bytes(8));
             $start = microtime(true);
 
-            new PoolBinder()->bind($this->server, $this->container);
-
             // Prepare middleware pipeline
             $pipeline = new MiddlewarePipeline();
             $this->registerGlobalMiddlewares($pipeline);
-
-            // Route resolution
-            [$action, $params, $routeMiddlewares] = $this->router->match(
-                $req->server['request_method'],
-                $req->server['request_uri']
-            );
 
             // Run pipeline + final dispatcher
             $pipeline->handle(
                 $req,
                 $res,
                 $this->container,
-                $routeMiddlewares,
-                fn () => $this->dispatch($action, $params, $req, $reqId, $res, $start)
+                fn () => $this->dispatchRouteMiddlewarePipeline($req, $reqId, $res, $start)
             );
         } catch (Throwable $e) {
             $this->handleException($req, $res, $e);
@@ -109,25 +102,64 @@ final class RequestHandler
      */
     private function handleException(Request $req, Response $res, Throwable $e): void
     {
-        $status = $e->getCode() ?: 500;
+        $status = is_int($e->getCode()) ? (int) $e->getCode() : 500;
 
         $res->header('Content-Type', 'application/json');
         $res->status($status);
         $res->end(json_encode([
-            'error' => $e->getMessage(),
+            'error' => Messages::ERROR_INTERNAL_ERROR,
             'code'  => $status,
             'trace' => $e->getTraceAsString(),
             'file'  => $e->getFile(),
             'line'  => $e->getLine(),
         ]));
 
-        new RequestLogger()->log($this->server, $req, [
-            'error' => $e->getMessage(),
-            'code'  => $status,
-            'trace' => $e->getTraceAsString(),
-            'file'  => $e->getFile(),
-            'line'  => $e->getLine(),
-        ]);
+        new RequestLogger()->log(
+            'error',
+            $this->server,
+            $req,
+            [
+                'error' => $e->getMessage(),
+                'code'  => $status,
+                'trace' => $e->getTraceAsString(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+            ]
+        );
+    }
+
+    /**
+     * Dispatch the request to the appropriate controller action and send the response.
+     *
+     * @param Request $req The incoming HTTP request
+     * @param string $reqId Unique request ID for logging
+     * @param Response $res The HTTP response to be sent
+     * @param float $start Timestamp when the request handling started (for metrics)
+     *
+     */
+    private function dispatchRouteMiddlewarePipeline(
+        Request $req,
+        string $reqId,
+        Response $res,
+        float $start
+    ): void {
+        // Route resolution
+        [$action, $params, $routeMiddlewares] = $this->router->match(
+            $req->server['request_method'],
+            $req->server['request_uri']
+        );
+
+        // Prepare middleware pipeline
+        $pipeline = new MiddlewarePipeline();
+        $pipeline->addMiddlewares($routeMiddlewares);
+
+        // Run pipeline + final dispatcher
+        $pipeline->handle(
+            $req,
+            $res,
+            $this->container,
+            fn () => $this->dispatch($action, $params, $req, $reqId, $res, $start)
+        );
     }
 
     /**
@@ -150,7 +182,7 @@ final class RequestHandler
         float $start
     ): void {
         // Metrics setup
-        $reg = Metrics::reg();
+        $reg     = Metrics::reg();
         $counter = $reg->getOrRegisterCounter(
             'http_requests_total',
             'Requests',
@@ -167,13 +199,16 @@ final class RequestHandler
         // Execute controller/handler
         $payload = new Dispatcher($this->container)->dispatch($action, $params, $req);
 
-        $path = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $status = $payload['__status'] ?? 200;
-        $json = $payload['__json'] ?? null;
-        $html = $payload['__html'] ?? null;
-        $text = $payload['__text'] ?? null;
-        $ctype = $payload['__contentType'] ?? null;
+        $path         = parse_url($req->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $status       = $payload['__status'] ?? 200;
+        $json         = $payload['__json'] ?? null;
+        $html         = $payload['__html'] ?? null;
+        $text         = $payload['__text'] ?? null;
+        $ctype        = $payload['__contentType'] ?? null;
+        $cacheTagType = $payload['__cacheTagType'] ?? null;
 
+        $res->status($status);
+        $res->header('X-CACHE-TYPE', $cacheTagType);
         // Format response
         if ($html) {
             $res->header('Content-Type', $ctype ?? 'text/html');
@@ -185,7 +220,6 @@ final class RequestHandler
             $res->header('Content-Type', $ctype ?? 'application/json');
             $res->end($status === 204 ? '' : json_encode($json ?: $payload));
         }
-        $res->status($status);
 
         // Metrics & Logging
         $dur = microtime(true) - $start;
@@ -199,12 +233,17 @@ final class RequestHandler
             $hist->observe($dur, [$req->server['request_method'], $route['path']]);
         }
 
-        new RequestLogger()->log($this->server, $req, [
-            'id'     => $reqId,
-            'method' => $req->server['request_method'],
-            'path'   => $path,
-            'status' => $status,
-            'dur_ms' => (int) round($dur * 1000),
-        ]);
+        new RequestLogger()->log(
+            'debug',
+            $this->server,
+            $req,
+            [
+                'id'     => $reqId,
+                'method' => $req->server['request_method'],
+                'path'   => $path,
+                'status' => $status,
+                'dur_ms' => (int) round($dur * 1000),
+            ]
+        );
     }
 }

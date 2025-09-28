@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
+use App\Core\Constants;
 use App\Core\Container;
 
 use function sprintf;
@@ -22,7 +23,7 @@ final class LoggingMiddleware implements MiddlewareInterface
         $dur = microtime(true) - $start;
         echo sprintf(
             "[%s] %s %s - %.2fms\n",
-            date('Y-m-d H:i:s'),
+            date(Constants::DATETIME_FORMAT),
             $req->server['request_method'] ?? '-',
             $req->server['request_uri'] ?? '-',
             $dur * 1000

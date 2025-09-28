@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Messages;
 use App\Services\Cache\CacheService;
 use App\Services\UserService;
-
-use function count;
-
 use OpenApi\Attributes as OA;
 
 /**
@@ -54,12 +52,12 @@ final class UserController extends Controller
     public function create(): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $user = $this->svc->create($data);
+        $data = $this->svc->create($data);
 
         // Invalidate cache
         $this->cache->invalidateLists('users');
 
-        return $this->json($user, 201);
+        return $this->json($data, 201);
     }
 
     /**
@@ -169,12 +167,12 @@ final class UserController extends Controller
     public function index(): array
     {
         // Pagination params
-        $page = (int)($this->request->get['page'] ?? 1);
-        $limit = max(1, min((int)($this->request->get['limit'] ?? 100), 1000));
+        $page   = (int)($this->request->get['page'] ?? 1);
+        $limit  = max(1, min((int)($this->request->get['limit'] ?? 20), 100));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override with direct offset if provided
-        $limit = (int)($this->request->get['limit'] ?? $limit);
+        $limit  = (int)($this->request->get['limit'] ?? $limit);
         $offset = (int)($this->request->get['offset'] ?? $offset);
 
         $filters = [
@@ -184,7 +182,7 @@ final class UserController extends Controller
             'created_before' => $this->request->get['created_before'] ?? null,
         ];
 
-        $sortBy = $this->request->get['sortBy'] ?? 'id';
+        $sortBy        = $this->request->get['sortBy'] ?? 'id';
         $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Cache key based on pagination params
@@ -195,12 +193,16 @@ final class UserController extends Controller
             'sortBy'        => $sortBy,
             'sortDirection' => $sortDirection,
         ];
-        if ($cached = $this->cache->getList('users', $query)) {
-            return $this->json($cached);
+        [$cacheTag, $cached] = $this->cache->getList('users', $query);
+        if ($cached) {
+            return $this->json(
+                data: $cached,
+                cacheTag: $cacheTag
+            );
         }
 
         // Fetch from service if not cached
-        $users = $this->svc->list(
+        [$records, $pagination] = $this->svc->pagination(
             $limit,
             $offset,
             $filters,
@@ -208,21 +210,9 @@ final class UserController extends Controller
             $sortDirection
         );
 
-        // Get total count for pagination metadata
-        $filteredTotal = $this->svc->filteredCount($filters);
-        $total = $this->svc->count();
-        $pages = ceil($total / $limit);
-
         $data = [
-            'data'       => $users,
-            'pagination' => [
-                'count'          => count($users),
-                'current_page'   => floor($offset / $limit) + 1,
-                'filtered_total' => $filteredTotal,
-                'per_page'       => $limit,
-                'total_pages'    => $pages,
-                'total'          => $total,
-            ],
+            'data'       => $records,
+            'pagination' => $pagination,
         ];
 
         // cache for 10s
@@ -251,7 +241,7 @@ final class UserController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'User found',
+                description: 'Found',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'id', type: 'integer'),
@@ -260,25 +250,29 @@ final class UserController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
     public function show(array $params): array
     {
         $id = (int)$params['id'];
 
-        if ($cached = $this->cache->getRecord('users', $id)) {
-            return $this->json($cached);
+        [$cacheTag, $cached] = $this->cache->getRecord('users', $id);
+        if ($cached) {
+            return $this->json(
+                data: $cached,
+                cacheTag: $cacheTag
+            );
         }
 
-        $u = $this->svc->find($id);
-        if (!$u) {
-            return $this->json(['error' => 'Not Found'], 404);
+        $data = $this->svc->find($id);
+        if (!$data) {
+            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->setRecord('users', $id, $u);
+        $this->cache->setRecord('users', $id, $data);
 
-        return $this->json($u);
+        return $this->json($data);
     }
 
     /**
@@ -300,7 +294,7 @@ final class UserController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'User found',
+                description: 'Found',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'id', type: 'integer'),
@@ -309,25 +303,29 @@ final class UserController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
     public function showByEmail(array $params): array
     {
         $email = (string)$params['email'];
 
-        if ($cached = $this->cache->getRecordByColumn('users', 'email', $email)) {
-            return $this->json($cached);
+        [$cacheTag, $cached] = $this->cache->getRecordByColumn('users', 'email', $email);
+        if ($cached) {
+            return $this->json(
+                data: $cached,
+                cacheTag: $cacheTag
+            );
         }
 
-        $u = $this->svc->findByEmail(urldecode($email));
-        if (!$u) {
-            return $this->json(['error' => 'Not Found'], 404);
+        $data = $this->svc->findByEmail(urldecode($email));
+        if (!$data) {
+            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->setRecord('users', $u['id'], $u);
-        $this->cache->setRecordByColumn('users', 'email', $email, $u);
-        return $this->json($u);
+        $this->cache->setRecord('users', $data['id'], $data);
+        $this->cache->setRecordByColumn('users', 'email', $email, $data);
+        return $this->json($data);
     }
 
     /**
@@ -358,23 +356,23 @@ final class UserController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'User updated'),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
     public function update(array $p): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $u = $this->svc->update((int)$p['id'], $data);
-        if (!$u) {
-            return $this->json(['error' => 'Not Found'], 404);
+        $data = $this->svc->update((int)$p['id'], $data);
+        if (!$data) {
+            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->invalidateRecord('users', $u['id']);
-        $this->cache->invalidateRecordByColumn('users', 'email', $u['email']);
+        $this->cache->invalidateRecord('users', $data['id']);
+        $this->cache->invalidateRecordByColumn('users', 'email', $data['email']);
 
         // Invalidate cache
         $this->cache->invalidateLists('users');
-        return $this->json($u);
+        return $this->json($data);
     }
 
     /**
@@ -395,7 +393,7 @@ final class UserController extends Controller
         ],
         responses: [
             new OA\Response(response: 204, description: 'User deleted'),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
     public function destroy(array $p): array

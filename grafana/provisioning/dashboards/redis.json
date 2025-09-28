@@ -1,0 +1,108 @@
+{
+  "uid": "redis",
+  "title": "Redis",
+  "schemaVersion": 37,
+  "timezone": "browser",
+  "refresh": "5s",
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Redis Up",
+      "gridPos": {"x":0,"y":0,"w":6,"h":3},
+      "targets":[{"expr":"redis_up","refId":"A"}],
+      "fieldConfig":{"defaults":{"thresholds":{"mode":"absolute","steps":[{"value":0,"color":"red"},{"value":1,"color":"green"}]}}}
+    },
+    {
+      "type": "gauge",
+      "title": "Connected Clients",
+      "gridPos": {"x":6,"y":0,"w":6,"h":3},
+      "targets":[{"expr":"redis_connected_clients","refId":"B"}]
+    },
+    {
+      "type": "gauge",
+      "title": "Blocked Clients",
+      "gridPos": {"x":12,"y":0,"w":6,"h":3},
+      "targets":[{"expr":"redis_blocked_clients","refId":"C"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage (Used vs Peak)",
+      "gridPos": {"x":0,"y":3,"w":12,"h":6},
+      "targets":[
+        {"expr":"redis_memory_used_bytes","legendFormat":"Used","refId":"D"},
+        {"expr":"redis_memory_peak_bytes","legendFormat":"Peak","refId":"E"}
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Memory Fragmentation Ratio",
+      "gridPos": {"x":12,"y":3,"w":6,"h":3},
+      "targets":[{"expr":"redis_memory_fragmentation_ratio","refId":"F"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Keys & Expiring Keys",
+      "gridPos": {"x":0,"y":9,"w":12,"h":6},
+      "targets":[
+        {"expr":"redis_db_keys","legendFormat":"Total Keys","refId":"G"},
+        {"expr":"redis_db_keys_expiring","legendFormat":"Expiring Keys","refId":"H"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Evicted & Expired Keys",
+      "gridPos": {"x":12,"y":9,"w":12,"h":6},
+      "targets":[
+        {"expr":"redis_evicted_keys_total","legendFormat":"Evicted","refId":"I"},
+        {"expr":"redis_expired_keys_total","legendFormat":"Expired","refId":"J"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Commands per Second",
+      "gridPos": {"x":0,"y":15,"w":12,"h":6},
+      "targets":[
+        {"expr":"rate(redis_commands_total[1m])","legendFormat":"Ops/sec","refId":"K"},
+        {"expr":"redis_instantaneous_ops_per_sec","legendFormat":"Instant Ops","refId":"L"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Persistence Metrics",
+      "gridPos": {"x":0,"y":21,"w":12,"h":6},
+      "targets":[
+        {"expr":"redis_rdb_last_save_time_seconds","legendFormat":"RDB Last Save","refId":"M"},
+        {"expr":"redis_rdb_last_bgsave_duration_seconds","legendFormat":"RDB Save Duration","refId":"N"},
+        {"expr":"redis_aof_current_size_bytes","legendFormat":"AOF Size","refId":"O"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "AOF Rewrite In Progress",
+      "gridPos": {"x":12,"y":21,"w":6,"h":3},
+      "targets":[{"expr":"redis_aof_rewrite_in_progress","refId":"P"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network Traffic",
+      "gridPos": {"x":0,"y":27,"w":12,"h":6},
+      "targets":[
+        {"expr":"rate(redis_net_input_bytes_total[1m])","legendFormat":"In","refId":"Q"},
+        {"expr":"rate(redis_net_output_bytes_total[1m])","legendFormat":"Out","refId":"R"}
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Command Latency",
+      "gridPos": {"x":12,"y":27,"w":12,"h":6},
+      "targets":[{"expr":"redis_command_duration_seconds_bucket","refId":"S"}]
+    },
+    {
+      "type": "stat",
+      "title": "Redis Role",
+      "gridPos": {"x":0,"y":33,"w":6,"h":3},
+      "targets":[{"expr":"redis_instance_role","refId":"T"}]
+    }
+  ]
+}

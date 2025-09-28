@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Servers;
 
+use App\Core\Messages;
 use App\Core\Metrics;
 
 use function define;
@@ -73,8 +74,9 @@ final class MetricsServer
                 $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
                 $response->end($metrics);
             } catch (Throwable $e) {
+                error_log('Exception: ' . $e->getMessage()); // logged internally
                 $response->status(500);
-                $response->end(json_encode(['error' => $e->getMessage()]));
+                $response->end(json_encode(['error' => Messages::ERROR_INTERNAL_ERROR]));
             }
         });
 

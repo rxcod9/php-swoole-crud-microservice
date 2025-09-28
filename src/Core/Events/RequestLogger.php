@@ -10,15 +10,11 @@ use Swoole\Http\Server;
 
 final class RequestLogger
 {
-    public function log(Server $server, Request $req, array $data): void
+    public function log($level, Server $server, Request $req, array $data): void
     {
-        // $server->task([
-        //     'type' => 'log',
-        //     'data' => $data
-        // ]);
         $server->task([
             'class'     => LogTask::class,
-            'arguments' => [$data],
+            'arguments' => [$level, $data],
         ]);
     }
 }

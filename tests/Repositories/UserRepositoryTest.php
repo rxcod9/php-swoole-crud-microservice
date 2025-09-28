@@ -1,11 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Repositories;
 
-use App\Core\Pools\PDOPool;
 use App\Repositories\UserRepository;
 use PDO;
-use PDOStatement;
 use Tests\TestCase;
 
 /**
@@ -30,7 +30,7 @@ class UserRepositoryTest extends TestCase
             $pdo = $this->pool->get();
 
             // Create a fake users table schema for testing
-            $pdo->exec("
+            $pdo->exec('
                 DROP TABLE IF EXISTS users;
                 CREATE TABLE users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,19 +39,19 @@ class UserRepositoryTest extends TestCase
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            ");
+            ');
 
             // Initialize repository with test PDO connection
             $this->repository = new UserRepository($this->pool);
 
             // Insert sample test data
             $this->repository->create([
-                'name' => 'Alice',
+                'name'  => 'Alice',
                 'email' => 'alice@example.com',
             ]);
 
             $this->repository->create([
-                'name' => 'Bob',
+                'name'  => 'Bob',
                 'email' => 'bob@example.com',
             ]);
         });
@@ -79,7 +79,7 @@ class UserRepositoryTest extends TestCase
 
             $user = $this->repository->find(1);
 
-            $this->assertNotNull($user, "User with ID 1 should exist");
+            $this->assertNotNull($user, 'User with ID 1 should exist');
             $this->assertEquals('Alice', $user['name']);
             $this->assertEquals('alice@example.com', $user['email']);
         });
@@ -93,10 +93,10 @@ class UserRepositoryTest extends TestCase
         $this->runInCoroutine(function () {
             $newId = $this->repository->create([
                 'name'  => 'Charlie',
-                'email' => 'charlie@example.com'
+                'email' => 'charlie@example.com',
             ]);
 
-            $this->assertIsInt($newId, "Newly created user should return an integer ID");
+            $this->assertIsInt($newId, 'Newly created user should return an integer ID');
 
             $user = $this->repository->find($newId);
             $this->assertEquals('Charlie', $user['name']);
@@ -111,11 +111,11 @@ class UserRepositoryTest extends TestCase
     {
         $this->runInCoroutine(function () {
             $updated = $this->repository->update(1, [
-                'name' => 'Alice Updated',
-                'email' => 'alice-updated@example.com'
+                'name'  => 'Alice Updated',
+                'email' => 'alice-updated@example.com',
             ]);
 
-            $this->assertTrue($updated, "Expected update() to return true");
+            $this->assertTrue($updated, 'Expected update() to return true');
 
             $user = $this->repository->find(1);
             $this->assertEquals('Alice Updated', $user['name']);
@@ -130,10 +130,10 @@ class UserRepositoryTest extends TestCase
         $this->runInCoroutine(function () {
             $deleted = $this->repository->delete(1);
 
-            $this->assertTrue($deleted, "Expected delete() to return true");
+            $this->assertTrue($deleted, 'Expected delete() to return true');
 
             $user = $this->repository->find(1);
-            $this->assertNull($user, "Deleted user should not be found");
+            $this->assertNull($user, 'Deleted user should not be found');
         });
     }
 }

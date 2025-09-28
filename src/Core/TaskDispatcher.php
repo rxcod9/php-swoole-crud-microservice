@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\TaskContractViolationException;
+use App\Exceptions\TaskNotFoundException;
 use App\Tasks\TaskInterface;
 
 use function get_class;
@@ -29,10 +31,10 @@ final class TaskDispatcher
     /**
      * TaskDispatcher constructor.
      *
-     * @param Container $c Dependency Injection Container
+     * @param Container $app Dependency Injection Container
      */
     public function __construct(
-        private Container $c
+        private Container $app
     ) {
         //
     }
@@ -54,18 +56,15 @@ final class TaskDispatcher
     public function dispatch(string $class, array $arguments, Task $task): bool
     {
         if (!class_exists($class)) {
-            throw new RuntimeException("Task class $class does not exist.");
+            throw new TaskNotFoundException("Task class $class does not exist.");
         }
 
         // check interface
         if (!new ReflectionClass($class)->implementsInterface(TaskInterface::class)) {
-            // var_export($class instanceof TaskInterface);
-            // var_export(class_implements($class));
-            // var_export((new \ReflectionClass($class))->implementsInterface(TaskInterface::class));
-            throw new RuntimeException("Implement TaskInterface in your Task class $class.");
+            throw new TaskContractViolationException("Implement TaskInterface in your Task class $class.");
         }
 
-        $instance = $this->c->get($class);
+        $instance = $this->app->get($class);
 
         try {
             $result = $this->handle($instance, $arguments);
@@ -74,7 +73,6 @@ final class TaskDispatcher
                 'class'     => $class,
                 'arguments' => $arguments,
                 'result'    => $result,
-                'error'     => null,
             ]);
 
             return true;
@@ -86,15 +84,15 @@ final class TaskDispatcher
                     'class'     => $class,
                     'arguments' => $arguments,
                     'result'    => $result,
-                    'error'     => null,
                 ]);
                 return true;
             }
 
+            error_log('Exception: ' . $e->getMessage()); // logged internally
+
             $task->finish([
                 'class'     => $class,
                 'arguments' => $arguments,
-                'result'    => null,
                 'error'     => $e->getMessage(),
             ]);
 
@@ -113,6 +111,6 @@ final class TaskDispatcher
             return $instance(...$arguments);
         }
 
-        throw new RuntimeException('Task ' . get_class($instance) . ' must have a handle() method or be invokable (__invoke)');
+        throw new TaskContractViolationException('Task ' . get_class($instance) . ' must have a handle() method or be invokable (__invoke)');
     }
 }

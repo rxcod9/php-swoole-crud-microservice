@@ -25,10 +25,10 @@ final class TaskFinishHandler
 {
     public function __invoke(Server $server, int $taskId, $data): bool
     {
-        $class = $data['class'] ?? 'unknown';
+        $class     = $data['class'] ?? 'unknown';
         $arguments = $data['arguments'] ?? [];
-        $result = $data['result'] ?? null;
-        $error = $data['error'] ?? null;
+        $result    = $data['result'] ?? null;
+        $error     = $data['error'] ?? null;
 
         if ($error) {
             echo "[Task Failed] {$class} -> {$error}\n";

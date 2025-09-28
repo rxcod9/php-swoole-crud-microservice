@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * WebSocket Server Bootstrap File
  *
@@ -25,7 +27,7 @@ $dotenv->load();
 
 // Optional: validate required env variables
 $dotenv->required([
-    'WS_PORT'
+    'WS_PORT',
 ])->notEmpty();
 
 /**
@@ -45,22 +47,22 @@ $port = getenv('WS_PORT') ?: 9502;
 /**
  * Ensure only one Swoole event loop is started per process.
  */
-if (!defined('SWOOLE_EVENT_LOOP_STARTED')) {
-	/**
-	 * Define a constant to indicate the Swoole event loop has started.
-	 */
-	define('SWOOLE_EVENT_LOOP_STARTED', true);
+if (!\defined('SWOOLE_EVENT_LOOP_STARTED')) {
+    /**
+     * Define a constant to indicate the Swoole event loop has started.
+     */
+    \define('SWOOLE_EVENT_LOOP_STARTED', true);
 
-	/**
-	 * Create and start the WebSocket server.
-	 *
-	 * @var WebSocketServer $webSocketServer
-	 */
-	$webSocketServer = new WebSocketServer($port);
-	$webSocketServer->start();
+    /**
+     * Create and start the WebSocket server.
+     *
+     * @var WebSocketServer $webSocketServer
+     */
+    $webSocketServer = new WebSocketServer($port);
+    $webSocketServer->start();
 } else {
-	/**
-	 * Log a message if the Swoole event loop is already started.
-	 */
-	error_log('Swoole event loop already started. WebSocketServer not started again.');
+    /**
+     * Log a message if the Swoole event loop is already started.
+     */
+    error_log('Swoole event loop already started. WebSocketServer not started again.');
 }

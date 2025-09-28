@@ -1,8 +1,8 @@
 {
-    "title": "MySQL Dashboard",
+    "title": "MySQL",
     "uid": "mysql",
     "timezone": "browser",
-    "refresh": "15s",
+    "refresh": "5s",
     "panels": [
         {
             "collapsed": false,

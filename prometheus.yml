@@ -3,8 +3,14 @@ global:
 
 scrape_configs:
   - job_name: 'mysql'
+    metrics_path: /metrics                 # ensure your PHP/Swoole exposes this path
     static_configs:
       - targets: ['mysqld-exporter:9104']   # container name:port for MySQL exporter
+
+  - job_name: 'redis'
+    metrics_path: /metrics                 # ensure your PHP/Swoole exposes this path
+    static_configs:
+      - targets: ['redis-exporter:9121']   # container name:port for MySQL exporter
 
   - job_name: 'php_app'
     metrics_path: /                 # ensure your PHP/Swoole exposes this path

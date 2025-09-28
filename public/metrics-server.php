@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Metrics Server Bootstrap File
  *
@@ -26,7 +28,7 @@ $dotenv->load();
 
 // Optional: validate required env variables
 $dotenv->required([
-    'METRICS_PORT'
+    'METRICS_PORT',
 ])->notEmpty();
 
 /**
@@ -48,22 +50,22 @@ $port = getenv('METRICS_PORT') ?: 9310;
 /**
  * Ensure only one Swoole event loop is started per process.
  */
-if (!defined('SWOOLE_EVENT_LOOP_STARTED')) {
-	/**
-	 * Define a constant to indicate the Swoole event loop has started.
-	 */
-	define('SWOOLE_EVENT_LOOP_STARTED', true);
+if (!\defined('SWOOLE_EVENT_LOOP_STARTED')) {
+    /**
+     * Define a constant to indicate the Swoole event loop has started.
+     */
+    \define('SWOOLE_EVENT_LOOP_STARTED', true);
 
-	/**
-	 * Instantiate and start the MetricsServer.
-	 *
-	 * @var MetricsServer $metricsServer
-	 */
-	$metricsServer = new MetricsServer($port);
-	$metricsServer->start();
+    /**
+     * Instantiate and start the MetricsServer.
+     *
+     * @var MetricsServer $metricsServer
+     */
+    $metricsServer = new MetricsServer($port);
+    $metricsServer->start();
 } else {
-	/**
-	 * Log a warning if the Swoole event loop is already started.
-	 */
-	error_log('Swoole event loop already started. MetricsServer not started again.');
+    /**
+     * Log a warning if the Swoole event loop is already started.
+     */
+    error_log('Swoole event loop already started. MetricsServer not started again.');
 }
