@@ -42,7 +42,7 @@ services:
 
   # MySQL database service
   mysql:
-    image: mysql:8.4
+    image: mysql:9.4
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USER}
