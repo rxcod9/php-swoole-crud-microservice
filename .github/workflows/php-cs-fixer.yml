@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Optional: set up PHP if needed (e.g. for local composer plugins)
       - name: Setup PHP
