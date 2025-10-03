@@ -1,7 +1,7 @@
 <?php
 
 /**
- * src/Exceptions/WorkerNotReadyException.php
+ * src/Exceptions/ChannelException.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
@@ -12,7 +12,7 @@
  * @license  MIT
  * @version  1.0.0
  * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Exceptions/WorkerNotReadyException.php
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Exceptions/ChannelException.php
  */
 declare(strict_types=1);
 
@@ -21,7 +21,7 @@ namespace App\Exceptions;
 use RuntimeException;
 
 /**
- * Class WorkerNotReadyException
+ * Class ChannelException
  * Handles all user-related operations such as creation, update,
  * deletion, and retrieval. Integrates with external services and
  * logs critical operations.
@@ -35,7 +35,7 @@ use RuntimeException;
  * @version  1.0.0
  * @since    2025-10-02
  */
-final class WorkerNotReadyException extends RuntimeException
+final class ChannelException extends RuntimeException
 {
     //
 }

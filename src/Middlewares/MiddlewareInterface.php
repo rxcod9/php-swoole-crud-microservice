@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Middlewares/MiddlewareInterface.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Middlewares
+ * @package  App\Middlewares
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Middlewares/MiddlewareInterface.php
+ */
 declare(strict_types=1);
 
 namespace App\Middlewares;
@@ -11,12 +25,13 @@ use Swoole\Http\Response;
 /**
  * Middleware interface for handling HTTP requests and responses.
  *
- * @package App\Middlewares
- * @version 1.0.0
- * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
+ * @category Middlewares
+ * @package  App\Middlewares
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://your-repo-link
  */
 interface MiddlewareInterface
 {
@@ -25,5 +40,5 @@ interface MiddlewareInterface
      *
      * @param callable $next Middleware must call $next() to continue the chain
      */
-    public function handle(Request $req, Response $res, Container $container, callable $next): void;
+    public function handle(Request $request, Response $response, Container $container, callable $next): void;
 }

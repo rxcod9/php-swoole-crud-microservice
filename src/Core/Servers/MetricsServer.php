@@ -1,15 +1,25 @@
 <?php
 
+/**
+ * src/Core/Servers/MetricsServer.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Servers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Servers/MetricsServer.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Servers;
 
 use App\Core\Messages;
 use App\Core\Metrics;
-
-use function define;
-use function defined;
-
 use Prometheus\RenderTextFormat;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -29,29 +39,28 @@ if (!defined('SWOOLE_BASE')) {
 
 /**
  * Class MetricsServer
- *
  * Starts a Swoole HTTP server to serve Prometheus metrics.
+ *
+ * @category Core
+ * @package  App\Core\Servers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
-final class MetricsServer
+final readonly class MetricsServer
 {
-    /**
-     * @var int The port on which the metrics server will listen.
-     */
-    private int $port;
-
     /**
      * MetricsServer constructor.
      *
      * @param int $port The port to listen on (default: 9310).
      */
-    public function __construct(int $port = 9310)
+    public function __construct(private int $port = 9310)
     {
-        $this->port = $port;
     }
 
     /**
      * Starts the Swoole HTTP server to serve metrics.
-     *
      */
     public function start(): void
     {
@@ -60,21 +69,19 @@ final class MetricsServer
         /**
          * Handles incoming HTTP requests and serves Prometheus metrics.
          *
-         * @param Request $_ The incoming HTTP request (unused).
+         * @param Request  $_        The incoming HTTP request (unused).
          * @param Response $response The HTTP response object.
-         *
-         * @return void
          */
-        $server->on('request', function (Request $_, Response $response) {
+        $server->on('request', function (Request $request, Response $response): void {
             try {
-                $renderer = new RenderTextFormat();
+                $renderTextFormat = new RenderTextFormat();
 
-                $metrics = $renderer->render(Metrics::reg()->getMetricFamilySamples());
+                $metrics = $renderTextFormat->render(Metrics::reg()->getMetricFamilySamples());
 
                 $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
                 $response->end($metrics);
-            } catch (Throwable $e) {
-                error_log('Exception: ' . $e->getMessage()); // logged internally
+            } catch (Throwable $throwable) {
+                error_log('Exception: ' . $throwable->getMessage()); // logged internally
                 $response->status(500);
                 $response->end(json_encode(['error' => Messages::ERROR_INTERNAL_ERROR]));
             }

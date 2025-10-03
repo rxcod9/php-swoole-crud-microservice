@@ -315,4 +315,13 @@ return [
          */
         'backpressure_max_pending' => (int)(env('QUEUE_MAX_PENDING', 10000)),
     ],
+
+    'cors' => [
+        'origin' => env('CORS_ORIGIN', '*'),
+    ],
+
+    'rateLimit' => [
+        'throttle' => env('RATE_LIMIT_THROTTLE', 100),
+        'skip_ip_patterns' => env('RATE_LIMIT_SKIP_IP_PATTERN', '/^(127\.0\.0\.1|::1|172\.\d{1,3}\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})$/'),
+    ]
 ];

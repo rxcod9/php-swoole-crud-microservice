@@ -45,7 +45,7 @@ $dotenv->required([
  */
 function logMsg(string $msg): void
 {
-    echo '[' . date(Constants::DATETIME_FORMAT) . "] $msg\n";
+    error_log('[' . date(Constants::DATETIME_FORMAT) . "] $msg" . PHP_EOL);
 }
 
 /**
@@ -59,7 +59,7 @@ function runMigrations(): void
     logMsg('Starting migration...');
 
     // Load application configuration
-    $cfg = require __DIR__ . '/../config/config.php';
+    $cfg = require_once __DIR__ . '/../config/config.php';
     logMsg('Loaded config.');
 
     // Extract MySQL database configuration
@@ -91,7 +91,7 @@ function runMigrations(): void
     logMsg('Connected to MySQL via PDO.');
 
     // Load migration files configuration
-    $migrations = require __DIR__ . '/../config/database.php';
+    $migrations = require_once __DIR__ . '/../config/database.php';
     logMsg('Loaded migrations config.');
 
     // Execute each migration

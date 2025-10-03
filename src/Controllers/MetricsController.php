@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Controllers/MetricsController.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/MetricsController.php
+ */
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -14,12 +28,13 @@ use Throwable;
 /**
  * MetricsController handles metrics check endpoints for the application.
  *
- * @package App\Controllers
- * @version 1.0.0
- * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://your-repo-link
  */
 final class MetricsController extends Controller
 {
@@ -38,12 +53,12 @@ final class MetricsController extends Controller
     public function check(): array
     {
         try {
-            $renderer = new RenderTextFormat();
-            $metrics  = $renderer->render(Metrics::reg()->getMetricFamilySamples());
+            $renderTextFormat = new RenderTextFormat();
+            $metrics          = $renderTextFormat->render(Metrics::reg()->getMetricFamilySamples());
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
-        } catch (Throwable $e) {
-            error_log('Exception: ' . $e->getMessage()); // logged internally
+        } catch (Throwable $throwable) {
+            error_log('Exception: ' . $throwable->getMessage()); // logged internally
             return $this->text(Messages::ERROR_INTERNAL_ERROR, 500, RenderTextFormat::MIME_TYPE);
         }
     }

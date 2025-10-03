@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Core/Servers/WebSocketServer.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Servers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Servers/WebSocketServer.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Servers;
@@ -8,40 +22,29 @@ use Swoole\WebSocket\Server;
 
 /**
  * WebSocketServer
- *
  * A simple WebSocket server using Swoole.
  *
- * @package App\Core
+ * @category Core
+ * @package  App\Core\Servers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
-final class WebSocketServer
+final readonly class WebSocketServer
 {
-    /**
-     * The host address to bind the WebSocket server.
-     *
-     */
-    private string $host;
-
-    /**
-     * The port number to bind the WebSocket server.
-     *
-     */
-    private int $port;
-
     /**
      * WebSocketServer constructor.
      *
      * @param string $host The host address to bind (default: 0.0.0.0)
-     * @param int $port The port number to bind (default: 9502)
+     * @param int    $port The port number to bind (default: 9502)
      */
-    public function __construct(string $host = '0.0.0.0', int $port = 9502)
+    public function __construct(private string $host = '0.0.0.0', private int $port = 9502)
     {
-        $this->host = $host;
-        $this->port = $port;
     }
 
     /**
      * Start the WebSocket server.
-     *
      */
     public function start(): void
     {
@@ -53,22 +56,22 @@ final class WebSocketServer
         ]);
 
         // Event: Server start
-        $ws->on('start', function () {
-            print("WS listening on {$this->host}:{$this->port}\n");
+        $ws->on('start', function (): void {
+            print(sprintf('WS listening on %s:%d%s', $this->host, $this->port, PHP_EOL));
         });
 
         // Event: New connection opened
-        $ws->on('open', function ($server, $request) {
+        $ws->on('open', function ($server, $request): void {
             $server->push($request->fd, json_encode(['hello' => 'ws']));
         });
 
         // Event: Message received
-        $ws->on('message', function ($server, $frame) {
+        $ws->on('message', function ($server, $frame): void {
             $server->push($frame->fd, strtoupper($frame->data));
         });
 
         // Event: Task received
-        $ws->on('task', function ($server, $task) {
+        $ws->on('task', function ($server, $task): true {
             return true;
         });
 

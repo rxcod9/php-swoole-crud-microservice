@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Controllers/HealthController.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/HealthController.php
+ */
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -7,30 +21,28 @@ namespace App\Controllers;
 use App\Core\Constants;
 use App\Core\Controller;
 use App\Tables\TableWithLRUAndGC;
-
-use function count;
-
+use Carbon\Carbon;
 use OpenApi\Attributes as OA;
 use Swoole\Table;
 
 /**
  * HealthController handles health check endpoints for the application.
- *
  * Provides both JSON and HTML responses to monitor the status of worker processes,
  * including database and cache connection pool usage.
  *
- * @package App\Controllers
- * @version 1.0.0
- * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://your-repo-link
  */
 final class HealthController extends Controller
 {
     public function __construct(
-        private Table $table,
-        private TableWithLRUAndGC $cacheTable
+        private readonly Table $table,
+        private readonly TableWithLRUAndGC $tableWithLRUAndGC
     ) {
         //
     }
@@ -45,10 +57,10 @@ final class HealthController extends Controller
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'object',
                     properties: [
                         new OA\Property(property: 'ok', type: 'bool'),
-                    ]
+                    ],
+                    type: 'object'
                 )
             ),
         ]
@@ -60,12 +72,12 @@ final class HealthController extends Controller
 
         return $this->json([
             'ok'            => true,
-            'uptime'        => time() - ($_SERVER['REQUEST_TIME'] ?? time()),
-            'ts'            => time(),
+            'uptime'        => Carbon::now()->getTimestamp() - ($_SERVER['REQUEST_TIME'] ?? Carbon::now()->getTimestamp()),
+            'ts'            => Carbon::now()->getTimestamp(),
             'pid'           => posix_getpid(),
             'workers_count' => count($data),
             'workers'       => $data,
-            'cache'         => $this->cacheTable->stats(),
+            'cache'         => $this->tableWithLRUAndGC->stats(),
             'cacheCount'    => $cacheData,
             'cacheData'     => $cacheData,
         ]);
@@ -94,7 +106,7 @@ final class HealthController extends Controller
         $cacheHtml  = $this->renderCacheHtml();
 
         $workerStatsHtml = $this->renderTableStatsHtml($this->table, 'Workers Table');
-        $cacheStatsHtml  = $this->renderTableStatsHtml($this->cacheTable, 'Cache Table');
+        $cacheStatsHtml  = $this->renderTableStatsHtml($this->tableWithLRUAndGC, 'Cache Table');
 
         return "<!DOCTYPE html>
             <html lang='en'>
@@ -124,7 +136,7 @@ final class HealthController extends Controller
             </head>
             <body>
             <h1>Health Check</h1>
-            <p>Uptime: " . secondsReadable(time() - ($_SERVER['REQUEST_TIME'] ?? time())) . '</p>
+            <p>Uptime: " . secondsReadable(Carbon::now()->getTimestamp() - ($_SERVER['REQUEST_TIME'] ?? Carbon::now()->getTimestamp())) . '</p>
             <p>Timestamp: ' . date(Constants::DATETIME_FORMAT) . '</p>
             <p>PID: ' . posix_getpid() . "</p>
             {$workerStatsHtml}
@@ -135,21 +147,24 @@ final class HealthController extends Controller
             </html>";
     }
 
-    private function getWorkerData()
+    /**
+     * @return list<non-empty-array<mixed>>
+     */
+    private function getWorkerData(): array
     {
         $data = [];
         foreach ($this->table as $wid => $row) {
             $data[$wid] = [
                 ...$row,
-                'alive' => (time() - $row['last_heartbeat'] < 10),
-                'since' => (time() - $row['last_heartbeat'] < 10)
-                    ? (time() - $row['last_heartbeat']) . 's'
+                'alive' => (Carbon::now()->getTimestamp() - $row['last_heartbeat'] < 10),
+                'since' => (Carbon::now()->getTimestamp() - $row['last_heartbeat'] < 10)
+                    ? (Carbon::now()->getTimestamp() - $row['last_heartbeat']) . 's'
                     : 'dead',
-                'uptime' => secondsReadable(time() - ($row['first_heartbeat'] ?? time())),
+                'uptime' => secondsReadable(Carbon::now()->getTimestamp() - ($row['first_heartbeat'] ?? Carbon::now()->getTimestamp())),
             ];
         }
 
-        usort($data, fn ($a, $b) => $b['mysql_in_use'] <=> $a['mysql_in_use'] ?: $b['redis_in_use'] <=> $a['redis_in_use']);
+        usort($data, fn (array $a, array $b): int => ($b['mysql_in_use'] <=> $a['mysql_in_use']) !== 0 ? $b['mysql_in_use'] <=> $a['mysql_in_use'] : $b['redis_in_use'] <=> $a['redis_in_use']);
 
         return $data;
     }
@@ -193,10 +208,10 @@ final class HealthController extends Controller
             $rows .= "<tr>
                 <td>{$wid}</td>
                 <td>{$row['pid']}</td>
-                <td>" . date(Constants::DATETIME_FORMAT, $row['first_heartbeat']) . '</td>
-                <td>' . date(Constants::DATETIME_FORMAT, $row['last_heartbeat']) . "</td>
+                <td>" . Carbon::createFromTimestamp($row['first_heartbeat'])->format(Constants::DATETIME_FORMAT) . '</td>
+                <td>' . Carbon::createFromTimestamp($row['last_heartbeat'])->format(Constants::DATETIME_FORMAT) . "</td>
                 <td class=\"{$statusClass}\">{$statusText}</td>
-                <td>" . secondsReadable(time() - ($row['first_heartbeat'] ?? time())) . "</td>
+                <td>" . secondsReadable(Carbon::now()->getTimestamp() - ($row['first_heartbeat'] ?? Carbon::now()->getTimestamp())) . "</td>
                 <td>{$row['mysql_capacity']}</td>
                 <td>{$row['mysql_available']}</td>
                 <td>{$row['mysql_created']}</td>
@@ -211,20 +226,23 @@ final class HealthController extends Controller
         return $rows;
     }
 
-    private function getCacheData()
+    /**
+     * @return list<non-empty-array<mixed>>
+     */
+    private function getCacheData(): array
     {
         $data = [];
-        foreach ($this->cacheTable as $wid => $row) {
+        foreach ($this->tableWithLRUAndGC as $wid => $row) {
             $data[$wid] = [
                 ...$row,
                 'id'                   => $wid,
-                'value'                => json_decode($row['value']),
-                'expires_at_readable'  => (($row['expires_at'] ?? time()) > time()) ? secondsReadable(($row['expires_at'] ?? time()) - time()) : 'Expired',
-                'last_access_readable' => $row['last_access'] > 0 ? secondsReadable(time() - $row['last_access']) : 'Never Accessed',
+                'value'                => maybeDecodeJson($row['value']),
+                'expires_at_readable'  => (($row['expires_at'] ?? Carbon::now()->getTimestamp()) > Carbon::now()->getTimestamp()) ? secondsReadable(($row['expires_at'] ?? Carbon::now()->getTimestamp()) - Carbon::now()->getTimestamp()) : 'Expired',
+                'last_access_readable' => $row['last_access'] > 0 ? secondsReadable(Carbon::now()->getTimestamp() - $row['last_access']) : 'Never Accessed',
             ];
         }
 
-        usort($data, fn ($a, $b) => $b['last_access'] <=> $a['last_access']);
+        usort($data, fn (array $a, array $b): int => $b['last_access'] <=> $a['last_access']);
 
         return $data;
     }
@@ -250,6 +268,8 @@ final class HealthController extends Controller
             <th>ID</th>
             <th>Value</th>
             <th>Last Access</th>
+            <th>Usage</th>
+            <th>Created At</th>
             <th>Expired At</th>
         </tr>';
         foreach ($data as $row) {
@@ -257,6 +277,8 @@ final class HealthController extends Controller
                 <td>' . $row['id'] . '</td>
                 <td>' . $this->getPrettyJson($row['value']) . '</td>
                 <td>' . $row['last_access_readable'] . '</td>
+                <td>' . $row['usage'] . '</td>
+                <td>' . Carbon::createFromTimestamp($row['created_at'])->format(Constants::DATETIME_FORMAT) . '</td>
                 <td>' . $row['expires_at_readable'] . '</td>
             </tr>';
         }
@@ -264,9 +286,9 @@ final class HealthController extends Controller
         return $rows;
     }
 
-    private function getPrettyJson($data)
+    private function getPrettyJson($data): string
     {
-        $pretty = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $pretty = maybeEncodeJson($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         return '<pre class="json"><code>' . htmlspecialchars($pretty, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
     }
@@ -277,17 +299,14 @@ final class HealthController extends Controller
         $stats     = $table->stats();
         $statsHtml = '<h3>' . $title . ' Stats</h3><table><tr><th>Property</th><th>Value</th></tr>';
         foreach ($stats as $k => $v) {
-            $statsHtml .= "<tr><td>{$k}</td><td>{$v}</td></tr>";
+            $statsHtml .= sprintf('<tr><td>%s</td><td>%s</td></tr>', $k, $v);
         }
-        $statsHtml .= '</table>';
 
-        // 2. Size info (for Swoole\Table)
-        $sizeHtml = '';
+        $statsHtml .= '</table>';
 
         $sizeHtml = '<h3>' . $title . ' Size</h3><table><tr><th>Size</th><th>Memory Size (bytes)</th></tr>';
         $sizeHtml .= '<tr><td>' . $table->size . '</td><td>' . bytesReadable($table->memorySize) . '</td></tr>';
         $sizeHtml .= '</table>';
-
 
         return $statsHtml . $sizeHtml;
     }

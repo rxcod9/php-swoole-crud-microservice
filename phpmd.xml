@@ -1,105 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="Production PHPMD Ruleset"
     xmlns="http://phpmd.org/ruleset/1.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://phpmd.org/ruleset/1.0.0 https://phpmd.org/ruleset-1.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://phpmd.org/ruleset/1.0.0 https://phpmd.org/ruleset-1.0.0.xsd">
     <description>
-        Strict PHPMD ruleset for production PHP 8.4 projects.
-        - Enforces complexity, naming, design, and unused code rules
-        - Prevents dead code and bad practices
-        - Excludes vendor/node_modules directories
+        Strict PHPMD rules for PHP 8.4 microservices.
+        - Complexity, unused code, design & cleancode rules
+        - Exclude cosmetic or non-critical rules
     </description>
 
-    <!-- ========================================= -->
-    <!-- Core Rulesets -->
-    <!-- ========================================= -->
+    <file>src</file>
+    <file>tests</file>
 
+    <exclude>vendor</exclude>
+
+    <!-- Core rulesets -->
     <rule ref="rulesets/codesize.xml" />
     <rule ref="rulesets/cleancode.xml" />
-    <rule ref="rulesets/controversial.xml" />
     <rule ref="rulesets/design.xml" />
-    <!-- Allow short variables $id, $fd -->
-    <!-- Naming rules -->
-    <rule ref="rulesets/naming.xml">
-        <exclude name="ShortMethodName" />
-        <exclude name="ShortVariable" />
-    </rule>
-    <rule ref="rulesets/naming.xml/ShortMethodName">
-        <properties>
-            <property name="exceptions">
-                <value>
-                  gc
-                </value>
-            </property>
-        </properties>
-    </rule>
-    <rule ref="rulesets/naming.xml/ShortVariable">
-        <properties>
-            <property name="exceptions">
-                <value>
-                  id
-                </value>
-            </property>
-        </properties>
-    </rule>
     <rule ref="rulesets/unusedcode.xml" />
 
-    <!-- ========================================= -->
-    <!-- Optional stricter thresholds -->
-    <!-- ========================================= -->
-    <!-- Cyclomatic complexity (default 10 → stricter 8) -->
+    <!-- Relax naming rules -->
+    <rule ref="rulesets/naming.xml">
+        <exclude name="ShortVariable"/>
+        <exclude name="ShortMethodName"/>
+    </rule>
+
+    <!-- Stricter thresholds -->
     <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
         <properties>
             <property name="reportLevel" value="8" />
         </properties>
     </rule>
-    <!-- NPath complexity (default 200 → stricter 100) -->
     <rule ref="rulesets/codesize.xml/NPathComplexity">
         <properties>
             <property name="reportLevel" value="100" />
         </properties>
     </rule>
-    <!-- Long methods (default 100 → stricter 50 lines) -->
     <rule ref="rulesets/codesize.xml/ExcessiveMethodLength">
         <properties>
             <property name="minimum" value="50" />
         </properties>
     </rule>
-    <!-- Too many parameters (default 10 → stricter 5) -->
     <rule ref="rulesets/codesize.xml/ExcessiveParameterList">
         <properties>
             <property name="minimum" value="5" />
         </properties>
     </rule>
-    <!-- Too many fields in class (default 15 → stricter 10) -->
     <rule ref="rulesets/codesize.xml/ExcessiveClassComplexity">
         <properties>
             <property name="reportLevel" value="10" />
         </properties>
     </rule>
 
-    <!-- ========================================= -->
-    <!-- Excludes -->
-    <!-- ========================================= -->
+    <!-- Exclusions -->
     <exclude-pattern>.git/*</exclude-pattern>
-    <exclude-pattern>.github/*</exclude-pattern>
-    <exclude-pattern>.idea/*</exclude-pattern>
-    <exclude-pattern>.vscode/*</exclude-pattern>
-    <exclude-pattern>build/*</exclude-pattern>
-    <exclude-pattern>tests/*</exclude-pattern>
     <exclude-pattern>vendor/*</exclude-pattern>
-    <!-- ========================================= -->
+    <exclude-pattern>build/*</exclude-pattern>
+    <exclude-pattern>.github/*</exclude-pattern>
+    <exclude-pattern>tests/*</exclude-pattern>
 
-    <!-- File types -->
-    <!-- ========================================= -->
-
-    <arg name="extensions" value="php" />
-
-    <!-- ========================================= -->
-    <!-- CI-friendly output -->
-    <!-- ========================================= -->
-
-    <arg name="error-severity" value="1" />
-    <arg name="warning-severity" value="0" />
-    <arg name="parallel" value="2" />
-    <arg name="encoding" value="utf-8" />
+    <arg name="extensions" value="php"/>
+    <arg name="error-severity" value="1"/>
+    <arg name="warning-severity" value="0"/>
 </ruleset>

@@ -1,18 +1,26 @@
 <?php
 
+/**
+ * src/Core/Events/MiddlewarePipeline.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/MiddlewarePipeline.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Middlewares\MiddlewareInterface;
-
-use function count;
-
 use InvalidArgumentException;
-
-use function sprintf;
-
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -20,20 +28,45 @@ use Swoole\Http\Response;
  * Middleware pipeline to process HTTP requests through a series of middleware components.
  * Each middleware can modify the request/response and decide whether to continue the chain.
  *
- * @package App\Core\Events
- * @version 1.0.0
- * @since 1.0.0
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
 final class MiddlewarePipeline
 {
+    public function __construct(private readonly Container $container)
+    {
+        //
+    }
+
     /** @var MiddlewareInterface[] */
     private array $middlewares = [];
 
     /**
      * Add a middleware to the pipeline
      */
-    public function addMiddleware(MiddlewareInterface $middleware): void
+    public function addMiddleware(MiddlewareInterface|string $middleware): void
     {
+        // If a string class name is provided, resolve it from container
+        if (is_string($middleware)) {
+            if (!$this->container->has($middleware)) {
+                throw new InvalidArgumentException(
+                    sprintf('Middleware class "%s" is not in the container', $middleware)
+                );
+            }
+
+            $middleware = $this->container->get($middleware);
+        }
+
+        if (!$middleware instanceof MiddlewareInterface) {
+            throw new InvalidArgumentException(
+                sprintf('Expected instance of MiddlewareInterface, got %s', get_debug_type($middleware))
+            );
+        }
+
         $this->middlewares[] = $middleware;
     }
 
@@ -43,11 +76,6 @@ final class MiddlewarePipeline
     public function addMiddlewares(array $middlewares): void
     {
         foreach ($middlewares as $middleware) {
-            if (!$middleware instanceof MiddlewareInterface) {
-                throw new InvalidArgumentException(
-                    sprintf('Expected instance of MiddlewareInterface, got %s', get_debug_type($middleware))
-                );
-            }
             $this->addMiddleware($middleware);
         }
     }
@@ -56,16 +84,15 @@ final class MiddlewarePipeline
      * Start the middleware chain
      */
     public function handle(
-        Request $req,
-        Response $res,
-        Container $container,
+        Request $request,
+        Response $response,
         callable $finalHandler
     ): void {
         $total = count($this->middlewares);
 
-        $runner = function (int $index = 0) use ($req, $res, $container, $total, $finalHandler, &$runner) {
+        $runner = function (int $index = 0) use ($request, $response, $total, $finalHandler, &$runner): void {
             if ($index < $total) {
-                $this->middlewares[$index]->handle($req, $res, $container, fn () => $runner($index + 1));
+                $this->middlewares[$index]->handle($request, $response, $this->container, fn () => $runner($index + 1));
             } else {
                 $finalHandler();
             }

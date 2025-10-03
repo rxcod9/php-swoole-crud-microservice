@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Controllers/ItemController.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/ItemController.php
+ */
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -12,13 +26,20 @@ use OpenApi\Attributes as OA;
 /**
  * RESTful Item resource controller
  * Handles CRUD operations for Item entities.
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
 final class ItemController extends Controller
 {
     /**
      * Inject ItemService for business logic operations.
      */
-    public function __construct(private ItemService $svc)
+    public function __construct(private readonly ItemService $itemService)
     {
         //
     }
@@ -50,7 +71,7 @@ final class ItemController extends Controller
     public function create(): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $item = $this->svc->create($data);
+        $item = $this->itemService->create($data);
         return $this->json($item, 201);
     }
 
@@ -105,9 +126,9 @@ final class ItemController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(
-                    type: 'string',
-                    enum: ['id', 'sku', 'created_at', 'updated_at'], // allowed columns
-                    default: 'id'
+                    type: 'string', // allowed columns
+                    default: 'id',
+                    enum: ['id', 'sku', 'created_at', 'updated_at']
                 )
             ),
             new OA\Parameter(
@@ -115,9 +136,9 @@ final class ItemController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(
-                    type: 'string',
-                    enum: ['ASC', 'DESC'], // allowed columns
-                    default: 'DESC'
+                    type: 'string', // allowed columns
+                    default: 'DESC',
+                    enum: ['ASC', 'DESC']
                 )
             ),
         ],
@@ -126,13 +147,11 @@ final class ItemController extends Controller
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'object',
                     properties: [
                         new OA\Property(
                             property: 'data',
                             type: 'array',
                             items: new OA\Items(
-                                type: 'object',
                                 properties: [
                                     new OA\Property(property: 'id', type: 'integer'),
                                     new OA\Property(property: 'sku', type: 'string'),
@@ -140,21 +159,23 @@ final class ItemController extends Controller
                                     new OA\Property(property: 'price', type: 'number', format: 'float'),
                                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
                                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                ]
+                                ],
+                                type: 'object'
                             )
                         ),
                         new OA\Property(
                             property: 'pagination',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'total', type: 'integer', example: 1),
                                 new OA\Property(property: 'count', type: 'integer', example: 1),
                                 new OA\Property(property: 'per_page', type: 'integer', example: 100),
                                 new OA\Property(property: 'current_page', type: 'integer', example: 1),
                                 new OA\Property(property: 'total_pages', type: 'integer', example: 1),
-                            ]
+                            ],
+                            type: 'object'
                         ),
-                    ]
+                    ],
+                    type: 'object'
                 )
             ),
         ]
@@ -181,7 +202,7 @@ final class ItemController extends Controller
         $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Fetch from service if not cached
-        [$records, $pagination] = $this->svc->pagination(
+        [$records, $pagination] = $this->itemService->pagination(
             $limit,
             $offset,
             $filters,
@@ -232,10 +253,11 @@ final class ItemController extends Controller
     )]
     public function show(array $params): array
     {
-        $data = $this->svc->find((int)$params['id']);
+        $data = $this->itemService->find((int)$params['id']);
         if (!$data) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
+
         return $this->json($data);
     }
 
@@ -273,10 +295,11 @@ final class ItemController extends Controller
     )]
     public function showBySku(array $params): array
     {
-        $data = $this->svc->findBySku(urldecode((string)$params['sku']));
+        $data = $this->itemService->findBySku(urldecode((string)$params['sku']));
         if (!$data) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
+
         return $this->json($data);
     }
 
@@ -315,10 +338,11 @@ final class ItemController extends Controller
     public function update(array $p): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->svc->update((int)$p['id'], $data);
-        if (!$data) {
+        $data = $this->itemService->update((int)$p['id'], $data);
+        if ($data === null || $data === []) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
+
         return $this->json($data);
     }
 
@@ -345,7 +369,7 @@ final class ItemController extends Controller
     )]
     public function destroy(array $p): array
     {
-        $ok = $this->svc->delete((int)$p['id']);
+        $ok = $this->itemService->delete((int)$p['id']);
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }
 }

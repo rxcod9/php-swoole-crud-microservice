@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Controllers/IndexController.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/IndexController.php
+ */
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -7,6 +21,21 @@ namespace App\Controllers;
 use App\Core\Controller;
 use OpenApi\Attributes as OA;
 
+/**
+ * Class IndexController
+ * Handles all user-related operations such as creation, update,
+ * deletion, and retrieval. Integrates with external services and
+ * logs critical operations.
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ */
 #[OA\Info(
     version: '1.0.0',
     title: 'PHP Swoole CRUD Microservice API',
@@ -34,10 +63,10 @@ final class IndexController extends Controller
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'object',
                     properties: [
                         new OA\Property(property: 'message', type: 'string'),
-                    ]
+                    ],
+                    type: 'object'
                 )
             ),
         ]

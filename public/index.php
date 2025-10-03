@@ -20,6 +20,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Router;
 use App\Core\Servers\HttpServer;
+use App\Middlewares\RateLimitMiddleware;
 use Dotenv\Dotenv;
 
 // Load .env file from project root
@@ -71,7 +72,7 @@ $router->get('/', 'IndexController@index');
 
 // Health check route.
 $router->get('/health', 'HealthController@check');
-$router->get('/health.html', 'HealthController@checkHtml'); // , [new \App\Middlewares\RateLimitMiddleware()]);
+$router->get('/health.html', 'HealthController@checkHtml');
 
 // Metrics route.
 $router->get('/metrics', 'MetricsController@check');

@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * tests/TestCase.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category General
+ * @package  Tests
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/TestCase.php
+ */
 declare(strict_types=1);
 
 namespace Tests;
@@ -10,7 +24,16 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 use Swoole\Coroutine;
 
 /**
- * @covers \App\Repositories\Base
+ * Class TestCase
+ * Handles all test case operations.
+ *
+ * @category General
+ * @package  Tests
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @covers   \App\Repositories\Base
  */
 abstract class TestCase extends BaseTestCase
 {
@@ -29,7 +52,7 @@ abstract class TestCase extends BaseTestCase
         // Reset schema before each test
         // Coroutine\run(function () {
         // In-memory SQLite database (fast and isolated for tests)
-        $this->runInCoroutine(function () {
+        $this->runInCoroutine(function (): void {
             $this->pool = $this->createPool();
         });
     }
@@ -45,7 +68,7 @@ abstract class TestCase extends BaseTestCase
         $user = getenv('DB_USER') ?: null;
         $pass = getenv('DB_PASS') ?: null;
 
-        return new PDOPool([
+        $pdoPool = new PDOPool([
             'dsn'      => $dsn,
             'user'     => $user,
             'password' => $pass,
@@ -55,13 +78,17 @@ abstract class TestCase extends BaseTestCase
             ],
             'size' => 1,
         ]);
+
+        $pdoPool->init();
+
+        return $pdoPool;
     }
 
     protected function runInCoroutine(callable $fn): void
     {
         Coroutine::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 
-        Coroutine\run(function () use ($fn) {
+        Coroutine\run(function () use ($fn): void {
             $fn();
         });
     }

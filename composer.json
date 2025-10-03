@@ -5,6 +5,7 @@
     "license": "MIT",
     "require": {
         "monolog/monolog": "^3.6",
+        "nesbot/carbon": "^3.10",
         "promphp/prometheus_client_php": "^2.10",
         "vlucas/phpdotenv": "^5.6"
     },
@@ -13,10 +14,13 @@
         "friendsofphp/php-cs-fixer": "^3.88",
         "pheromone/phpcs-security-audit": "^2.0",
         "phpcompatibility/php-compatibility": "^9.3",
+        "phpdocumentor/reflection-docblock": "^5.6",
         "phpmd/phpmd": "^2.15",
+        "phpstan/phpdoc-parser": "^2.3",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^10.5",
+        "rector/rector": "^2.1",
         "slevomat/coding-standard": "^8.20",
         "squizlabs/php_codesniffer": "^3.13",
         "swoole/ide-helper": "~5.0.0",
@@ -27,14 +31,15 @@
         "test": "vendor/bin/phpunit",
         "openapi:generate": "vendor/bin/openapi --output public/openapi.json src",
         "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
-        "phpcs": "vendor/bin/phpcs -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
+        "phpcs": "vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=json",
         "phpmd": "vendor/bin/phpmd ./src text phpmd.xml --report-file=phpmd.csv",
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v"
     },
     "autoload": {
         "psr-4": {
             "App\\": "src/",
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "RectorRules\\": "tools/rector/"
         },
         "files": [
             "src/Support/helpers.php"

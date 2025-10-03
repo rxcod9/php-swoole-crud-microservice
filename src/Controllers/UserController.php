@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Controllers/UserController.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/UserController.php
+ */
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -13,6 +27,13 @@ use OpenApi\Attributes as OA;
 /**
  * RESTful User resource controller
  * Handles CRUD operations for User entities.
+ *
+ * @category Controllers
+ * @package  App\Controllers
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
 final class UserController extends Controller
 {
@@ -20,8 +41,8 @@ final class UserController extends Controller
      * Inject UserService for business logic operations.
      */
     public function __construct(
-        private UserService $svc,
-        private CacheService $cache
+        private readonly UserService $userService,
+        private readonly CacheService $cacheService
     ) {
         //
     }
@@ -52,10 +73,10 @@ final class UserController extends Controller
     public function create(): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->svc->create($data);
+        $data = $this->userService->create($data);
 
         // Invalidate cache
-        $this->cache->invalidateLists('users');
+        $this->cacheService->invalidateLists('users');
 
         return $this->json($data, 201);
     }
@@ -111,9 +132,9 @@ final class UserController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(
-                    type: 'string',
-                    enum: ['id', 'email', 'created_at', 'updated_at'], // allowed columns
-                    default: 'id'
+                    type: 'string', // allowed columns
+                    default: 'id',
+                    enum: ['id', 'email', 'created_at', 'updated_at']
                 )
             ),
             new OA\Parameter(
@@ -121,9 +142,9 @@ final class UserController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(
-                    type: 'string',
-                    enum: ['ASC', 'DESC'], // allowed columns
-                    default: 'DESC'
+                    type: 'string', // allowed columns
+                    default: 'DESC',
+                    enum: ['ASC', 'DESC']
                 )
             ),
         ],
@@ -132,34 +153,34 @@ final class UserController extends Controller
                 response: 200,
                 description: 'Successful operation',
                 content: new OA\JsonContent(
-                    type: 'object',
                     properties: [
                         new OA\Property(
                             property: 'data',
                             type: 'array',
                             items: new OA\Items(
-                                type: 'object',
                                 properties: [
                                     new OA\Property(property: 'id', type: 'integer', example: 3001),
                                     new OA\Property(property: 'name', type: 'string', example: 'string'),
                                     new OA\Property(property: 'email', type: 'string', example: 'string'),
                                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
                                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                ]
+                                ],
+                                type: 'object'
                             )
                         ),
                         new OA\Property(
                             property: 'pagination',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'total', type: 'integer', example: 1),
                                 new OA\Property(property: 'count', type: 'integer', example: 1),
                                 new OA\Property(property: 'per_page', type: 'integer', example: 100),
                                 new OA\Property(property: 'current_page', type: 'integer', example: 1),
                                 new OA\Property(property: 'total_pages', type: 'integer', example: 1),
-                            ]
+                            ],
+                            type: 'object'
                         ),
-                    ]
+                    ],
+                    type: 'object'
                 )
             ),
         ]
@@ -193,16 +214,16 @@ final class UserController extends Controller
             'sortBy'        => $sortBy,
             'sortDirection' => $sortDirection,
         ];
-        [$cacheTag, $cached] = $this->cache->getList('users', $query);
+        [$cacheTagType, $cached] = $this->cacheService->getList('users', $query);
         if ($cached) {
             return $this->json(
                 data: $cached,
-                cacheTag: $cacheTag
+                cacheTagType: $cacheTagType
             );
         }
 
         // Fetch from service if not cached
-        [$records, $pagination] = $this->svc->pagination(
+        [$records, $pagination] = $this->userService->pagination(
             $limit,
             $offset,
             $filters,
@@ -216,7 +237,7 @@ final class UserController extends Controller
         ];
 
         // cache for 10s
-        $this->cache->setList('users', $query, $data);
+        $this->cacheService->setList('users', $query, $data);
 
         // Respond with user list
         return $this->json($data);
@@ -257,20 +278,20 @@ final class UserController extends Controller
     {
         $id = (int)$params['id'];
 
-        [$cacheTag, $cached] = $this->cache->getRecord('users', $id);
+        [$cacheTagType, $cached] = $this->cacheService->getRecord('users', $id);
         if ($cached) {
             return $this->json(
                 data: $cached,
-                cacheTag: $cacheTag
+                cacheTagType: $cacheTagType
             );
         }
 
-        $data = $this->svc->find($id);
+        $data = $this->userService->find($id);
         if (!$data) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->setRecord('users', $id, $data);
+        $this->cacheService->setRecord('users', $id, $data);
 
         return $this->json($data);
     }
@@ -310,21 +331,21 @@ final class UserController extends Controller
     {
         $email = (string)$params['email'];
 
-        [$cacheTag, $cached] = $this->cache->getRecordByColumn('users', 'email', $email);
+        [$cacheTagType, $cached] = $this->cacheService->getRecordByColumn('users', 'email', $email);
         if ($cached) {
             return $this->json(
                 data: $cached,
-                cacheTag: $cacheTag
+                cacheTagType: $cacheTagType
             );
         }
 
-        $data = $this->svc->findByEmail(urldecode($email));
+        $data = $this->userService->findByEmail(urldecode($email));
         if (!$data) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->setRecord('users', $data['id'], $data);
-        $this->cache->setRecordByColumn('users', 'email', $email, $data);
+        $this->cacheService->setRecord('users', $data['id'], $data);
+        $this->cacheService->setRecordByColumn('users', 'email', $email, $data);
         return $this->json($data);
     }
 
@@ -362,16 +383,17 @@ final class UserController extends Controller
     public function update(array $p): array
     {
         $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->svc->update((int)$p['id'], $data);
+        $data = $this->userService->update((int)$p['id'], $data);
+
         if (!$data) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
-        $this->cache->invalidateRecord('users', $data['id']);
-        $this->cache->invalidateRecordByColumn('users', 'email', $data['email']);
+        $this->cacheService->invalidateRecord('users', $data['id']);
+        $this->cacheService->invalidateRecordByColumn('users', 'email', $data['email']);
 
         // Invalidate cache
-        $this->cache->invalidateLists('users');
+        $this->cacheService->invalidateLists('users');
         return $this->json($data);
     }
 
@@ -398,14 +420,15 @@ final class UserController extends Controller
     )]
     public function destroy(array $p): array
     {
-        $ok = $this->svc->delete((int)$p['id']);
+        $ok = $this->userService->delete((int)$p['id']);
         if ($ok) {
             // Invalidate cache
-            $this->cache->invalidateRecord('users', $p['id']);
+            $this->cacheService->invalidateRecord('users', $p['id']);
 
             // Invalidate cache
-            $this->cache->invalidateLists('users');
+            $this->cacheService->invalidateLists('users');
         }
+
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }
 }

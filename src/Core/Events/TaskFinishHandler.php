@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Core/Events/TaskFinishHandler.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/TaskFinishHandler.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Events;
@@ -9,33 +23,32 @@ use Swoole\Http\Server;
 /**
  * Handles incoming HTTP requests, including routing, middleware, and response generation.
  * Also manages CORS headers and preflight requests.
- * Binds request-scoped dependencies like DbContext and connection pools.
+ * Binds request-scoped dependencies like connection pools.
  * Logs request details asynchronously.
  * Provides health check endpoints.
  * Ensures worker readiness before processing requests.
  *
- * @package App\Core\Events
- * @version 1.0.0
- * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://your-repo-link
  */
 final class TaskFinishHandler
 {
     public function __invoke(Server $server, int $taskId, $data): bool
     {
-        $class     = $data['class'] ?? 'unknown';
-        $arguments = $data['arguments'] ?? [];
-        $result    = $data['result'] ?? null;
-        $error     = $data['error'] ?? null;
+        $class = $data['class'] ?? 'unknown';
+        $error = $data['error'] ?? null;
 
         if ($error) {
-            echo "[Task Failed] {$class} -> {$error}\n";
+            error_log(sprintf('[Task Failed] %s -> %s%s', $class, $error, PHP_EOL));
             return false;
         }
 
-        echo "Task {$taskId} finished:  {$class} -> {" . json_encode($data) . '}' . PHP_EOL;
+        error_log(sprintf('Task %d finished:  %s -> {', $taskId, $class) . json_encode($data) . '}' . PHP_EOL);
 
         // @TODO call TaskListener for chaining
         return true;

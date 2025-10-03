@@ -1,32 +1,58 @@
 <?php
 
+/**
+ * src/Middlewares/LoggingMiddleware.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Middlewares
+ * @package  App\Middlewares
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Middlewares/LoggingMiddleware.php
+ */
 declare(strict_types=1);
 
 namespace App\Middlewares;
 
 use App\Core\Constants;
 use App\Core\Container;
-
-use function sprintf;
-
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
+/**
+ * Class LoggingMiddleware
+ * Handles all user-related operations such as creation, update,
+ * deletion, and retrieval. Integrates with external services and
+ * logs critical operations.
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ *
+ * @category Middlewares
+ * @package  App\Middlewares
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ */
 final class LoggingMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $req, Response $res, Container $c, callable $next): void
+    public function handle(Request $request, Response $response, Container $container, callable $next): void
     {
         $start = microtime(true);
 
         $next(); // call next middleware first
 
         $dur = microtime(true) - $start;
-        echo sprintf(
+        error_log(sprintf(
             "[%s] %s %s - %.2fms\n",
             date(Constants::DATETIME_FORMAT),
-            $req->server['request_method'] ?? '-',
-            $req->server['request_uri'] ?? '-',
+            $request->server['request_method'] ?? '-',
+            $request->server['request_uri'] ?? '-',
             $dur * 1000
-        );
+        ));
     }
 }

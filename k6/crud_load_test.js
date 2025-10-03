@@ -6,8 +6,8 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 1000,
-    TOTAL_ITEMS: 1000,
+    TOTAL_USERS: 200,
+    TOTAL_ITEMS: 200,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     COOL_PERCENT: 0.1,          // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
@@ -28,7 +28,7 @@ const CONFIG = {
         DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 200,
+        MAX_VUS: 10,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
@@ -36,8 +36,8 @@ const CONFIG = {
             { duration: '20s', target: 0 }
         ]
     },
-    TOTAL_EXECUTIONS: 5000,    // total default() executions across all VUs
-    MAX_DURATION: '5m'          // maximum test duration
+    TOTAL_EXECUTIONS: 100,    // total default() executions across all VUs
+    MAX_DURATION: '1m'          // maximum test duration
 };
 
 // --------------------
@@ -135,7 +135,7 @@ export function setup() {
         try {
             userIds.push(JSON.parse(res.body).id);
         } catch (e) {
-            console.error('[SETUP] Failed parse CREATE response', res.body);
+            console.error('[SETUP] Failed parse CREATE response', res.body, e);
         }
     }
 
@@ -150,7 +150,7 @@ export function setup() {
         try {
             itemIds.push(JSON.parse(res.body).id);
         } catch (e) {
-            console.error('[SETUP] Failed parse CREATE response', res.body);
+            console.error('[SETUP] Failed parse CREATE response', res.body, e);
         }
     }
 

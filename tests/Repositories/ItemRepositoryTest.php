@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * tests/Repositories/ItemRepositoryTest.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Repositories
+ * @package  Tests\Repositories
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/Repositories/ItemRepositoryTest.php
+ */
 declare(strict_types=1);
 
 namespace Tests\Repositories;
@@ -9,11 +23,20 @@ use PDO;
 use Tests\TestCase;
 
 /**
- * @covers \App\Repositories\ItemRepository
+ * Class ItemRepositoryTest
+ * Handles all item repository test operations.
+ *
+ * @category Repositories
+ * @package  Tests\Repositories
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @covers   \App\Repositories\ItemRepository
  */
-class ItemRepositoryTest extends TestCase
+final class ItemRepositoryTest extends TestCase
 {
-    private ItemRepository $repository;
+    private ItemRepository $itemRepository;
 
     /**
      * Set up an in-memory SQLite database for testing.
@@ -21,10 +44,11 @@ class ItemRepositoryTest extends TestCase
      * This avoids needing a real MySQL connection while testing.
      * PDO is used the same way in production, so this keeps tests realistic.
      */
+    #[\Override]
     protected function setUp(): void
     {
         parent::setUp();
-        $this->runInCoroutine(function () {
+        $this->runInCoroutine(function (): void {
 
             // Setup schema for SQLite
             $pdo = $this->pool->get();
@@ -45,16 +69,16 @@ class ItemRepositoryTest extends TestCase
             $this->pool->put($pdo);
 
             // Initialize repository with test PDO connection
-            $this->repository = new ItemRepository($this->pool);
+            $this->itemRepository = new ItemRepository($this->pool);
 
             // Insert sample test data
-            $this->repository->create([
+            $this->itemRepository->create([
                 'title' => 'Item 001',
                 'sku'   => 'item-001',
                 'price' => 100,
             ]);
 
-            $this->repository->create([
+            $this->itemRepository->create([
                 'title' => 'Item 002',
                 'sku'   => 'item-002',
                 'price' => 100,
@@ -67,7 +91,7 @@ class ItemRepositoryTest extends TestCase
      */
     public function testListItems(): void
     {
-        $this->runInCoroutine(function () {
+        $this->runInCoroutine(function (): void {
             $this->assertTrue(true);
         });
     }
@@ -77,9 +101,9 @@ class ItemRepositoryTest extends TestCase
      */
     public function testGetItemById(): void
     {
-        $this->runInCoroutine(function () {
+        $this->runInCoroutine(function (): void {
 
-            $item = $this->repository->find(1);
+            $item = $this->itemRepository->find(1);
 
             $this->assertNotNull($item, 'Item with ID 1 should exist');
             $this->assertEquals('Item 001', $item['title']);
@@ -92,8 +116,8 @@ class ItemRepositoryTest extends TestCase
      */
     public function testCreateItem(): void
     {
-        $this->runInCoroutine(function () {
-            $newId = $this->repository->create([
+        $this->runInCoroutine(function (): void {
+            $newId = $this->itemRepository->create([
                 'title' => 'Item 101',
                 'sku'   => 'item-101',
                 'price' => 1001,
@@ -101,7 +125,7 @@ class ItemRepositoryTest extends TestCase
 
             $this->assertIsInt($newId, 'Newly created item should return an integer ID');
 
-            $item = $this->repository->find($newId);
+            $item = $this->itemRepository->find($newId);
             $this->assertEquals('Item 101', $item['title']);
             $this->assertEquals('item-101', $item['sku']);
             $this->assertEquals(1001, $item['price']);
@@ -113,8 +137,8 @@ class ItemRepositoryTest extends TestCase
      */
     public function testUpdateItem(): void
     {
-        $this->runInCoroutine(function () {
-            $updated = $this->repository->update(1, [
+        $this->runInCoroutine(function (): void {
+            $updated = $this->itemRepository->update(1, [
                 'title' => 'Item 001 Updated',
                 'sku'   => 'item-101-updated',
                 'price' => 1002,
@@ -122,7 +146,7 @@ class ItemRepositoryTest extends TestCase
 
             $this->assertTrue($updated, 'Expected update() to return true');
 
-            $item = $this->repository->find(1);
+            $item = $this->itemRepository->find(1);
             $this->assertEquals('Item 001 Updated', $item['title']);
             $this->assertEquals('item-101-updated', $item['sku']);
             $this->assertEquals(1002, $item['price']);
@@ -134,12 +158,12 @@ class ItemRepositoryTest extends TestCase
      */
     public function testDeleteItem(): void
     {
-        $this->runInCoroutine(function () {
-            $deleted = $this->repository->delete(1);
+        $this->runInCoroutine(function (): void {
+            $deleted = $this->itemRepository->delete(1);
 
             $this->assertTrue($deleted, 'Expected delete() to return true');
 
-            $item = $this->repository->find(1);
+            $item = $this->itemRepository->find(1);
             $this->assertNull($item, 'Deleted item should not be found');
         });
     }

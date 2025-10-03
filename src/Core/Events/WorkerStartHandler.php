@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * src/Core/Events/WorkerStartHandler.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/WorkerStartHandler.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Events;
@@ -9,6 +23,7 @@ use App\Core\Pools\PDOPool;
 use App\Core\Pools\RedisPool;
 use App\Exceptions\CacheSetException;
 use App\Services\Cache\CacheService;
+use Carbon\Carbon;
 use Swoole\Http\Server;
 use Swoole\Table;
 use Swoole\Timer;
@@ -16,41 +31,45 @@ use Throwable;
 
 /**
  * Handles WorkerStart event
+ *
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
  */
 final class WorkerStartHandler
 {
-    /**
-     * @var array<int, array<int>> Keeps track of timers per worker
-     */
+    /** @var array<int, array<int>> Keeps track of timers per worker */
     private array $workerTimers = [];
 
     public function __construct(
-        private array $config,
-        private Table $table,
-        private CacheService $cacheService,
-        private PDOPool &$mysql,
-        private RedisPool &$redis
+        private readonly Table $table,
+        private readonly CacheService $cacheService,
+        private PDOPool &$pdoPool,
+        private RedisPool &$redisPool
     ) {
         //
     }
 
-    public function __invoke(Server $server, int $workerId)
+    public function __invoke(Server $server, int $workerId): void
     {
         $pid = posix_getpid();
-        echo "Worker {$workerId} started with {$pid}\n";
+        error_log(sprintf('Worker %d started with %d%s', $workerId, $pid, PHP_EOL));
 
         // Write initial health
         $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
-            'first_heartbeat' => time(),
-            'last_heartbeat'  => time(),
+            'first_heartbeat' => Carbon::now()->getTimestamp(),
+            'last_heartbeat'  => Carbon::now()->getTimestamp(),
         ]);
         if (!$success) {
             throw new CacheSetException('Unable to set Cache');
         }
 
         AppContext::setWorkerReady(true);
-        echo "Worker {$workerId} started with {$pid} ready\n";
+        error_log("Worker {$workerId} started with {$pid} ready\n");
 
         $this->startTimers($server, $workerId, $pid);
     }
@@ -58,8 +77,8 @@ final class WorkerStartHandler
     private function startTimers(Server $server, int $workerId, int $pid): void
     {
         // Heartbeat every 5s
-        $timerId = Timer::tick(5000, function ($timerId) use ($server, $workerId, $pid) {
-            $this->tick($timerId, $server, $workerId, $pid);
+        $timerId = Timer::tick(5000, function ($timerId) use ($server, $workerId, $pid): void {
+            $this->tick($timerId, $workerId, $pid);
         });
 
         $this->workerTimers[$workerId] = [$timerId]; // store timers per worker
@@ -86,20 +105,19 @@ final class WorkerStartHandler
      * Updates the shared memory table with current stats.
      */
     private function tick(
-        $timerId,
-        $server,
-        $workerId,
-        $pid
-    ) {
+        mixed $timerId,
+        int $workerId,
+        int $pid
+    ): void {
         error_log("Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
 
-        $mysqlStats     = $this->mysql->stats();
+        $mysqlStats     = $this->pdoPool->stats();
         $mysqlCapacity  = $mysqlStats['capacity'];
         $mysqlAvailable = $mysqlStats['available'];
         $mysqlCreated   = $mysqlStats['created'];
         $mysqlInUse     = $mysqlStats['in_use'];
 
-        $redisStats     = $this->redis->stats();
+        $redisStats     = $this->redisPool->stats();
         $redisCapacity  = $redisStats['capacity'];
         $redisAvailable = $redisStats['available'];
         $redisCreated   = $redisStats['created'];
@@ -109,8 +127,8 @@ final class WorkerStartHandler
         $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
             'timer_id'        => $timerId,
-            'first_heartbeat' => $row['first_heartbeat'] ?? time(),
-            'last_heartbeat'  => time(),
+            'first_heartbeat' => $row['first_heartbeat'] ?? Carbon::now()->getTimestamp(),
+            'last_heartbeat'  => Carbon::now()->getTimestamp(),
             'mysql_capacity'  => $mysqlCapacity,
             'mysql_available' => $mysqlAvailable,
             'mysql_created'   => $mysqlCreated,
@@ -125,15 +143,15 @@ final class WorkerStartHandler
         }
 
         try {
-            $this->mysql->autoScale();
-        } catch (Throwable $e) {
-            error_log("[Worker {$workerId}] MySQL autoScale error: " . $e->getMessage() . "\n");
+            $this->pdoPool->autoScale();
+        } catch (Throwable $throwable) {
+            error_log(sprintf('[Worker %d] MySQL autoScale error: ', $workerId) . $throwable->getMessage() . "\n");
         }
 
         try {
-            $this->redis->autoScale();
-        } catch (Throwable $e) {
-            error_log("[Worker {$workerId}] Redis autoScale error: " . $e->getMessage() . "\n");
+            $this->redisPool->autoScale();
+        } catch (Throwable $throwable) {
+            error_log(sprintf('[Worker %d] Redis autoScale error: ', $workerId) . $throwable->getMessage() . "\n");
         }
 
         $this->cacheService->gc(); // run garbage collection on cache table

@@ -1,55 +1,67 @@
 <?php
 
+/**
+ * src/Tables/TableWithLRUAndGC.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Tables
+ * @package  App\Tables
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tables/TableWithLRUAndGC.php
+ */
 declare(strict_types=1);
 
 namespace App\Tables;
 
 use App\Exceptions\CacheSetException;
 use BadMethodCallException;
-
-use function count;
-
+use Carbon\Carbon;
 use Countable;
 use Iterator;
 use OutOfBoundsException;
-
-use function strlen;
-
 use Swoole\Table;
 
 /**
  * TableWithLRUAndGC
- *
  * Extensible wrapper around Swoole\Table with user-defined schema.
  * Behaves like Table but allows overrides for eviction and GC.
  *
- * @var const TYPE_INT = 1;
- * @var const TYPE_FLOAT = 2;
- * @var const TYPE_STRING = 3;
- * @var ?int $size;
- * @var ?int $memorySize;
- * @method bool column(string $name, int $type, int $size = 0)
- * @method bool create()
- * @method bool destroy()
- * @method bool set(string $key, array $value)
- * @method mixed get(string $key, ?string $field = null)
- * @method int count()
- * @method bool del(string $key)
- * @method bool delete(string $key)
- * @method bool exists(string $key)
- * @method bool exist(string $key)
- * @method float incr(string $key, string $column, int|float $incrby = 1): in
- * @method float decr(string $key, string $column, int|float $incrby = 1): in
- * @method int getSize()
- * @method int getMemorySize()
- * @method false stats(): arra
- * @method void rewind()
- * @method bool valid()
- * @method void next()
- * @method mixed current()
- * @method mixed key()
- *
- * @package App\Tables
+ * @category Tables
+ * @package  App\Tables
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @var      const TYPE_INT = 1;
+ * @var      const TYPE_FLOAT = 2;
+ * @var      const TYPE_STRING = 3;
+ * @var      ?int  $size;
+ * @var      ?int  $memorySize;
+ * @method   bool  column(string $name, int $type, int $size = 0)
+ * @method   bool  create()
+ * @method   bool  destroy()
+ * @method   bool  set(string $key, array<key, mixed> $value)
+ * @method   mixed get(string $key, ?string $field = null)
+ * @method   int   count()
+ * @method   bool  del(string $key)
+ * @method   bool  delete(string $key)
+ * @method   bool  exists(string $key)
+ * @method   bool  exist(string $key)
+ * @method   float incr(string $key, string $column, int|float $incrby = 1): int|float
+ * @method   float decr(string $key, string $column, int|float $incrby = 1): int|float
+ * @method   int getSize()
+ * @method   int getMemorySize()
+ * @method   false stats(): arra
+ * @method   void  rewind()
+ * @method   bool  valid()
+ * @method   void  next()
+ * @method   mixed current()
+ * @method   mixed key()
  */
 class TableWithLRUAndGC implements Iterator, Countable
 {
@@ -57,13 +69,15 @@ class TableWithLRUAndGC implements Iterator, Countable
 
     public function __construct(
         protected int $maxSize = 1024,
-        protected int $ttl = 60,
+        protected int $ttl = 120,
         protected int $bufferSize = 10
     ) {
-        $table = new Table($maxSize, 128);
+        $table = new Table($maxSize);
         $table->column('value', Table::TYPE_STRING, 30000);
         $table->column('last_access', Table::TYPE_INT, 10);
+        $table->column('usage', Table::TYPE_INT, 10);
         $table->column('expires_at', Table::TYPE_INT, 10);
+        $table->column('created_at', Table::TYPE_INT, 10);
 
         $this->table = $table;
     }
@@ -81,7 +95,7 @@ class TableWithLRUAndGC implements Iterator, Countable
         }
 
         // check expiration
-        $now = time();
+        $now = Carbon::now()->getTimestamp();
         if (isset($row['expires_at']) && $now > $row['expires_at']) {
             $this->table->del($key);
             return null;
@@ -93,7 +107,7 @@ class TableWithLRUAndGC implements Iterator, Countable
     /**
      * Set row with user-defined schema.
      */
-    public function set(string $key, array $data, int $localTtl = 0): bool
+    public function set(string $key, array $row, int $localTtl = 0): bool
     {
         $key    = strlen($key) > 32 ? substr($key, 0, 32) : $key;
         $exists = $this->table->exist($key);
@@ -106,14 +120,18 @@ class TableWithLRUAndGC implements Iterator, Countable
         }
 
         // auto-update last_access
-        // if (!isset($data['last_access'])) {
-        //     $data['last_access'] = time();
+        // if (!isset($row['last_access'])) {
+        //     $row['last_access'] = time();
         // }
-        if (!isset($data['expires_at'])) {
-            $data['expires_at'] = time() + (($localTtl > 0 ? $localTtl : $this->ttl) * 1000);
+        if (!isset($row['expires_at'])) {
+            $row['expires_at'] = Carbon::now()->getTimestamp() + (($localTtl > 0 ? $localTtl : $this->ttl) * 1000);
         }
 
-        $success = $this->table->set($key, $data);
+        if (!isset($row['created_at'])) {
+            $row['created_at'] = Carbon::now()->getTimestamp();
+        }
+
+        $success = $this->table->set($key, $row);
         if (!$success) {
             throw new CacheSetException('Unable to set Cache');
         }
@@ -148,10 +166,10 @@ class TableWithLRUAndGC implements Iterator, Countable
      */
     public function gc(): void
     {
-        $now = time();
+        $now = Carbon::now()->getTimestamp();
         foreach ($this->table as $key => $row) {
-            $expiresAt = $row['expires_at'] ?? time();
-            if ($now >= $expiresAt) {
+            $expiresAt = $row['expires_at'] ?? Carbon::now()->getTimestamp();
+            if ($now > $expiresAt) {
                 $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
                 $this->table->del($key);
             }
@@ -161,10 +179,10 @@ class TableWithLRUAndGC implements Iterator, Countable
     /**
      * Proxy unknown calls to Swoole\Table.
      */
-    public function __call($name, $arguments)
+    public function __call(mixed $name, mixed $arguments)
     {
         if (!method_exists($this->table, $name)) {
-            throw new BadMethodCallException("Method {$name} does not exist on Swoole\\Table");
+            throw new BadMethodCallException(sprintf('Method %s does not exist on Swoole\Table', $name));
         }
 
         return $this->table->$name(...$arguments);
@@ -178,7 +196,8 @@ class TableWithLRUAndGC implements Iterator, Countable
         if (property_exists($this->table, $name)) {
             return $this->table->$name;
         }
-        throw new OutOfBoundsException("Property {$name} does not exist on Swoole\\Table");
+
+        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
     public function __set(string $name, $value): void
@@ -187,7 +206,8 @@ class TableWithLRUAndGC implements Iterator, Countable
             $this->table->$name = $value;
             return;
         }
-        throw new OutOfBoundsException("Property {$name} does not exist on Swoole\\Table");
+
+        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
     public function __isset(string $name): bool
@@ -201,7 +221,8 @@ class TableWithLRUAndGC implements Iterator, Countable
             unset($this->table->$name);
             return;
         }
-        throw new OutOfBoundsException("Property {$name} does not exist on Swoole\\Table");
+
+        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
     /* -------------------------

@@ -1,36 +1,48 @@
 <?php
 
+/**
+ * src/Core/Events/TaskRequestHandler.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/TaskRequestHandler.php
+ */
 declare(strict_types=1);
 
 namespace App\Core\Events;
 
 use App\Core\Container;
-use App\Core\Messages;
 use App\Core\Metrics;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
-use Swoole\Table;
 use Throwable;
 
 /**
  * Handles incoming HTTP requests, including routing, middleware, and response generation.
  * Also manages CORS headers and preflight requests.
- * Binds request-scoped dependencies like DbContext and connection pools.
+ * Binds request-scoped dependencies like connection pools.
  * Logs request details asynchronously.
  * Provides health check endpoints.
  * Ensures worker readiness before processing requests.
  *
- * @package App\Core\Events
- * @version 1.0.0
- * @since 1.0.0
- * @author Your Name
- * @license MIT
- * @link https://your-repo-link
+ * @category Core
+ * @package  App\Core\Events
+ * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license  MIT
+ * @version  1.0.0
+ * @since    2025-10-02
+ * @link     https://your-repo-link
  */
-final class TaskRequestHandler
+final readonly class TaskRequestHandler
 {
     public function __construct(
-        private Table $table,
         private Container $container
     ) {
         //
@@ -69,9 +81,8 @@ final class TaskRequestHandler
             $hist->observe($dur, [$class]);
 
             return $status;
-        } catch (Throwable $e) {
-            error_log('Exception: ' . $e->getMessage()); // logged internally
-            echo Messages::ERROR_INTERNAL_ERROR;
+        } catch (Throwable $throwable) {
+            error_log('Exception: ' . $throwable->getMessage()); // logged internally
         }
 
         return false;

@@ -26,7 +26,7 @@ const CONFIG = {
         // DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 10,
+        MAX_VUS: 200,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
@@ -34,7 +34,7 @@ const CONFIG = {
             { duration: '20s', target: 0 }
         ]
     },
-    TOTAL_EXECUTIONS: 10,    // total default() executions across all VUs
+    TOTAL_EXECUTIONS: 10000,    // total default() executions across all VUs
     MAX_DURATION: '5m'          // maximum test duration
 };
 
