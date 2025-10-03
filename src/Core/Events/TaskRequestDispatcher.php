@@ -47,10 +47,11 @@ final readonly class TaskRequestDispatcher
 
     public function dispatch(Task $task): bool
     {
-        $data      = $task->data;
-        $class     = $data['class'] ?? null;
-        $arguments = $data['arguments'] ?? null;
-        return new TaskDispatcher($this->container)->dispatch(
+        $data           = $task->data;
+        $class          = $data['class'] ?? null;
+        $arguments      = $data['arguments'] ?? null;
+        $taskDispatcher = new TaskDispatcher($this->container);
+        return $taskDispatcher->dispatch(
             $class,
             $arguments,
             $task

@@ -31,7 +31,7 @@
         "test": "vendor/bin/phpunit",
         "openapi:generate": "vendor/bin/openapi --output public/openapi.json src",
         "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
-        "phpcs": "vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=json",
+        "phpcs": "vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
         "phpmd": "vendor/bin/phpmd ./src text phpmd.xml --report-file=phpmd.csv",
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v"
     },

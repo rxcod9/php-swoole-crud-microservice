@@ -51,6 +51,8 @@ class Constants
 
     public const PDO_CONNECTION_TIMED_OUT_IN = 'Connection timed out in';
 
+    public const PDO_DNS_LOOKUP_RESOLVE_FAILED = 'DNS Lookup resolve failed';
+
     // MySQL server has gone away
     public const PDO_SERVER_GONE_AWAY_ERROR_CODE = 2006;
 

@@ -1,12 +1,10 @@
 name: Docker Build & Push
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["run-tests"]
+    types:
+      - completed
   workflow_dispatch: # manual trigger
 
 jobs:

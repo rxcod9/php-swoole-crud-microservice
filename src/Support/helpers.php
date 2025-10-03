@@ -101,7 +101,8 @@ if (!\function_exists('shouldPDORetry')) {
             && $driverCode === Constants::PDO_CONNECTION_REFUSED_ERROR_CODE
             && (
                 str_contains($driverMsg, Constants::PDO_CONNECTION_REFUSED_MESSAGE) ||
-                str_contains($driverMsg, Constants::PDO_CONNECTION_TIMED_OUT_IN)
+                str_contains($driverMsg, Constants::PDO_CONNECTION_TIMED_OUT_IN) ||
+                str_contains($driverMsg, Constants::PDO_DNS_LOOKUP_RESOLVE_FAILED)
             )
         ) || (
             $sqlState === Constants::PDO_GENERAL_ERROR_SQL_STATE

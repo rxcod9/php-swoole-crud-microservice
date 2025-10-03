@@ -51,7 +51,8 @@ final readonly class TaskRequestHandler
     public function __invoke(Server $server, Task $task): bool
     {
         try {
-            new WorkerReadyChecker()->wait();
+            $workerReadyChecker = new WorkerReadyChecker();
+            $workerReadyChecker->wait();
 
             $taskId = bin2hex(random_bytes(8));
             $start  = microtime(true);
@@ -71,7 +72,8 @@ final readonly class TaskRequestHandler
                 ['class']
             );
 
-            $status = new TaskRequestDispatcher($this->container)->dispatch($task);
+            $taskRequestDispatcher = new TaskRequestDispatcher($this->container);
+            $status                = $taskRequestDispatcher->dispatch($task);
             // Metrics and async logging
             $dur = microtime(true) - $start;
 

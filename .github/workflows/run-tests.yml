@@ -4,7 +4,7 @@ on:
     push:
     pull_request:
     schedule:
-        - cron: '0 0 * * *'
+        - cron: "0 0 * * *"
 
 jobs:
     run-tests:
@@ -14,31 +14,68 @@ jobs:
             matrix:
                 php: [8.4]
 
-        name: P${{ matrix.php }}
+        name: PHP ${{ matrix.php }}
 
         steps:
+            # --------------------------
+            # Update APT for runtime & build dependencies
+            # --------------------------
             - name: Update apt
               run: sudo apt-get update --fix-missing
 
+            # --------------------------
+            # Checkout code
+            # --------------------------
             - name: Checkout code
               uses: actions/checkout@v4
 
+            # --------------------------
+            # Setup PHP with all extensions
+            # --------------------------
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
                   php-version: ${{ matrix.php }}
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, pdo_mysql, bcmath, soap, intl, gd, exif, iconv, imagick, sockets, opcache, redis, xdebug
                   coverage: none
-                  tools: composer, cs2pr # cs2pr converts phpcs/phpstan results into PR annotations
+                  tools: composer, cs2pr
 
+            # --------------------------
+            # Install runtime & build dependencies from Dockerfile
+            # --------------------------
+            - name: Install required system libraries
+              run: |
+                  sudo apt-get install -y git unzip libzip-dev libssl-dev libcurl4-openssl-dev \
+                  libnghttp2-dev libsqlite3-dev libpq-dev libbrotli-dev libc-ares-dev supervisor \
+                  autoconf build-essential pkg-config \
+                  && sudo rm -rf /var/lib/apt/lists/*
+
+            # --------------------------
+            # Cache Composer dependencies
+            # --------------------------
+            - name: Cache Composer
+              uses: actions/cache@v3
+              with:
+                  path: ~/.composer/cache
+                  key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+
+            # --------------------------
+            # Install PHP dependencies
+            # --------------------------
+            - name: Install dependencies
+              run: composer install --no-dev --optimize-autoloader --prefer-dist
+
+            # --------------------------
+            # Setup Problem Matchers
+            # --------------------------
             - name: Setup Problem Matches
               run: |
                   echo "::add-matcher::${{ runner.tool_cache }}/php.json"
                   echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
-            - name: Install dependencies
-              run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
-
+            # --------------------------
+            # Run PHP code quality checks
+            # --------------------------
             - name: Run PHPCS
               run: vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=checkstyle | cs2pr
 
@@ -46,7 +83,10 @@ jobs:
               run: vendor/bin/phpmd ./src text phpmd.xml | cs2pr
 
             - name: Run PHPStan
-              run: vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 --error-format=checkstyle| cs2pr
+              run: vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 --error-format=checkstyle | cs2pr
 
+            # --------------------------
+            # Execute PHPUnit tests
+            # --------------------------
             - name: Execute tests
               run: vendor/bin/phpunit

@@ -74,7 +74,8 @@ final readonly class RequestHandler
     public function __invoke(Request $request, Response $response): void
     {
         try {
-            new WorkerReadyChecker()->wait();
+            $workerReadyChecker = new WorkerReadyChecker();
+            $workerReadyChecker->wait();
 
             $reqId = bin2hex(random_bytes(8));
             $start = microtime(true);
@@ -123,7 +124,8 @@ final readonly class RequestHandler
             'line'  => $throwable->getLine(),
         ]));
 
-        new RequestLogger()->log(
+        $requestLogger = new RequestLogger();
+        $requestLogger->log(
             'error',
             $this->server,
             $request,
@@ -203,7 +205,8 @@ final readonly class RequestHandler
         );
 
         // Execute controller/handler
-        $payload = new Dispatcher($this->container)->dispatch($action, $params, $request);
+        $dispatcher = new Dispatcher($this->container);
+        $payload    = $dispatcher->dispatch($action, $params, $request);
 
         $path         = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status       = $payload['__status'] ?? 200;
@@ -239,7 +242,8 @@ final readonly class RequestHandler
             $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
         }
 
-        new RequestLogger()->log(
+        $requestLogger = new RequestLogger();
+        $requestLogger->log(
             'debug',
             $this->server,
             $request,

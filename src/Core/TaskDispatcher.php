@@ -71,7 +71,9 @@ final readonly class TaskDispatcher
         }
 
         // check interface
-        if (!new ReflectionClass($class)->implementsInterface(TaskInterface::class)) {
+
+        $reflectionClass = new ReflectionClass($class);
+        if (!$reflectionClass->implementsInterface(TaskInterface::class)) {
             throw new TaskContractViolationException(sprintf('Implement TaskInterface in your Task class %s.', $class));
         }
 

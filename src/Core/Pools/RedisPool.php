@@ -132,7 +132,6 @@ final class RedisPool
             if (shouldRedisRetry($throwable)) {
                 // Retry with exponential backoff
                 ++$retry;
-                error_log(var_export($retry <= $maxRetry, true) . ' ' . var_export($maxRetry === -1, true));
                 if ($retry <= $maxRetry || $maxRetry === -1) {
                     $backoff = (1 << $retry) * 100000; // microseconds
                     error_log(sprintf('[RETRY] Retrying Redis connection in %.2f seconds...', $backoff / 1000000));

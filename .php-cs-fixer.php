@@ -82,4 +82,6 @@ return (new Config())
         // Misc spacing & braces
         'no_extra_blank_lines' => ['tokens' => ['extra','curly_brace_block','square_brace_block','parenthesis_brace_block','throw','use','return']],
         'braces' => ['allow_single_line_closure' => true,'position_after_functions_and_oop_constructs' => 'same'],
+        // disable only the new_expression_parentheses fixer
+        'new_expression_parentheses' => false,
     ]);

@@ -16,6 +16,5 @@ parameters:
     tmpDir: build/phpstan-cache
     parallel:
         maximumNumberOfProcesses: 1
-        processTimeout: 3600
     reportUnmatchedIgnoredErrors: true
     treatPhpDocTypesAsCertain: true

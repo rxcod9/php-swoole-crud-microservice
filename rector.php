@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
 use Rector\Config\RectorConfig;
 use Rector\Set\ValueObject\SetList;
 
@@ -58,6 +59,10 @@ return static function (RectorConfig $rectorConfig): void {
     // 6️⃣ Optional: Add file-level doc headers for missing PHPDocs
     $rectorConfig->rule(AddFileDocBeforeDeclareRector::class);
     $rectorConfig->rule(AddClassDocRector::class);
+
+    $rectorConfig->skip([
+        HeaderCommentFixer::class, // prevents header formatting changes
+    ]);
 
     // 7️⃣ Cache & extensions
     $rectorConfig->cacheDirectory(__DIR__ . '/.rector_cache');

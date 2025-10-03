@@ -11,7 +11,7 @@
  * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-03
+ * @since     2025-10-02
  */
 
 declare(strict_types=1);

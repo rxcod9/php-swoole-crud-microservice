@@ -45,6 +45,13 @@
         <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint"/>
         <exclude name="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat"/>
         <exclude name="SlevomatCodingStandard.TypeHints.LongTypeHints.UsedLongTypeHint"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.ClassConstantTypeHint.MissingNativeTypeHint"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingTraversableTypeHintSpecification"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingAnyTypeHint"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingTraversableTypeHintSpecification"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingTraversableTypeHintSpecification"/>
     </rule>
     <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat"/>
 
@@ -59,6 +66,8 @@
 
     <rule ref="Generic.Files">
         <exclude name="Generic.Files.LineLength.TooLong"/>
+        <exclude name="Generic.Files.LowercasedFilename"/>
+        <exclude name="Generic.Files.EndFileNoNewline.Found"/>
     </rule>
     <rule ref="SlevomatCodingStandard.Commenting">
         <!-- Non-critical rules as warnings -->
@@ -72,25 +81,28 @@
         <exclude name="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment"/>
     </rule>
     <rule ref="SlevomatCodingStandard.TypeHints">
-    <exclude name="SlevomatCodingStandard.TypeHints.DisallowArrayTypeHintSyntax.DisallowedArrayTypeHintSyntax"/>
+        <exclude name="SlevomatCodingStandard.TypeHints.DisallowArrayTypeHintSyntax.DisallowedArrayTypeHintSyntax"/>
     </rule>
     <rule ref="Squiz.Commenting">
-    <exclude name="Squiz.Commenting.BlockComment.NoNewLine"/>
-    <exclude name="Squiz.Commenting.BlockComment.WrongStart"/>
-    <exclude name="Squiz.Commenting.FunctionCommentThrowTag.Missing"/>
-    <exclude name="Squiz.Commenting.FunctionCommentThrowTag.WrongNumber"/>
-    <exclude name="Squiz.Commenting.InlineComment.DocBlock"/>
-    <exclude name="Squiz.Commenting.InlineComment.Empty"/>
-    <exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
-    <exclude name="Squiz.Commenting.InlineComment.NotCapital"/>
-    <exclude name="Squiz.Commenting.InlineComment.SpacingAfter"/>
-    <exclude name="Squiz.Commenting.InlineComment.SpacingBefore"/>
-    <exclude name="Squiz.Commenting.LongConditionClosingComment.Missing"/>
-    <exclude name="Squiz.Commenting.PostStatementComment.Found"/>
-    <exclude name="Squiz.Commenting.VariableComment.IncorrectVarType"/>
-    <exclude name="Squiz.Commenting.VariableComment.Missing"/>
-    <exclude name="Squiz.Commenting.VariableComment.MissingVar"/>
-    <exclude name="Squiz.Commenting.VariableComment.WrongStyle"/>
+        <exclude name="Squiz.Commenting.BlockComment.NoNewLine"/>
+        <exclude name="Squiz.Commenting.BlockComment.WrongStart"/>
+        <exclude name="Squiz.Commenting.FunctionCommentThrowTag.Missing"/>
+        <exclude name="Squiz.Commenting.FunctionCommentThrowTag.WrongNumber"/>
+        <exclude name="Squiz.Commenting.InlineComment.DocBlock"/>
+        <exclude name="Squiz.Commenting.InlineComment.Empty"/>
+        <exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+        <exclude name="Squiz.Commenting.InlineComment.NotCapital"/>
+        <exclude name="Squiz.Commenting.InlineComment.SpacingAfter"/>
+        <exclude name="Squiz.Commenting.InlineComment.SpacingBefore"/>
+        <exclude name="Squiz.Commenting.LongConditionClosingComment.Missing"/>
+        <exclude name="Squiz.Commenting.PostStatementComment.Found"/>
+        <exclude name="Squiz.Commenting.VariableComment.IncorrectVarType"/>
+        <exclude name="Squiz.Commenting.VariableComment.Missing"/>
+        <exclude name="Squiz.Commenting.VariableComment.MissingVar"/>
+        <exclude name="Squiz.Commenting.VariableComment.WrongStyle"/>
+    </rule>
+    <rule ref="PSR12.Files">
+        <exclude name="PSR12.Files.FileHeader"/>
     </rule>
 
     <!-- Exclude unnecessary paths -->

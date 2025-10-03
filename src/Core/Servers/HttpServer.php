@@ -153,7 +153,8 @@ final class HttpServer
             $redisPool->init(-1);
         });
 
-        new PoolBinder($pdoPool, $redisPool)->bind($container);
+        $poolBinder = new PoolBinder($pdoPool, $redisPool);
+        $poolBinder->bind($container);
 
         $cacheService = $container->get(CacheService::class);
         $container->bind(CacheService::class, fn (): mixed => $cacheService);

@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://phpmd.org/ruleset/1.0.0 https://phpmd.org/ruleset-1.0.0.xsd">
     <description>
         Strict PHPMD rules for PHP 8.4 microservices.
-        - Complexity, unused code, design & cleancode rules
+        - Complexity, unused code, design &amp; cleancode rules
         - Exclude cosmetic or non-critical rules
     </description>
 
