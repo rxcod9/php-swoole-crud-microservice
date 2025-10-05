@@ -185,7 +185,7 @@ final class RedisPool
             throw new RedisPoolExhaustedException('Redis pool exhausted', 503);
         }
 
-        if (!$conn->connected()) {
+        if (!$conn->isConnected()) {
             $this->decrementCreated();
             // create a fresh connection synchronously (preserve previous semantics)
             return $this->make();
@@ -201,7 +201,7 @@ final class RedisPool
      */
     public function put(Redis $redis): void
     {
-        if (!$this->channel->isFull() && $redis->connected()) {
+        if (!$this->channel->isFull() && $redis->isConnected()) {
             $success = $this->channel->push($redis);
             if ($success === false) {
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
