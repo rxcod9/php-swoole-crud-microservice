@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - '**' # run on all branches
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   style:
@@ -12,8 +15,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # important to push commits
 
-      # Optional: set up PHP if needed (e.g. for local composer plugins)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -21,24 +25,26 @@ jobs:
           coverage: none
           tools: composer
 
-      # Run PHP-CS-Fixer
       - name: Fix style
         uses: docker://oskarstark/php-cs-fixer-ga
         with:
           args: --config=.php-cs-fixer.php --allow-risky=yes --verbose
 
-      # Extract branch name safely
-      - name: Extract branch name
-        id: extract_branch
+      - name: Get branch name
+        id: get_branch
         run: |
-          branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          echo "branch=$branch_name" >> $GITHUB_OUTPUT
+          # handle push and PR events safely
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            echo "branch=$GITHUB_HEAD_REF" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
 
-      # Commit back changes if fixer modified files
-      - name: Commit changes
+      - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: fix styling via php-cs-fixer"
-          branch: ${{ steps.extract_branch.outputs.branch }}
+          branch: ${{ steps.get_branch.outputs.branch }}
+          push: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

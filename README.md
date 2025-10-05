@@ -8,7 +8,7 @@ By 🐼 [Ramakant Gangwar](https://github.com/rxcod9)
 
 [![Latest Version](https://img.shields.io/github/v/release/rxcod9/php-swoole-crud-microservice?style=flat-square)](https://github.com/rxcod9/php-swoole-crud-microservice/releases)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rxcod9/php-swoole-crud-microservice/run-tests.yml?branch=main&label=tests)
-[![Total Downloads](https://img.shields.io/packagist/dt/joy/php-swoole-crud-microservice.svg?style=flat-square)](https://packagist.org/packages/joy/php-swoole-crud-microservice)
+[![Total Downloads](https://img.shields.io/packagist/dt/rxcod9/php-swoole-crud-microservice.svg?style=flat-square)](https://packagist.org/packages/rxcod9/php-swoole-crud-microservice)
 
 ---
 
@@ -29,7 +29,40 @@ By 🐼 [Ramakant Gangwar](https://github.com/rxcod9)
 
 ### Prerequisites
 
-- **Docker** & **Docker Compose**
+**Docker** & **Docker Compose**
+
+### Docker Hub Quick Start
+
+If you prefer using the pre-built Docker image, follow these steps:
+
+```bash
+# Pull the latest image
+docker pull rxcod9/php-swoole-crud-microservice:latest
+
+# Run the container
+docker run -d -p 9501:9501 --name php-crud-microservice rxcod9/php-swoole-crud-microservice
+
+# Run database migrations inside the running container
+docker exec -it php-crud-microservice php scripts/migrate.php
+```
+
+### Docker Compose Usage
+
+This repository includes a `docker-compose.yml` to run the full stack:
+
+```bash
+# Start all services (PHP app, MySQL, Redis, Prometheus, Grafana, Caddy)
+docker compose up -d --build
+
+# Stop all services
+docker compose down
+
+# View logs
+docker compose logs -f
+```
+
+Edit `.env` or `docker-compose.override.yml` to customize ports and database credentials.
+
 
 ### Quick Start
 
