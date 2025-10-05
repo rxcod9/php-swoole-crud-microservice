@@ -31,7 +31,7 @@ jobs:
 
       - name: Run Rector for automated refactoring
         run: |
-          vendor/bin/rector process src --set php84 --dry-run=false --ansi
+          vendor/bin/rector process src --ansi
         # Adjust --set according to your target PHP version / ruleset
 
       - name: Fix code style with PHP CS Fixer

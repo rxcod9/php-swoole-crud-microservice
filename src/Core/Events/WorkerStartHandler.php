@@ -55,6 +55,9 @@ final class WorkerStartHandler
         //
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.StaticAccess)
+     */
     public function __invoke(Server $server, int $workerId): void
     {
         $pid = posix_getpid();
@@ -76,6 +79,10 @@ final class WorkerStartHandler
         $this->startTimers($server, $workerId, $pid);
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
     private function startTimers(Server $server, int $workerId, int $pid): void
     {
         // Heartbeat every 5s
@@ -88,6 +95,8 @@ final class WorkerStartHandler
 
     /**
      * Clear all timers for a given worker
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     public function clearTimers(int $workerId): void
     {

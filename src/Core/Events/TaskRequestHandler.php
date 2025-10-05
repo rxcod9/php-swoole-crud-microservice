@@ -50,6 +50,11 @@ final readonly class TaskRequestHandler
         //
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
     public function __invoke(Server $server, Task $task): bool
     {
         try {

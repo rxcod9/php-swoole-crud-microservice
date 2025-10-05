@@ -90,7 +90,7 @@ class TableWithLRUAndGC implements Iterator, Countable
      */
     public function get(string $key): ?array
     {
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
         $row = $this->table->get($key);
         if (!$row) {
             return null;
@@ -111,7 +111,7 @@ class TableWithLRUAndGC implements Iterator, Countable
      */
     public function set(string $key, array $row, int $localTtl = 0): bool
     {
-        $key    = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key    = strlen($key) > 56 ? substr($key, 0, 56) : $key;
         $exists = $this->table->exist($key);
         if (
             !$exists &&
@@ -158,7 +158,7 @@ class TableWithLRUAndGC implements Iterator, Countable
         }
 
         if ($oldestKey !== null) {
-            $oldestKey = strlen($oldestKey) > 32 ? substr($oldestKey, 0, 32) : $oldestKey;
+            $oldestKey = strlen($oldestKey) > 56 ? substr($oldestKey, 0, 56) : $oldestKey;
             $this->table->del($oldestKey);
         }
     }
@@ -172,7 +172,7 @@ class TableWithLRUAndGC implements Iterator, Countable
         foreach ($this->table as $key => $row) {
             $expiresAt = $row['expires_at'] ?? Carbon::now()->getTimestamp();
             if ($now > $expiresAt) {
-                $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+                $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
                 $this->table->del($key);
             }
         }

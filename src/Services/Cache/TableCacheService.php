@@ -51,7 +51,7 @@ final readonly class TableCacheService
 
     public function get(string $key): mixed
     {
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
         $row = $this->tableWithLRUAndGC->get($key);
         if (!$row) {
             return null;
@@ -73,7 +73,7 @@ final readonly class TableCacheService
 
     public function set(string $key, mixed $value, int $ttl): bool
     {
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         $row = [
             'value'       => $value,
@@ -150,7 +150,7 @@ final readonly class TableCacheService
     public function invalidateLists(string $entity): void
     {
         $key = $entity . ':version';
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         $row = $this->tableWithLRUAndGC->get($key);
         if (!$row) {
@@ -173,7 +173,7 @@ final readonly class TableCacheService
     private function getListVersion(string $entity): int
     {
         $key = $entity . ':version';
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         $row = $this->tableWithLRUAndGC->get($key);
 
@@ -202,14 +202,14 @@ final readonly class TableCacheService
         $key = sprintf('%s:list:v%d:%s', $entity, $version, $hash);
 
         // For Swoole Table safety, truncate if still >64 bytes
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         return $key;
     }
 
     public function incr(string $key, string $column, int|float $incrby = 1): int|float
     {
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         return $this->tableWithLRUAndGC->incr($key, $column, $incrby);
     }
@@ -223,7 +223,7 @@ final readonly class TableCacheService
      */
     private function touch(string $key, array $row, ?int $now = null): array
     {
-        $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         $now ??= Carbon::now()->getTimestamp();
 
@@ -247,6 +247,8 @@ final readonly class TableCacheService
      * Garbage collect old list versions for multiple entities in one loop
      *
      * @param string[] $entities
+     * 
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     public function gcOldListVersions(array $entities, int $keepVersions = 2): void
     {
@@ -267,7 +269,7 @@ final readonly class TableCacheService
 
             $version = $this->extractVersion($key);
             if ($version <= $versions[$entity] - $keepVersions) {
-                $key = strlen($key) > 32 ? substr($key, 0, 32) : $key;
+                $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
                 $this->tableWithLRUAndGC->del($key);
             }
         }

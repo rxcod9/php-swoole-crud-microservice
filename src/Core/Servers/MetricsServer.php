@@ -63,6 +63,8 @@ final readonly class MetricsServer
 
     /**
      * Starts the Swoole HTTP server to serve metrics.
+     * 
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function start(): void
     {
@@ -73,6 +75,9 @@ final readonly class MetricsServer
          *
          * @param Request  $_        The incoming HTTP request (unused).
          * @param Response $response The HTTP response object.
+         *
+         * @SuppressWarnings(PHPMD.StaticAccess)
+         * @SuppressWarnings(PHPMD.UnusedFormalParameter)
          */
         $server->on('request', function (Request $request, Response $response): void {
             try {

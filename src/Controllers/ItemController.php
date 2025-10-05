@@ -256,9 +256,6 @@ final class ItemController extends Controller
     public function show(array $params): array
     {
         $data = $this->itemService->find((int)$params['id']);
-        if (!$data) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
-        }
 
         return $this->json($data);
     }
@@ -298,9 +295,6 @@ final class ItemController extends Controller
     public function showBySku(array $params): array
     {
         $data = $this->itemService->findBySku(urldecode((string)$params['sku']));
-        if (!$data) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
-        }
 
         return $this->json($data);
     }
@@ -340,10 +334,7 @@ final class ItemController extends Controller
     public function update(array $params): array
     {
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->itemService->update((int)$params['id'], $payload);
-        if ($data === null || $data === []) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
-        }
+        $data    = $this->itemService->update((int)$params['id'], $payload);
 
         return $this->json($data);
     }

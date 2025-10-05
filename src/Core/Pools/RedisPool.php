@@ -103,6 +103,8 @@ final class RedisPool
      * @param int $retry Current retry attempt count.
      *
      * @throws RuntimeException If connection fails after retries.
+     * 
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function make(int $retry = 0, int $maxRetry = 5): Redis
     {
@@ -173,12 +175,7 @@ final class RedisPool
         if (($available <= 1) && $this->created < $this->max) {
             $toCreate = 1;
             error_log(sprintf('[SCALE-UP MySQL] Creating %d new connections (used: %d, available: %d)', $toCreate, $used, $available));
-            for ($i = 0; $i < $toCreate; ++$i) {
-                $success = $this->channel->push($this->make());
-                if ($success === false) {
-                    throw new ChannelException('Unable to push to channel' . PHP_EOL);
-                }
-            }
+            return $this->make();
         }
 
         // Pop a connection from the channel (waits up to $timeout seconds)
@@ -186,6 +183,12 @@ final class RedisPool
         if (!$conn) {
             error_log(sprintf('[ERROR] Redis pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', $timeout, $available, $used, $this->created));
             throw new RedisPoolExhaustedException('Redis pool exhausted', 503);
+        }
+
+        if (!$conn->connected()) {
+            $this->decrementCreated();
+            // create a fresh connection synchronously (preserve previous semantics)
+            return $this->make();
         }
 
         return $conn;
@@ -198,19 +201,20 @@ final class RedisPool
      */
     public function put(Redis $redis): void
     {
-        if (!$this->channel->isFull()) {
+        if (!$this->channel->isFull() && $redis->connected()) {
             $success = $this->channel->push($redis);
             if ($success === false) {
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
             }
 
             error_log('[PUT] Redis connection returned to pool');
-        } else {
-            // Pool full, let garbage collector close the Redis object
-            $redis->close();
-            $this->decrementCreated();
-            error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
+            return;
         }
+
+        // Pool full, let garbage collector close the Redis object
+        $redis->close();
+        $this->decrementCreated();
+        error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
     }
 
     private function decrementCreated(): void
@@ -260,7 +264,7 @@ final class RedisPool
             'capacity'  => $this->channel->capacity,
             'available' => $this->channel->length(),
             'created'   => $this->created,
-            'in_use'    => $this->created - $this->channel->length(),
+            'in_use'    => max(0, $this->created - $this->channel->length()),
         ];
     }
 

@@ -85,7 +85,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
         error_log('IP: ' . $ip);
 
-        [$cacheType, $row] = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
+        [$row] = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
         $nowSec            = Carbon::now()->getTimestamp();
         $count             = 0;
         $oldest            = $nowSec;

@@ -78,6 +78,8 @@ final class HttpServer
      *
      * @param array<int, mixed> $config Server configuration array
      * @param Router            $router Router instance for HTTP request routing
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function __construct(
         private array $config,
@@ -202,6 +204,9 @@ final class HttpServer
         );
 
         // Worker error event (crash/fatal error)
+        /**
+         * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+         */
         $this->server->on(
             'WorkerError',
             function (
@@ -257,6 +262,8 @@ final class HttpServer
      * Disable a worker and remove its entry from the health table.
      *
      * @param string $workerId The ID of the worker to disable
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function disableWorker(
         int $workerId,

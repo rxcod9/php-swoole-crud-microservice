@@ -19,7 +19,9 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Core\Messages;
 use App\Core\Pools\PDOPool;
+use App\Exceptions\ResourceNotFoundException;
 use InvalidArgumentException;
 use PDO;
 use PDOException;
@@ -122,7 +124,11 @@ final readonly class ItemRepository
                 $stmt->execute();
 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $result !== false ? $result : null;
+                if ($result === false) {
+                    throw new ResourceNotFoundException(Messages::ERROR_NOT_FOUND, 404);
+                }
+
+                return $result;
             } catch (PDOException $pdoException) {
                 // Log exception here
                 error_log(
@@ -174,7 +180,11 @@ final readonly class ItemRepository
                 $stmt->execute();
 
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $result !== false ? $result : null;
+                if ($result === false) {
+                    throw new ResourceNotFoundException(Messages::ERROR_NOT_FOUND, 404);
+                }
+
+                return $result;
             } catch (PDOException $pdoException) {
                 // Log exception here
                 error_log(

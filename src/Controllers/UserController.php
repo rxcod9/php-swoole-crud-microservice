@@ -179,9 +179,9 @@ final class UserController extends Controller
      */
     private function getCachedUserList(array $query): ?array
     {
-        [$cacheTagType, $cached] = $this->cacheService->getList('users', $query);
-        if ($cached) {
-            return $this->json(data: $cached, cacheTagType: $cacheTagType);
+        [$users, $cacheTagType] = $this->cacheService->getList('users', $query);
+        if ($users) {
+            return $this->json(data: $users, cacheTagType: $cacheTagType);
         }
 
         return null;
@@ -286,15 +286,12 @@ final class UserController extends Controller
     {
         $id = (int)$params['id'];
 
-        [$cacheTagType, $cached] = $this->cacheService->getRecord('users', $id);
-        if ($cached) {
-            return $this->json(data: $cached, cacheTagType: $cacheTagType);
+        [$user, $cacheTagType] = $this->cacheService->getRecord('users', $id);
+        if ($user) {
+            return $this->json(data: $user, cacheTagType: $cacheTagType);
         }
 
         $data = $this->userService->find($id);
-        if (!$data) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
-        }
 
         $this->cacheService->setRecord('users', $id, $data);
 
@@ -335,15 +332,12 @@ final class UserController extends Controller
     {
         $email = (string)$params['email'];
 
-        [$cacheTagType, $cached] = $this->cacheService->getRecordByColumn('users', 'email', $email);
-        if ($cached) {
-            return $this->json(data: $cached, cacheTagType: $cacheTagType);
+        [$user, $cacheTagType] = $this->cacheService->getRecordByColumn('users', 'email', $email);
+        if ($user) {
+            return $this->json(data: $user, cacheTagType: $cacheTagType);
         }
 
         $data = $this->userService->findByEmail(urldecode($email));
-        if (!$data) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
-        }
 
         $this->cacheService->setRecord('users', $data['id'], $data);
         $this->cacheService->setRecordByColumn('users', 'email', $email, $data);
@@ -382,12 +376,15 @@ final class UserController extends Controller
     )]
     public function update(array $params): array
     {
+        $id      = (int)$params['id'];
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->userService->update((int)$params['id'], $payload);
 
-        if ($data === null || $data === []) {
-            return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
+        [$user] = $this->cacheService->getRecord('users', $id);
+        if (!$user) {
+            $this->userService->find($id);
         }
+
+        $data = $this->userService->update((int)$params['id'], $payload);
 
         $this->cacheService->invalidateRecord('users', (int) $payload['id']);
         $this->cacheService->invalidateRecordByColumn('users', 'email', (string) $payload['email']);

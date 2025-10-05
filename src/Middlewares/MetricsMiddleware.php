@@ -42,6 +42,9 @@ use Swoole\Http\Response;
  */
 final class MetricsMiddleware implements MiddlewareInterface
 {
+    /**
+     * @SuppressWarnings(PHPMD.StaticAccess)
+     */
     public function handle(Request $request, Response $response, Container $container, callable $next): void
     {
         $start = microtime(true);

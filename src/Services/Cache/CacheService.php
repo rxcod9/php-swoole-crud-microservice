@@ -57,7 +57,7 @@ final readonly class CacheService
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
         if ($value !== null) {
-            return [TableCacheService::TAG, $value];
+            return [$value, TableCacheService::TAG];
         }
 
         // 2. Fallback to Redis
@@ -70,7 +70,7 @@ final readonly class CacheService
                 error_log('Exception: ' . $e->getMessage()); // logged internally
             }
 
-            return [RedisCacheService::TAG, $value];
+            return [$value, RedisCacheService::TAG];
         }
 
         return [null, $value];
@@ -117,7 +117,7 @@ final readonly class CacheService
         // 1. Check local table cache first
         $data = $this->tableCacheService->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
-            return [TableCacheService::TAG, $data];
+            return [$data, TableCacheService::TAG];
         }
 
         // 2. Fallback to Redis
@@ -130,10 +130,10 @@ final readonly class CacheService
                 error_log('Exception: ' . $e->getMessage()); // logged internally
             }
 
-            return [RedisCacheService::TAG, $data];
+            return [$data, RedisCacheService::TAG];
         }
 
-        return [null, $data];
+        return [$data, null];
     }
 
     public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data, ?int $localTtl = null): void
@@ -183,7 +183,7 @@ final readonly class CacheService
     {
         $value = $this->tableCacheService->getList($entity, $query);
         if ($value !== null) {
-            return [TableCacheService::TAG, $value];
+            return [$value, TableCacheService::TAG];
         }
 
         $value = $this->redisCacheService->getList($entity, $query);
@@ -194,7 +194,7 @@ final readonly class CacheService
                 error_log('Exception: ' . $e->getMessage()); // logged internally
             }
 
-            return [RedisCacheService::TAG, $value];
+            return [$value, RedisCacheService::TAG];
         }
 
         return [null, $value];

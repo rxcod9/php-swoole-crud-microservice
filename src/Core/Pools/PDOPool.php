@@ -107,6 +107,8 @@ final class PDOPool
      * Create a new PDO connection.
      * @param int $retry Current retry attempt count.
      * @throws RuntimeException
+     * 
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function make(int $retry = 0, int $maxRetry = 5): array
     {
@@ -141,10 +143,7 @@ final class PDOPool
                 if ($retry <= $maxRetry || $maxRetry === -1) {
                     $backoff = (1 << $retry) * 100000; // microseconds
                     error_log(sprintf('[RETRY] Retrying PDO connection in %.2f seconds...', $backoff / 1000000));
-                    // PHPMD fix
-                    (function () use ($backoff): void {
-                        Coroutine::sleep($backoff / 1000000);
-                    })();
+                    Coroutine::sleep($backoff / 1000000);
                     return $this->make($retry, $maxRetry);
                 }
             }
@@ -179,16 +178,7 @@ final class PDOPool
         if (($available <= 1) && $this->created < $this->max) {
             $toCreate = 1;
             error_log(sprintf('[SCALE-UP PDO] Creating %d new connections (used: %d, available: %d)', $toCreate, $used, $available));
-            for (
-                $i = 0;
-                $i < $toCreate;
-                ++$i
-            ) {
-                $success = $this->channel->push($this->make());
-                if ($success === false) {
-                    throw new ChannelException('Unable to push to channel' . PHP_EOL);
-                }
-            }
+            return $this->make();
         }
 
         $item = $this->channel->pop($timeout);
@@ -244,35 +234,27 @@ final class PDOPool
 
     /**
      * Return a PDO connection to the pool.
-     *
      * If the pool is full or the PDO is dead, the PDO is discarded.
-     *
      *
      * @throws ChannelException
      */
     public function put(PDO $pdo, int $pdoId): void
     {
-        if ($this->channel->isFull()) {
-            unset($pdo);
-            $pdo = null;
-            $this->decrementCreated();
-            error_log(sprintf('[PUT] Pool full, PDO connection discarded. Total connections: %d', $this->created));
+        if (!$this->channel->isFull() && $this->isConnected($pdo)) {
+            $success = $this->channel->push([$pdo, $pdoId]);
+            if ($success === false) {
+                throw new ChannelException('Unable to push to channel' . PHP_EOL);
+            }
+
+            error_log('[PUT] PDO connection returned to pool');
             return;
         }
 
-        if (!$this->isConnected($pdo)) {
-            unset($pdo);
-            $pdo = null;
-            $this->decrementCreated();
-            error_log('[PUT] Dead PDO connection discarded');
-            return;
-        }
-
-        if ($this->channel->push([$pdo, $pdoId]) === false) {
-            throw new ChannelException('Unable to push to channel');
-        }
-
-        error_log('[PUT] PDO connection returned to pool');
+        // Pool full, let garbage collector close the PDO object
+        unset($pdo);
+        $pdo = null;
+        $this->decrementCreated();
+        error_log(sprintf('[PUT] Pool full, PDO connection discarded. Total connections: %d', $this->created));
     }
 
     private function decrementCreated(): void
@@ -387,7 +369,7 @@ final class PDOPool
             'capacity'  => $this->channel->capacity,
             'available' => $this->channel->length(),
             'created'   => $this->created,
-            'in_use'    => $this->created - $this->channel->length(),
+            'in_use'    => max(0, $this->created - $this->channel->length()),
         ];
     }
 

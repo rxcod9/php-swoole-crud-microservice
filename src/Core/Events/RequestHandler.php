@@ -29,6 +29,7 @@ use App\Middlewares\CorsMiddleware;
 use App\Middlewares\HideServerHeaderMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\SecurityHeadersMiddleware;
+use ReflectionClass;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
@@ -119,7 +120,7 @@ final readonly class RequestHandler
         $response->header('Content-Type', 'application/json');
         $response->status($status);
         $response->end(json_encode([
-            'error'      => Messages::ERROR_INTERNAL_ERROR,
+            'error'      => $this->getErrorMessage($throwable),
             'error_full' => $throwable->getMessage(),
             'code'       => $status,
             'trace'      => $throwable->getTraceAsString(),
@@ -140,6 +141,31 @@ final readonly class RequestHandler
                 'line'  => $throwable->getLine(),
             ]
         );
+    }
+
+    /**
+     * Centralized exception handler for all request failures.
+     */
+    private function getErrorMessage(Throwable $throwable): string
+    {
+        if ($this->isAppException($throwable)) {
+            return $throwable->getMessage();
+        }
+
+        return Messages::ERROR_INTERNAL_ERROR;
+    }
+
+    /**
+     * Determine if the given Throwable belongs to the App\Exception namespace.
+     *
+     */
+    public static function isAppException(Throwable $throwable): bool
+    {
+        $reflectionClass = new ReflectionClass($throwable);
+        $namespace       = $reflectionClass->getNamespaceName();
+
+        // You can tweak this prefix to match your actual project namespace
+        return str_starts_with($namespace, 'App\\Exceptions');
     }
 
     /**
@@ -183,6 +209,8 @@ final readonly class RequestHandler
      * @param string               $reqId    Unique request ID for logging
      * @param Response             $response The HTTP response to be sent
      * @param float                $start    Timestamp when the request handling started (for metrics)
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function dispatch(
         string $action,
