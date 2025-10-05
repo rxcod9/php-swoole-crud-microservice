@@ -63,7 +63,7 @@ jobs:
             # Install PHP dependencies
             # --------------------------
             - name: Install dependencies
-              run: composer install --no-dev --optimize-autoloader --prefer-dist
+              run: composer install --optimize-autoloader --prefer-dist
 
             # --------------------------
             # Setup Problem Matchers
