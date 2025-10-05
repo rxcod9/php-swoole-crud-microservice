@@ -337,10 +337,10 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
-    public function update(array $p): array
+    public function update(array $params): array
     {
-        $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->itemService->update((int)$p['id'], $data);
+        $payload = json_decode($this->request->rawContent() ?: '[]', true);
+        $data = $this->itemService->update((int)$params['id'], $payload);
         if ($data === null || $data === []) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
@@ -369,9 +369,9 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
-    public function destroy(array $p): array
+    public function destroy(array $params): array
     {
-        $ok = $this->itemService->delete((int)$p['id']);
+        $ok = $this->itemService->delete((int)$params['id']);
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }
 }

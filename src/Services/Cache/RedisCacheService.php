@@ -174,7 +174,6 @@ final readonly class RedisCacheService
         $version    = $redis->get($versionKey);
 
         if (!$version) {
-            // $redis->set($versionKey, 1);
             return 1;
         }
 

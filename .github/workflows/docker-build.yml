@@ -18,7 +18,7 @@ jobs:
     steps:
       # Checkout repo
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Setup QEMU (for multi-arch builds, e.g. amd64 + arm64)
       - name: Set up QEMU

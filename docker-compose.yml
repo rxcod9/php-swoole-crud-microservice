@@ -48,7 +48,7 @@ services:
 
   # MySQL database service
   mysql:
-    image: mysql:8.4
+    image: mysql:9.4
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USER}
@@ -60,7 +60,8 @@ services:
     volumes:
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
       - ./migrations:/docker-entrypoint-initdb.d:ro
-      - ./logs/mysql:/var/log/mysql
+      - mysql-data:/var/lib/mysql
+      - mysql-logs:/var/log/mysql
     healthcheck:
       test: ["CMD","mysqladmin","ping","-h","localhost","-u${DB_USER}","-p${DB_PASS}"]
       interval: 5s
@@ -151,7 +152,7 @@ services:
 
   # Redis in-memory data store
   redis:
-    image: redis:7
+    image: redis:8
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]  # 👈 Enable AUTH
     ports: ["6379:6379"]
     healthcheck:
@@ -162,7 +163,7 @@ services:
 
   # Caddy web server and reverse proxy
   caddy:
-    image: caddy:2.8
+    image: caddy:2.10
     ports: 
       - "443:443"
       - "80:80"
@@ -196,5 +197,7 @@ services:
 
 volumes:
   grafana-data:
+  mysql-data:
+  mysql-logs:
 #   # caddy_data:
 #   # caddy_config:

@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # important to push commits
 
@@ -25,10 +25,24 @@ jobs:
           coverage: none
           tools: composer
 
-      - name: Fix style
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+
+      - name: Run Rector for automated refactoring
+        run: |
+          vendor/bin/rector process src --set php84 --dry-run=false --ansi
+        # Adjust --set according to your target PHP version / ruleset
+
+      - name: Fix code style with PHP CS Fixer
         uses: docker://oskarstark/php-cs-fixer-ga
         with:
           args: --config=.php-cs-fixer.php --allow-risky=yes --verbose
+
+      - name: Run PHP Code Beautifier (phpcbf)
+        run: |
+          vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --verbose
+        # You can change 'src' to the directories you want
 
       - name: Get branch name
         id: get_branch
@@ -43,7 +57,7 @@ jobs:
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: fix styling via php-cs-fixer"
+          commit_message: "chore: fix styling and refactor via PHP CS Fixer, Rector, phpcbf"
           branch: ${{ steps.get_branch.outputs.branch }}
           push: true
         env:

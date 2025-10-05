@@ -21,10 +21,10 @@
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^10.5",
         "rector/rector": "^2.1",
-        "slevomat/coding-standard": "^8.20",
+        "slevomat/coding-standard": "^8.22",
         "squizlabs/php_codesniffer": "^3.13",
-        "swoole/ide-helper": "~5.0.0",
-        "zircote/swagger-php": "^5.3"
+        "swoole/ide-helper": "^6.0",
+        "zircote/swagger-php": "^5.4"
     },
     "scripts": {
         "start": "php public/index.php",
@@ -35,7 +35,7 @@
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v",
         "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1",
         "php-cs-fixer": "vendor/bin/php-cs-fixer fix src --config=.php-cs-fixer.php",
-        "rector": "vendor/bin/rector process"
+        "rector": "vendor/bin/rector process src --set php84 --dry-run=false --ansi"
     },
     "autoload": {
         "psr-4": {
