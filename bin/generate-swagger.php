@@ -13,8 +13,10 @@ declare(strict_types=1);
  *
  * The generated swagger.json will be saved in the /public directory.
  *
- * @author  Your Name
- * @license MIT
+ * @package    App
+ * @subpackage Bin
+ * @author     Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license    MIT
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';

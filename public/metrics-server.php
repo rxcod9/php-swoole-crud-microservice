@@ -12,8 +12,8 @@ declare(strict_types=1);
  *
  * @package    App
  * @subpackage Public
- * @author     Your Name
- * @copyright  Copyright (c) 2024
+ * @author     Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright  Copyright (c) 2025
  * @license    MIT
  */
 

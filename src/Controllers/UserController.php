@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Controllers
- * @package  App\Controllers
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/UserController.php
+ * @category  Controllers
+ * @package   App\Controllers
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/UserController.php
  */
 declare(strict_types=1);
 
@@ -28,12 +29,13 @@ use OpenApi\Attributes as OA;
  * RESTful User resource controller
  * Handles CRUD operations for User entities.
  *
- * @category Controllers
- * @package  App\Controllers
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Controllers
+ * @package   App\Controllers
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-05
  */
 final class UserController extends Controller
 {
@@ -91,62 +93,14 @@ final class UserController extends Controller
         description: 'Get all users with optional pagination. Use either page & limit or offset & limit',
         tags: ['Users'],
         parameters: [
-            new OA\Parameter(
-                name: 'email',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', default: null)
-            ),
-            new OA\Parameter(
-                name: 'name',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', default: null)
-            ),
-            new OA\Parameter(
-                name: 'created_after',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'date', default: null)
-            ),
-            new OA\Parameter(
-                name: 'created_before',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'date', default: null)
-            ),
-            new OA\Parameter(
-                name: 'limit',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)
-            ),
-            new OA\Parameter(
-                name: 'offset',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
-            ),
-            new OA\Parameter(
-                name: 'sortBy',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(
-                    type: 'string', // allowed columns
-                    default: 'id',
-                    enum: ['id', 'email', 'created_at', 'updated_at']
-                )
-            ),
-            new OA\Parameter(
-                name: 'sortDirection',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(
-                    type: 'string', // allowed columns
-                    default: 'DESC',
-                    enum: ['ASC', 'DESC']
-                )
-            ),
+            new OA\Parameter(name: 'email', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
+            new OA\Parameter(name: 'name', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
+            new OA\Parameter(name: 'created_after', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
+            new OA\Parameter(name: 'created_before', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
+            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)),
+            new OA\Parameter(name: 'offset', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, minimum: 0)),
+            new OA\Parameter(name: 'sortBy', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'id', enum: ['id', 'email', 'created_at', 'updated_at'])),
+            new OA\Parameter(name: 'sortDirection', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'DESC', enum: ['ASC', 'DESC'])),
         ],
         responses: [
             new OA\Response(
@@ -187,26 +141,16 @@ final class UserController extends Controller
     )]
     public function index(): array
     {
-        // Pagination params
-        $page   = (int)($this->request->get['page'] ?? 1);
-        $limit  = max(1, min((int)($this->request->get['limit'] ?? 20), 100));
-        $offset = max(0, ($page - 1) * $limit);
+        // --------------------
+        // Resolve query params
+        // --------------------
+        [$limit, $offset]         = $this->resolvePagination();
+        $filters                  = $this->resolveFilters();
+        [$sortBy, $sortDirection] = $this->resolveSorting();
 
-        // Override with direct offset if provided
-        $limit  = (int)($this->request->get['limit'] ?? $limit);
-        $offset = (int)($this->request->get['offset'] ?? $offset);
-
-        $filters = [
-            'email'          => $this->request->get['email'] ?? null,
-            'name'           => $this->request->get['name'] ?? null,
-            'created_after'  => $this->request->get['created_after'] ?? null,
-            'created_before' => $this->request->get['created_before'] ?? null,
-        ];
-
-        $sortBy        = $this->request->get['sortBy'] ?? 'id';
-        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
-
-        // Cache key based on pagination params
+        // --------------------
+        // Build query array
+        // --------------------
         $query = [
             'limit'         => $limit,
             'offset'        => $offset,
@@ -214,21 +158,47 @@ final class UserController extends Controller
             'sortBy'        => $sortBy,
             'sortDirection' => $sortDirection,
         ];
-        [$cacheTagType, $cached] = $this->cacheService->getList('users', $query);
-        if ($cached) {
-            return $this->json(
-                data: $cached,
-                cacheTagType: $cacheTagType
-            );
+
+        // --------------------
+        // Check cache
+        // --------------------
+        $cachedResult = $this->getCachedUserList($query);
+        if ($cachedResult !== null) {
+            return $cachedResult;
         }
 
-        // Fetch from service if not cached
+        // --------------------
+        // Fetch from service + cache
+        // --------------------
+        return $this->fetchAndCacheUsers($query);
+    }
+
+    /**
+     * Attempt to retrieve cached user list.
+     * @param array $query Contains limit, offset, filters, sortBy, sortDirection
+     */
+    private function getCachedUserList(array $query): ?array
+    {
+        [$cacheTagType, $cached] = $this->cacheService->getList('users', $query);
+        if ($cached) {
+            return $this->json(data: $cached, cacheTagType: $cacheTagType);
+        }
+
+        return null;
+    }
+
+    /**
+     * Fetch users from service and cache results.
+     * @param array $query Contains limit, offset, filters, sortBy, sortDirection
+     */
+    private function fetchAndCacheUsers(array $query): array
+    {
         [$records, $pagination] = $this->userService->pagination(
-            $limit,
-            $offset,
-            $filters,
-            $sortBy,
-            $sortDirection
+            $query['limit'],
+            $query['offset'],
+            $query['filters'],
+            $query['sortBy'],
+            $query['sortDirection']
         );
 
         $data = [
@@ -239,13 +209,51 @@ final class UserController extends Controller
         // cache for 10s
         $this->cacheService->setList('users', $query, $data);
 
-        // Respond with user list
         return $this->json($data);
     }
 
     /**
+     * Private helper: resolve pagination params
+     */
+    private function resolvePagination(): array
+    {
+        $page   = (int)($this->request->get['page'] ?? 1);
+        $limit  = max(1, min((int)($this->request->get['limit'] ?? 20), 100));
+        $offset = max(0, ($page - 1) * $limit);
+
+        // Override offset & limit if explicitly set
+        $limit  = (int)($this->request->get['limit'] ?? $limit);
+        $offset = (int)($this->request->get['offset'] ?? $offset);
+
+        return [$limit, $offset];
+    }
+
+    /**
+     * Private helper: resolve filter params
+     */
+    private function resolveFilters(): array
+    {
+        return [
+            'email'          => $this->request->get['email'] ?? null,
+            'name'           => $this->request->get['name'] ?? null,
+            'created_after'  => $this->request->get['created_after'] ?? null,
+            'created_before' => $this->request->get['created_before'] ?? null,
+        ];
+    }
+
+    /**
+     * Private helper: resolve sorting params
+     */
+    private function resolveSorting(): array
+    {
+        return [
+            $this->request->get['sortBy'] ?? 'id',
+            $this->request->get['sortDirection'] ?? 'DESC',
+        ];
+    }
+
+    /**
      * Show a single user by ID.
-     * URL param: id
      */
     #[OA\Get(
         path: '/users/{id}',
@@ -280,10 +288,7 @@ final class UserController extends Controller
 
         [$cacheTagType, $cached] = $this->cacheService->getRecord('users', $id);
         if ($cached) {
-            return $this->json(
-                data: $cached,
-                cacheTagType: $cacheTagType
-            );
+            return $this->json(data: $cached, cacheTagType: $cacheTagType);
         }
 
         $data = $this->userService->find($id);
@@ -298,7 +303,6 @@ final class UserController extends Controller
 
     /**
      * Show a single user by Email.
-     * URL param: id
      */
     #[OA\Get(
         path: '/users/email/{email}',
@@ -333,10 +337,7 @@ final class UserController extends Controller
 
         [$cacheTagType, $cached] = $this->cacheService->getRecordByColumn('users', 'email', $email);
         if ($cached) {
-            return $this->json(
-                data: $cached,
-                cacheTagType: $cacheTagType
-            );
+            return $this->json(data: $cached, cacheTagType: $cacheTagType);
         }
 
         $data = $this->userService->findByEmail(urldecode($email));
@@ -346,13 +347,12 @@ final class UserController extends Controller
 
         $this->cacheService->setRecord('users', $data['id'], $data);
         $this->cacheService->setRecordByColumn('users', 'email', $email, $data);
+
         return $this->json($data);
     }
 
     /**
      * Update a user by ID.
-     * URL param: id
-     * Expects JSON body with updated user data.
      */
     #[OA\Put(
         path: '/users/{id}',
@@ -385,21 +385,19 @@ final class UserController extends Controller
         $data = json_decode($this->request->rawContent() ?: '[]', true);
         $data = $this->userService->update((int)$p['id'], $data);
 
-        if (!$data) {
+        if ($data === null || $data === []) {
             return $this->json(['error' => Messages::ERROR_NOT_FOUND], 404);
         }
 
         $this->cacheService->invalidateRecord('users', $data['id']);
         $this->cacheService->invalidateRecordByColumn('users', 'email', $data['email']);
-
-        // Invalidate cache
         $this->cacheService->invalidateLists('users');
+
         return $this->json($data);
     }
 
     /**
      * Delete a user by ID.
-     * URL param: id
      */
     #[OA\Delete(
         path: '/users/{id}',
@@ -422,10 +420,7 @@ final class UserController extends Controller
     {
         $ok = $this->userService->delete((int)$p['id']);
         if ($ok) {
-            // Invalidate cache
             $this->cacheService->invalidateRecord('users', $p['id']);
-
-            // Invalidate cache
             $this->cacheService->invalidateLists('users');
         }
 

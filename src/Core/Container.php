@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Container.php
+ * @category  Core
+ * @package   App\Core
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Container.php
  */
 declare(strict_types=1);
 
@@ -26,12 +27,13 @@ use ReflectionClass;
  * Class Container
  * A simple Dependency Injection Container for managing object creation and dependency resolution.
  *
- * @category Core
- * @package  App\Core
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Core
+ * @package   App\Core
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-05
  */
 final class Container
 {
@@ -88,6 +90,7 @@ final class Container
      */
     public function get(string $id): mixed
     {
+        // Return singleton instance if already instantiated
         if (array_key_exists($id, $this->instances)) {
             if ($this->instances[$id] === null) {
                 $this->instances[$id] = ($this->bindings[$id])($this);
@@ -96,10 +99,12 @@ final class Container
             return $this->instances[$id];
         }
 
+        // Return bound factory instance
         if (isset($this->bindings[$id])) {
             return ($this->bindings[$id])($this);
         }
 
+        // Autowire class if no binding exists
         return $this->autowire($id);
     }
 
@@ -115,11 +120,14 @@ final class Container
     private function autowire(string $class): mixed
     {
         $reflectionClass = new ReflectionClass($class);
+
         if (!$reflectionClass->isInstantiable()) {
             throw new InstantiableException('Cannot instantiate ' . $class);
         }
 
         $ctor = $reflectionClass->getConstructor();
+
+        // No constructor: just create the instance
         if (!$ctor) {
             return new $class();
         }
@@ -127,11 +135,15 @@ final class Container
         $args = [];
         foreach ($ctor->getParameters() as $parameter) {
             $t = $parameter->getType();
+
+            // Resolve class dependencies recursively
             if ($t && !$t->isBuiltin()) {
                 $args[] = $this->get($t->getName());
-            } else {
-                $args[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
+                continue;
             }
+
+            // Use default value if available, otherwise null
+            $args[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
         }
 
         return $reflectionClass->newInstanceArgs($args);

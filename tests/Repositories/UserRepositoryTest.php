@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Repositories
- * @package  Tests\Repositories
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/Repositories/UserRepositoryTest.php
+ * @category  Repositories
+ * @package   Tests\Repositories
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/Repositories/UserRepositoryTest.php
  */
 declare(strict_types=1);
 
@@ -26,13 +27,14 @@ use Tests\TestCase;
  * Class UserRepositoryTest
  * Handles all user repository test operations.
  *
- * @category Repositories
- * @package  Tests\Repositories
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @covers   \App\Repositories\UserRepository
+ * @category  Repositories
+ * @package   Tests\Repositories
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @covers    \App\Repositories\UserRepository
  */
 final class UserRepositoryTest extends TestCase
 {
@@ -51,7 +53,7 @@ final class UserRepositoryTest extends TestCase
         $this->runInCoroutine(function (): void {
 
             // Setup schema for SQLite
-            $pdo = $this->pool->get();
+            [$pdo, $pdoId] = $this->pool->get();
 
             // Create a fake users table schema for testing
             $pdo->exec('
@@ -64,6 +66,8 @@ final class UserRepositoryTest extends TestCase
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             ');
+
+            $this->pool->put($pdo, $pdoId);
 
             // Initialize repository with test PDO connection
             $this->userRepository = new UserRepository($this->pool);

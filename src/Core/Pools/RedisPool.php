@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core\Pools
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Pools/RedisPool.php
+ * @category  Core
+ * @package   App\Core\Pools
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Pools/RedisPool.php
  */
 declare(strict_types=1);
 
@@ -35,12 +36,13 @@ use Throwable;
  * Handles connection creation, scaling, health checks, and command execution.
  * Uses php-redis extension (phpredis) instead of Swoole\Coroutine\Redis.
  *
- * @category Core
- * @package  App\Core\Pools
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Core
+ * @package   App\Core\Pools
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
  */
 final class RedisPool
 {
@@ -206,9 +208,14 @@ final class RedisPool
         } else {
             // Pool full, let garbage collector close the Redis object
             $redis->close();
-            --$this->created;
+            $this->decrementCreated();
             error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
         }
+    }
+
+    private function decrementCreated(): void
+    {
+        $this->created = max(0, $this->created - 1);
     }
 
     /**
@@ -291,7 +298,7 @@ final class RedisPool
                 $conn = $this->channel->pop(0.01); // non-blocking pop
                 if ($conn) {
                     $conn->close();
-                    --$this->created;
+                    $this->decrementCreated();
                 }
             }
 

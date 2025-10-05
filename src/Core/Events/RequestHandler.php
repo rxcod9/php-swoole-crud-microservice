@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/RequestHandler.php
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/RequestHandler.php
  */
 declare(strict_types=1);
 
@@ -41,12 +42,13 @@ use Throwable;
  * Provides health check endpoints.
  * Ensures worker readiness before processing requests.
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
  */
 final readonly class RequestHandler
 {
@@ -117,11 +119,12 @@ final readonly class RequestHandler
         $response->header('Content-Type', 'application/json');
         $response->status($status);
         $response->end(json_encode([
-            'error' => Messages::ERROR_INTERNAL_ERROR,
-            'code'  => $status,
-            'trace' => $throwable->getTraceAsString(),
-            'file'  => $throwable->getFile(),
-            'line'  => $throwable->getLine(),
+            'error'      => Messages::ERROR_INTERNAL_ERROR,
+            'error_full' => $throwable->getMessage(),
+            'code'       => $status,
+            'trace'      => $throwable->getTraceAsString(),
+            'file'       => $throwable->getFile(),
+            'line'       => $throwable->getLine(),
         ]));
 
         $requestLogger = new RequestLogger();
@@ -234,7 +237,7 @@ final readonly class RequestHandler
         $dur = microtime(true) - $start;
 
         if (!in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            [$route, $actionMeta] = $this->router->getRouteByPath(
+            [$route] = $this->router->getRouteByPath(
                 $request->server['request_method'],
                 $path ?? '/'
             );

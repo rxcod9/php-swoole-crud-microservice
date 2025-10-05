@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/TaskFinishHandler.php
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/TaskFinishHandler.php
  */
 declare(strict_types=1);
 
@@ -28,16 +29,21 @@ use Swoole\Http\Server;
  * Provides health check endpoints.
  * Ensures worker readiness before processing requests.
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://your-repo-link
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://your-repo-link
  */
 final class TaskFinishHandler
 {
+    /**
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @param mixed $data
+     */
     public function __invoke(Server $server, int $taskId, $data): bool
     {
         $class = $data['class'] ?? 'unknown';

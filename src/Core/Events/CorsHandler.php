@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/CorsHandler.php
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/CorsHandler.php
  */
 declare(strict_types=1);
 
@@ -29,12 +30,13 @@ use Swoole\Http\Response;
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
  */
 final class CorsHandler
 {

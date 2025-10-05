@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category General
- * @package  Tests
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/TestCase.php
+ * @category  General
+ * @package   Tests
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/TestCase.php
  */
 declare(strict_types=1);
 
@@ -27,13 +28,14 @@ use Swoole\Coroutine;
  * Class TestCase
  * Handles all test case operations.
  *
- * @category General
- * @package  Tests
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @covers   \App\Repositories\Base
+ * @category  General
+ * @package   Tests
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @covers    \App\Repositories\Base
  */
 abstract class TestCase extends BaseTestCase
 {
@@ -73,8 +75,9 @@ abstract class TestCase extends BaseTestCase
             'user'     => $user,
             'password' => $pass,
             'options'  => [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_ERRMODE                   => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE        => PDO::FETCH_ASSOC,
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY  => true,
             ],
             'size' => 1,
         ]);

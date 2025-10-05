@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/MiddlewarePipeline.php
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/MiddlewarePipeline.php
  */
 declare(strict_types=1);
 
@@ -28,12 +29,13 @@ use Swoole\Http\Response;
  * Middleware pipeline to process HTTP requests through a series of middleware components.
  * Each middleware can modify the request/response and decide whether to continue the chain.
  *
- * @category Core
- * @package  App\Core\Events
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
+ * @category  Core
+ * @package   App\Core\Events
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-05
  */
 final class MiddlewarePipeline
 {
@@ -91,11 +93,17 @@ final class MiddlewarePipeline
         $total = count($this->middlewares);
 
         $runner = function (int $index = 0) use ($request, $response, $total, $finalHandler, &$runner): void {
-            if ($index < $total) {
-                $this->middlewares[$index]->handle($request, $response, $this->container, fn () => $runner($index + 1));
-            } else {
+            if ($index >= $total) {
                 $finalHandler();
+                return;
             }
+
+            $this->middlewares[$index]->handle(
+                $request,
+                $response,
+                $this->container,
+                fn () => $runner($index + 1)
+            );
         };
 
         $runner();

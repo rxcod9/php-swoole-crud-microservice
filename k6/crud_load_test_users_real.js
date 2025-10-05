@@ -43,6 +43,8 @@ let updateTrend = new Trend('UPDATE_latency_ms');
 // OPTIONS
 // --------------------
 export const options = {
+    setupTimeout: CONFIG.MAX_DURATION, // increase setup timeout
+    teardownTimeout: CONFIG.MAX_DURATION, // increase setup timeout
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -54,8 +56,7 @@ export const options = {
         'READ_latency_ms': ['avg<50'],
         'UPDATE_latency_ms': ['avg<100'],
         // 'DELETE_latency_ms': ['avg<100']
-    },
-    maxDuration: CONFIG.MAX_DURATION
+    }
 };
 
 // --------------------
@@ -108,11 +109,13 @@ export function setup() {
 
         // Attempt to parse ID; log if parsing fails
         try {
-            const id = JSON.parse(res.body).id;
-            if (!id) {
-                console.error(`[SETUP] CREATE response missing id: ${res.body}`);
-            } else {
-                userIds.push(id);
+            if (res.status === 201) {
+                const id = JSON.parse(res.body).id;
+                if (!id) {
+                    console.error(`[SETUP] CREATE response missing id: ${res.body}`);
+                } else {
+                    userIds.push(id);
+                }
             }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response:', res.body, 'Error:', e);
@@ -175,11 +178,13 @@ export default function (data) {
         check(res, { 'CREATE success': r => r.status === 201 });
 
         try {
-            const id = JSON.parse(res.body).id;
-            if (!id) {
-                console.error(`[DEFAULT] CREATE response missing id: ${res.body}`);
-            } else {
-                userIds.push(id);
+            if (res.status === 201) {
+                const id = JSON.parse(res.body).id;
+                if (!id) {
+                    console.error(`[DEFAULT] CREATE response missing id: ${res.body}`);
+                } else {
+                    userIds.push(id);
+                }
             }
         } catch (e) {
             console.error('[DEFAULT] Failed parse CREATE response:', res.body, 'Error:', e);

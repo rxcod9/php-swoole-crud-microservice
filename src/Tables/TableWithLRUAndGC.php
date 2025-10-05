@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Tables
- * @package  App\Tables
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tables/TableWithLRUAndGC.php
+ * @category  Tables
+ * @package   App\Tables
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tables/TableWithLRUAndGC.php
  */
 declare(strict_types=1);
 
@@ -31,37 +32,38 @@ use Swoole\Table;
  * Extensible wrapper around Swoole\Table with user-defined schema.
  * Behaves like Table but allows overrides for eviction and GC.
  *
- * @category Tables
- * @package  App\Tables
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @var      const TYPE_INT = 1;
- * @var      const TYPE_FLOAT = 2;
- * @var      const TYPE_STRING = 3;
- * @var      ?int  $size;
- * @var      ?int  $memorySize;
- * @method   bool  column(string $name, int $type, int $size = 0)
- * @method   bool  create()
- * @method   bool  destroy()
- * @method   bool  set(string $key, array<key, mixed> $value)
- * @method   mixed get(string $key, ?string $field = null)
- * @method   int   count()
- * @method   bool  del(string $key)
- * @method   bool  delete(string $key)
- * @method   bool  exists(string $key)
- * @method   bool  exist(string $key)
- * @method   float incr(string $key, string $column, int|float $incrby = 1): int|float
- * @method   float decr(string $key, string $column, int|float $incrby = 1): int|float
- * @method   int getSize()
- * @method   int getMemorySize()
- * @method   false stats(): arra
- * @method   void  rewind()
- * @method   bool  valid()
- * @method   void  next()
- * @method   mixed current()
- * @method   mixed key()
+ * @category  Tables
+ * @package   App\Tables
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @var       const TYPE_INT = 1;
+ * @var       const TYPE_FLOAT = 2;
+ * @var       const TYPE_STRING = 3;
+ * @var       ?int  $size;
+ * @var       ?int  $memorySize;
+ * @method    bool  column(string $name, int $type, int $size = 0)
+ * @method    bool  create()
+ * @method    bool  destroy()
+ * @method    bool  set(string $key, array<key, mixed> $value)
+ * @method    mixed get(string $key, ?string $field = null)
+ * @method    int   count()
+ * @method    bool  del(string $key)
+ * @method    bool  delete(string $key)
+ * @method    bool  exists(string $key)
+ * @method    bool  exist(string $key)
+ * @method    float incr(string $key, string $column, int|float $incrby = 1): int|float
+ * @method    float decr(string $key, string $column, int|float $incrby = 1): int|float
+ * @method    int getSize()
+ * @method    int getMemorySize()
+ * @method    false stats(): arra
+ * @method    void  rewind()
+ * @method    bool  valid()
+ * @method    void  next()
+ * @method    mixed current()
+ * @method    mixed key()
  */
 class TableWithLRUAndGC implements Iterator, Countable
 {

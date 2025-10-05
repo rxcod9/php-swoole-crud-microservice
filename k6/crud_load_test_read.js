@@ -6,8 +6,8 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 10,
-    TOTAL_ITEMS: 10,
+    TOTAL_USERS: 1000,
+    TOTAL_ITEMS: 1000,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
     LIST_PAGES: 3,
@@ -26,7 +26,7 @@ const CONFIG = {
         // DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 200,
+        MAX_VUS: 500,
         STAGES: [
             { duration: '20s', target: 0.1 },
             { duration: '40s', target: 0.4 },
@@ -55,6 +55,8 @@ let readTrendItems = new Trend('ITEMS_READ_latency_ms');
 // OPTIONS
 // --------------------
 export const options = {
+    setupTimeout: CONFIG.MAX_DURATION, // increase setup timeout
+    teardownTimeout: CONFIG.MAX_DURATION, // increase setup timeout
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -69,8 +71,7 @@ export const options = {
         // 'ITEMS_CREATE_latency_ms': ['avg<100'],
         'ITEMS_READ_latency_ms': ['avg<50'],
         // 'ITEMS_UPDATE_latency_ms': ['avg<100']
-    },
-    maxDuration: CONFIG.MAX_DURATION
+    }
 };
 
 // --------------------
@@ -129,7 +130,9 @@ export function setup() {
         // createTrendUsers.add(res.timings.duration);
         // check(res, { 'CREATE success': r => r.status === 201 });
         try {
-            userIds.push(JSON.parse(res.body).id);
+            if (res.status === 201) {
+                userIds.push(JSON.parse(res.body).id);
+            }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body);
         }
@@ -146,7 +149,9 @@ export function setup() {
         // createTrendItems.add(res.timings.duration);
         // check(res, { 'CREATE success': r => r.status === 201 });
         try {
-            itemIds.push(JSON.parse(res.body).id);
+            if (res.status === 201) {
+                itemIds.push(JSON.parse(res.body).id);
+            }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body);
         }

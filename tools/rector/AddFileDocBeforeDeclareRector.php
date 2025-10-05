@@ -104,6 +104,7 @@ CODE
         $version            = $this->composerMeta['version'] ?? '1.0.0';
         $authors            = $this->composerMeta['authors'] ?? [];
         $authorStr          = $this->getAuthorsString($authors);
+        $copyrightStr       = "Copyright (c) " . date('Y');
         $generated          = date('Y-m-d');
         $link               = "https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/" . $relativePath;
 
@@ -122,6 +123,7 @@ CODE
  * @category  {$category}
  * @package   {$namespace}
  * @author    {$authorStr}
+ * @copyright {$copyrightStr}
  * @license   {$license}
  * @version   {$version}
  * @since     {$generated}
@@ -165,51 +167,93 @@ PHPDOC;
 
     private function mergeDocComment(?Doc $existing, string $newDoc): Doc
     {
-        if ($existing === null) {
-            return new Doc($newDoc);
-        }
+        $tagOrder = [
+            'category',
+            'package',
+            'author',
+            'copyright',
+            'license',
+            'version',
+            'since',
+            'link',
+        ];
 
-        $existingLines = preg_split('/\R/', trim($existing->getText(), "/* \n\t"));
-        $newLines      = preg_split('/\R/', trim($newDoc, "/* \n\t"));
-
-        $existingDesc = [];
-        $existingTags = [];
-        foreach ($existingLines as $line) {
-            $line = trim(ltrim($line, "* \t"));
-            if ($line === '') continue;
-            if (str_starts_with($line, '@')) {
-                [$tag, $value] = array_pad(preg_split('/\s+/', $line, 2), 2, '');
-                $existingTags[$tag] = $value;
-            } else {
-                $existingDesc[] = $line;
+        // Determine indentation from existing doc or default 4 spaces
+        $indent = '    ';
+        if ($existing !== null) {
+            if (preg_match('/^(\s*)\/\*\*/', $existing->getText(), $matches)) {
+                $indent = $matches[1];
             }
         }
 
-        $newDesc = [];
-        $newTags = [];
-        foreach ($newLines as $line) {
-            $line = trim(ltrim($line, "* \t"));
-            if ($line === '') continue;
-            if (str_starts_with($line, '@')) {
-                [$tag, $value] = array_pad(preg_split('/\s+/', $line, 2), 2, '');
-                $newTags[$tag] = $value;
-            } else {
-                $newDesc[] = $line;
-            }
-        }
+        $parseDoc = function (string $doc): array {
+            $lines = preg_split('/\R/', trim($doc, "/* \n\t"));
+            $desc = [];
+            $tags = [];
+            foreach ($lines as $line) {
+                $line = trim(ltrim($line, "* \t"));
+                if ($line === '') continue;
 
+                if (str_starts_with($line, '@')) {
+                    preg_match('/^@+(\S+)\s*(.*)$/', $line, $matches);
+                    $tag = strtolower($matches[1] ?? '');
+                    $value = $matches[2] ?? '';
+                    if ($tag) {
+                        $tags[$tag][] = $value;
+                    }
+                } else {
+                    $desc[] = $line;
+                }
+            }
+            return [$desc, $tags];
+        };
+
+        [$existingDesc, $existingTags] = $parseDoc($existing?->getText() ?? '');
+        [$newDesc, $newTags] = $parseDoc($newDoc);
+
+        // Preserve existing description
         $finalDesc = $existingDesc ?: $newDesc;
-        $finalTags = $newTags + $existingTags;
-        $maxLen    = max(array_map('strlen', array_keys($finalTags)));
 
-        $merged = "/**\n";
-        foreach ($finalDesc as $line) $merged .= " * {$line}\n";
-        if ($finalDesc && $finalTags) $merged .= " *\n";
-        foreach ($finalTags as $tag => $value) {
-            $padding = str_repeat(' ', $maxLen - strlen($tag) + 1);
-            $merged .= " * {$tag}{$padding}{$value}\n";
+        // Merge tags: keep existing, add missing from new
+        $finalTags = $existingTags;
+        foreach ($newTags as $tag => $values) {
+            if (!isset($finalTags[$tag])) {
+                $finalTags[$tag] = $values;
+            }
         }
-        $merged .= " */";
+
+        // Compute max tag length for alignment
+        $allTags = array_merge(array_keys($finalTags), $tagOrder);
+        $maxTagLen = max(array_map('strlen', $allTags));
+
+        // Rebuild doc
+        $merged = "{$indent}/**\n";
+        foreach ($finalDesc as $line) {
+            $merged .= "{$indent} * {$line}\n";
+        }
+        if ($finalDesc && $finalTags) {
+            $merged .= "{$indent} *\n";
+        }
+
+        // Append tags in PHPCS order with aligned values
+        foreach ($tagOrder as $tag) {
+            if (!isset($finalTags[$tag])) continue;
+            foreach ($finalTags[$tag] as $value) {
+                $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
+                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
+            }
+            unset($finalTags[$tag]);
+        }
+
+        // Append any remaining tags
+        foreach ($finalTags as $tag => $values) {
+            foreach ($values as $value) {
+                $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
+                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
+            }
+        }
+
+        $merged .= "{$indent} */";
 
         return new Doc($merged);
     }

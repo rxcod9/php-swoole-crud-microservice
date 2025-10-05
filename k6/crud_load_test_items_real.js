@@ -42,7 +42,9 @@ let updateTrend = new Trend('UPDATE_latency_ms');
 // --------------------
 // OPTIONS
 // --------------------
-export let options = {
+export const options = {
+    setupTimeout: CONFIG.MAX_DURATION, // increase setup timeout
+    teardownTimeout: CONFIG.MAX_DURATION, // increase setup timeout
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -54,8 +56,7 @@ export let options = {
         'READ_latency_ms': ['avg<50'],
         'UPDATE_latency_ms': ['avg<100'],
         // 'DELETE_latency_ms': ['avg<100']
-    },
-    maxDuration: CONFIG.MAX_DURATION
+    }
 };
 
 // --------------------
@@ -99,7 +100,11 @@ export function setup() {
         });
         createTrend.add(res.timings.duration);
         check(res, { 'CREATE success': r => r.status === 201 });
-        try { itemIds.push(JSON.parse(res.body).id); }
+        try {
+            if (res.status === 201) {
+                itemIds.push(JSON.parse(res.body).id);
+            }
+        }
         catch (e) { console.error('Failed parse CREATE response', res.body); }
     }
 
@@ -151,7 +156,11 @@ export default function (data) {
         const res = http.post('http://localhost:9501/items', JSON.stringify(item), { headers: { 'Content-Type': 'application/json' } });
         createTrend.add(res.timings.duration);
         check(res, { 'CREATE success': r => r.status === 201 });
-        try { itemIds.push(JSON.parse(res.body).id); }
+        try {
+            if (res.status === 201) {
+                itemIds.push(JSON.parse(res.body).id);
+            }
+        }
         catch (e) { console.error('Failed parse CREATE response', res.body); }
 
     } else if (rand < w.LIST + w.READ + w.CREATE + w.UPDATE) {

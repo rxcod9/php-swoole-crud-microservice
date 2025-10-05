@@ -6,13 +6,14 @@
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category Controllers
- * @package  App\Controllers
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/HealthController.php
+ * @category  Controllers
+ * @package   App\Controllers
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/HealthController.php
  */
 declare(strict_types=1);
 
@@ -30,13 +31,13 @@ use Swoole\Table;
  * Provides both JSON and HTML responses to monitor the status of worker processes,
  * including database and cache connection pool usage.
  *
- * @category Controllers
- * @package  App\Controllers
- * @author   Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @license  MIT
- * @version  1.0.0
- * @since    2025-10-02
- * @link     https://your-repo-link
+ * @category  Controllers
+ * @package   App\Controllers
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-05
  */
 final class HealthController extends Controller
 {
@@ -78,7 +79,7 @@ final class HealthController extends Controller
             'workers_count' => count($data),
             'workers'       => $data,
             'cache'         => $this->tableWithLRUAndGC->stats(),
-            'cacheCount'    => $cacheData,
+            'cacheCount'    => count($cacheData),
             'cacheData'     => $cacheData,
         ]);
     }
@@ -95,25 +96,43 @@ final class HealthController extends Controller
 
     /**
      * Renders the health check HTML page.
+     * This method now only assembles the sections and delegates HTML building.
      */
     private function renderHtml(): string
     {
-        // $stats      = json_encode((array) $this->table->stats(), JSON_PRETTY_PRINT);
-        // $table      = json_encode((array) $this->table, JSON_PRETTY_PRINT);
-        // $cacheStats = json_encode((array) $this->cacheTable->stats(), JSON_PRETTY_PRINT);
-        // $cacheTable = json_encode((array) $this->cacheTable, JSON_PRETTY_PRINT);
-        $workerHtml = $this->renderWorkerHtml();
-        $cacheHtml  = $this->renderCacheHtml();
-
+        // Render individual sections
+        $workerHtml      = $this->renderWorkerHtml();
+        $cacheHtml       = $this->renderCacheHtml();
         $workerStatsHtml = $this->renderTableStatsHtml($this->table, 'Workers Table');
         $cacheStatsHtml  = $this->renderTableStatsHtml($this->tableWithLRUAndGC, 'Cache Table');
 
+        // Render full HTML page
+        return $this->buildHtmlPage(
+            title: 'Health Check',
+            body: '
+                <h1>Health Check</h1>
+                <p>Uptime: ' . secondsReadable(Carbon::now()->getTimestamp() - ($_SERVER['REQUEST_TIME'] ?? Carbon::now()->getTimestamp())) . '</p>
+                <p>Timestamp: ' . date(Constants::DATETIME_FORMAT) . '</p>
+                <p>PID: ' . posix_getpid() . "</p>
+                {$workerStatsHtml}
+                {$cacheStatsHtml}
+                {$workerHtml}
+                {$cacheHtml}"
+        );
+    }
+
+    /**
+     * Builds the full HTML document with <head> and <body>.
+     * Extracted to reduce length of renderHtml().
+     */
+    private function buildHtmlPage(string $title, string $body): string
+    {
         return "<!DOCTYPE html>
             <html lang='en'>
             <head>
                 <meta charset='UTF-8'>
                 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>Health Check</title>
+                <title>{$title}</title>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
                     table { border-collapse: collapse; width: 100%; }
@@ -135,14 +154,7 @@ final class HealthController extends Controller
                 </style>
             </head>
             <body>
-            <h1>Health Check</h1>
-            <p>Uptime: " . secondsReadable(Carbon::now()->getTimestamp() - ($_SERVER['REQUEST_TIME'] ?? Carbon::now()->getTimestamp())) . '</p>
-            <p>Timestamp: ' . date(Constants::DATETIME_FORMAT) . '</p>
-            <p>PID: ' . posix_getpid() . "</p>
-            {$workerStatsHtml}
-            {$cacheStatsHtml}
-            {$workerHtml}
-            {$cacheHtml}
+            {$body}
             </body>
             </html>";
     }
@@ -170,7 +182,7 @@ final class HealthController extends Controller
     }
 
     /**
-     * Renders the health check HTML page.
+     * Renders the worker HTML table.
      */
     private function renderWorkerHtml(): string
     {
@@ -182,7 +194,7 @@ final class HealthController extends Controller
     }
 
     /**
-     * Renders the health check HTML page.
+     * Renders the worker rows HTML.
      */
     private function getWorkerRowsHtml(array $data): string
     {
@@ -202,6 +214,7 @@ final class HealthController extends Controller
             <th>Redis Created</th>
             <th>Redis In Use</th>
         </tr>';
+
         foreach ($data as $wid => $row) {
             $statusClass = $row['alive'] ? 'alive' : 'dead';
             $statusText  = $row['alive'] ? 'Alive' : 'Dead';
@@ -248,7 +261,7 @@ final class HealthController extends Controller
     }
 
     /**
-     * Renders the Cache HTML page.
+     * Renders the cache HTML table.
      */
     private function renderCacheHtml(): string
     {
@@ -260,7 +273,7 @@ final class HealthController extends Controller
     }
 
     /**
-     * Renders the Cache HTML page.
+     * Renders the cache rows HTML.
      */
     private function getCacheRowsHtml(array $data): string
     {
@@ -286,6 +299,10 @@ final class HealthController extends Controller
         return $rows;
     }
 
+    /**
+     * Formats JSON data in a pretty <pre> block.
+     * @param mixed $data
+     */
     private function getPrettyJson($data): string
     {
         $pretty = maybeEncodeJson($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -293,6 +310,9 @@ final class HealthController extends Controller
         return '<pre class="json"><code>' . htmlspecialchars($pretty, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
     }
 
+    /**
+     * Renders the Swoole table stats HTML.
+     */
     private function renderTableStatsHtml(Table|TableWithLRUAndGC $table, string $title = 'Table'): string
     {
         // 1. Stats (Swoole\Table::stats or TableWithLRUAndGC::stats)
@@ -304,6 +324,7 @@ final class HealthController extends Controller
 
         $statsHtml .= '</table>';
 
+        // 2. Table Size info
         $sizeHtml = '<h3>' . $title . ' Size</h3><table><tr><th>Size</th><th>Memory Size (bytes)</th></tr>';
         $sizeHtml .= '<tr><td>' . $table->size . '</td><td>' . bytesReadable($table->memorySize) . '</td></tr>';
         $sizeHtml .= '</table>';

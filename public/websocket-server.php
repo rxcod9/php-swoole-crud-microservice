@@ -10,10 +10,11 @@ declare(strict_types=1);
  *
  * PHP version 7.4+
  *
- * @package   App\Public
- * @author    Your Name
- * @copyright Copyright (c) 2024
- * @license   MIT
+ * @package    App
+ * @subpackage Public
+ * @author     Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright  Copyright (c) 2025
+ * @license    MIT
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';

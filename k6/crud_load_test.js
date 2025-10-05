@@ -6,8 +6,8 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 200,
-    TOTAL_ITEMS: 200,
+    TOTAL_USERS: 2000,
+    TOTAL_ITEMS: 2000,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     COOL_PERCENT: 0.1,          // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
@@ -28,16 +28,24 @@ const CONFIG = {
         DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 10,
+        MAX_VUS: 200,
         STAGES: [
-            { duration: '20s', target: 0.1 },
-            { duration: '40s', target: 0.4 },
-            { duration: '1m', target: 1.0 },
-            { duration: '20s', target: 0 }
+            // Ramp up gradually over 10 minutes
+            { duration: '2m', target: 0.10 },   // 10% load
+            { duration: '2m', target: 0.25 },   // 25% load
+            { duration: '2m', target: 0.40 },   // 40% load
+            { duration: '2m', target: 0.60 },   // 60% load
+            { duration: '2m', target: 0.80 },   // 80% load
+            { duration: '2m', target: 1.00 },  // 100% load
+            // Ramp down over 5 minutes
+            { duration: '2m', target: 0.80 },
+            { duration: '1m', target: 0.50 },
+            { duration: '1m', target: 0.25 },
+            { duration: '1m', target: 0.0 },
         ]
     },
-    TOTAL_EXECUTIONS: 100,    // total default() executions across all VUs
-    MAX_DURATION: '1m'          // maximum test duration
+    TOTAL_EXECUTIONS: 10000,    // total default() executions across all VUs
+    MAX_DURATION: '15m'          // maximum test duration
 };
 
 // --------------------
@@ -59,6 +67,8 @@ let deleteTrendItems = new Trend('ITEMS_DELETE_latency_ms');
 // OPTIONS
 // --------------------
 export const options = {
+    setupTimeout: CONFIG.MAX_DURATION, // increase setup timeout
+    teardownTimeout: CONFIG.MAX_DURATION, // increase setup timeout
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -75,8 +85,7 @@ export const options = {
         'ITEMS_READ_latency_ms': ['avg<50'],
         'ITEMS_UPDATE_latency_ms': ['avg<100'],
         'ITEMS_DELETE_latency_ms': ['avg<50']
-    },
-    maxDuration: CONFIG.MAX_DURATION
+    }
 };
 
 // --------------------
@@ -107,7 +116,10 @@ function generateItem(index) {
     };
 }
 
-function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function randomItem(arr) { 
+    if (!arr || arr.length === 0) return null; 
+    return arr[Math.floor(Math.random() * arr.length)]; 
+}
 
 // --------------------
 // PER-VU ID TRACKERS
@@ -133,7 +145,9 @@ export function setup() {
         createTrendUsers.add(res.timings.duration);
         check(res, { 'CREATE success': r => r.status === 201 });
         try {
-            userIds.push(JSON.parse(res.body).id);
+            if (res.status === 201) {
+                userIds.push(JSON.parse(res.body).id);
+            }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body, e);
         }
@@ -148,7 +162,9 @@ export function setup() {
         createTrendItems.add(res.timings.duration);
         check(res, { 'CREATE success': r => r.status === 201 });
         try {
-            itemIds.push(JSON.parse(res.body).id);
+            if (res.status === 201) {
+                itemIds.push(JSON.parse(res.body).id);
+            }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body, e);
         }
@@ -202,6 +218,10 @@ export default function (data) {
                 weight: weights.READ,
                 handler: () => {
                     const id = hotIds.length && Math.random() < CONFIG.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                    if (!id) {
+                        console.warn(`[${entity}] Skipping read: no ID available`);
+                        return;
+                    }
                     const res = http.get(`${baseUrl}/${id}`);
                     trends.read.add(res.timings.duration);
                     check(res, { [`${entity} READ success`]: r => r.status === 200 });
@@ -215,14 +235,21 @@ export default function (data) {
                     const res = http.post(baseUrl, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
                     trends.create?.add(res.timings.duration);
                     check(res, { [`${entity} CREATE success`]: r => r.status === 201 });
-                    try { vuIds.push(JSON.parse(res.body).id); } catch (e) { console.error(e); }
+                    try {
+                        if (res.status === 201) {
+                            vuIds.push(JSON.parse(res.body).id);
+                        }
+                    } catch (e) { console.error(e); }
                 },
             },
             {
                 type: 'update',
                 weight: weights.UPDATE,
                 handler: () => {
-                    const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                    const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);if (!id) {
+                        console.warn(`[${entity}] Skipping update: no ID available`);
+                        return;
+                    }
                     const obj = generateFn(id);
                     const res = http.put(`${baseUrl}/${id}`, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
                     trends.update?.add(res.timings.duration);
@@ -234,7 +261,11 @@ export default function (data) {
                 weight: weights.DELETE,
                 handler: () => {
                     const id = randomItem(coolIds);
-                    const res = http.delete(`${baseUrl}/${id}`);
+                    if (!id) {
+                        console.warn(`[${entity}] Skipping delete: no ID available`);
+                        return;
+                    }
+                    const res = http.del(`${baseUrl}/${id}`);
                     trends.delete?.add(res.timings.duration);
                     check(res, { [`${entity} DELETE success`]: r => r.status === 204 });
                 },

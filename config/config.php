@@ -9,11 +9,12 @@ declare(strict_types=1);
  * server, database, Redis, and queue. Environment variables are used where available,
  * with sensible defaults provided for local development.
  *
- * @package php-swoole-crud-microservice
- * @author  Your Name
- * @license MIT
- * @version 1.0.0
- * @see     https://github.com/your-repo/php-swoole-crud-microservice
+ * @package    App
+ * @subpackage Config
+ * @author     Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @license    MIT
+ * @version    1.0.0
+ * @see        https://github.com/your-repo/php-swoole-crud-microservice
  */
 
 return [
