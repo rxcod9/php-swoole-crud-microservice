@@ -43,9 +43,8 @@ final class RequestLogger
 {
     /**
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-     * @param mixed $level
      */
-    public function log($level, Server $server, Request $request, array $data): void
+    public function log(string $level, Server $server, Request $request, array $data): void
     {
         $server->task([
             'class'     => LogTask::class,

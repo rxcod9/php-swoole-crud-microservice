@@ -30,10 +30,12 @@
         "start": "php public/index.php",
         "test": "vendor/bin/phpunit",
         "openapi:generate": "vendor/bin/openapi --output public/openapi.json src",
-        "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
         "phpcs": "vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=full",
         "phpmd": "vendor/bin/phpmd ./src text phpmd.xml --report-file=phpmd.csv",
-        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v"
+        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v",
+        "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1",
+        "php-cs-fixer": "vendor/bin/php-cs-fixer fix src --config=.php-cs-fixer.php",
+        "rector": "vendor/bin/rector process"
     },
     "autoload": {
         "psr-4": {

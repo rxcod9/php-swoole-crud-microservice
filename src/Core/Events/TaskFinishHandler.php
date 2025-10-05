@@ -42,9 +42,8 @@ final class TaskFinishHandler
 {
     /**
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-     * @param mixed $data
      */
-    public function __invoke(Server $server, int $taskId, $data): bool
+    public function __invoke(Server $server, int $taskId, mixed $data): bool
     {
         $class = $data['class'] ?? 'unknown';
         $error = $data['error'] ?? null;

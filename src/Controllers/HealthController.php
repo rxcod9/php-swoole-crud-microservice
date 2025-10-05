@@ -301,9 +301,8 @@ final class HealthController extends Controller
 
     /**
      * Formats JSON data in a pretty <pre> block.
-     * @param mixed $data
      */
-    private function getPrettyJson($data): string
+    private function getPrettyJson(mixed $data): string
     {
         $pretty = maybeEncodeJson($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 

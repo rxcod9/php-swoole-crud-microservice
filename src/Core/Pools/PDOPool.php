@@ -49,7 +49,7 @@ final class PDOPool
 
     private bool $initialized = false;
 
-    private int $created      = 0;
+    private int $created = 0;
 
     /**
      * Re-entrant connection stack to track nested withConnection calls
