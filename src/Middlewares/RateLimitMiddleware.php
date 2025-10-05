@@ -68,7 +68,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
         $rateLimitConfig = $this->config->get('rateLimit') ?? [];
         // Allow public paths without auth
         if (in_array($request->server['request_uri'], $this->excludePaths, true)) {
-            $next();
+            $next($request, $response);
             return;
         }
 
@@ -79,18 +79,18 @@ final class RateLimitMiddleware implements MiddlewareInterface
         $skipIpPatterns = $rateLimitConfig['skip_ip_patterns'] ?? null; // '/^172\.17\.\d+\.\d+$/'; // matches default Docker bridge
 
         if ($skipIpPatterns && preg_match($skipIpPatterns, $clientIp)) {
-            $next();
+            $next($request, $response);
             return;
         }
 
         error_log('IP: ' . $ip);
 
-        [$row] = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
-        $nowSec            = Carbon::now()->getTimestamp();
-        $count             = 0;
-        $oldest            = $nowSec;
-        $expiresAt         = $nowSec + 60;
-        $elapsed           = $nowSec - $oldest;
+        [$row]     = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
+        $nowSec    = Carbon::now()->getTimestamp();
+        $count     = 0;
+        $oldest    = $nowSec;
+        $expiresAt = $nowSec + 60;
+        $elapsed   = $nowSec - $oldest;
 
         if ($row === null) {
             $this->cacheService->setRecordByColumn(
@@ -153,6 +153,6 @@ final class RateLimitMiddleware implements MiddlewareInterface
         $response->header('X-RateLimit-Remaining', (string) $remaining);
         $response->header('X-RateLimit-Reset', (string) $resetAt);
 
-        $next();
+        $next($request, $response);
     }
 }

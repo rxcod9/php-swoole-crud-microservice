@@ -247,7 +247,7 @@ final readonly class TableCacheService
      * Garbage collect old list versions for multiple entities in one loop
      *
      * @param string[] $entities
-     * 
+     *
      * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     public function gcOldListVersions(array $entities, int $keepVersions = 2): void

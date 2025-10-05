@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Container;
+use App\Core\Events\TaskRequestDispatcher as Dispatcher;
 use App\Core\Metrics;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
@@ -79,8 +80,8 @@ final readonly class TaskRequestHandler
                 ['class']
             );
 
-            $taskRequestDispatcher = new TaskRequestDispatcher($this->container);
-            $status                = $taskRequestDispatcher->dispatch($task);
+            $dispatcher = new Dispatcher($this->container);
+            $status                = $dispatcher->dispatch($task);
             // Metrics and async logging
             $dur = microtime(true) - $start;
 

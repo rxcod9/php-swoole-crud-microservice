@@ -69,6 +69,6 @@ final class CorsMiddleware implements MiddlewareInterface
             return;
         }
 
-        $next();
+        $next($request, $response);
     }
 }

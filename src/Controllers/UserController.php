@@ -284,8 +284,8 @@ final class UserController extends Controller
     )]
     public function show(array $params): array
     {
-        $id = (int)$params['id'];
-
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        $id                    = (int)$params['id'];
         [$user, $cacheTagType] = $this->cacheService->getRecord('users', $id);
         if ($user) {
             return $this->json(data: $user, cacheTagType: $cacheTagType);
@@ -330,8 +330,8 @@ final class UserController extends Controller
     )]
     public function showByEmail(array $params): array
     {
-        $email = (string)$params['email'];
-
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['email']);
+        $email                 = (string)$params['email'];
         [$user, $cacheTagType] = $this->cacheService->getRecordByColumn('users', 'email', $email);
         if ($user) {
             return $this->json(data: $user, cacheTagType: $cacheTagType);
@@ -376,6 +376,7 @@ final class UserController extends Controller
     )]
     public function update(array $params): array
     {
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
         $id      = (int)$params['id'];
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
 
@@ -413,11 +414,13 @@ final class UserController extends Controller
             new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
         ]
     )]
-    public function destroy(array $p): array
+    public function destroy(array $params): array
     {
-        $ok = $this->userService->delete((int)$p['id']);
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        $id = (int)$params['id'];
+        $ok = $this->userService->delete($id);
         if ($ok) {
-            $this->cacheService->invalidateRecord('users', (int) $p['id']);
+            $this->cacheService->invalidateRecord('users', $id);
             $this->cacheService->invalidateLists('users');
         }
 

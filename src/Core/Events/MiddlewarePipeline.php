@@ -12,7 +12,7 @@
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-05
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/MiddlewarePipeline.php
  */
 declare(strict_types=1);
@@ -20,14 +20,11 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Container;
-use App\Middlewares\MiddlewareInterface;
-use InvalidArgumentException;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
 /**
- * Middleware pipeline to process HTTP requests through a series of middleware components.
- * Each middleware can modify the request/response and decide whether to continue the chain.
+ * MiddlewarePipeline handles request/response middleware execution.
  *
  * @category  Core
  * @package   App\Core\Events
@@ -44,36 +41,19 @@ final class MiddlewarePipeline
         //
     }
 
-    /** @var MiddlewareInterface[] */
+    /** @var array<callable|string> */
     private array $middlewares = [];
 
     /**
-     * Add a middleware to the pipeline
+     * Add a single middleware to the pipeline.
      */
-    public function addMiddleware(MiddlewareInterface|string $middleware): void
+    public function addMiddleware(callable|string $middleware): void
     {
-        // If a string class name is provided, resolve it from container
-        if (is_string($middleware)) {
-            if (!$this->container->has($middleware)) {
-                throw new InvalidArgumentException(
-                    sprintf('Middleware class "%s" is not in the container', $middleware)
-                );
-            }
-
-            $middleware = $this->container->get($middleware);
-        }
-
-        if (!$middleware instanceof MiddlewareInterface) {
-            throw new InvalidArgumentException(
-                sprintf('Expected instance of MiddlewareInterface, got %s', get_debug_type($middleware))
-            );
-        }
-
         $this->middlewares[] = $middleware;
     }
 
     /**
-     * Register multiple middlewares at once.
+     * Add multiple middlewares at once.
      */
     public function addMiddlewares(array $middlewares): void
     {
@@ -83,29 +63,37 @@ final class MiddlewarePipeline
     }
 
     /**
-     * Start the middleware chain
+     * Execute the pipeline.
      */
-    public function handle(
-        Request $request,
-        Response $response,
-        callable $finalHandler
-    ): void {
-        $total = count($this->middlewares);
+    public function handle(Request $request, Response $response, callable $finalHandler): void
+    {
+        $stack = $this->buildStack($finalHandler);
+        $stack($request, $response);
+    }
 
-        $runner = function (int $index = 0) use ($request, $response, $total, $finalHandler, &$runner): void {
-            if ($index >= $total) {
-                $finalHandler();
-                return;
-            }
+    /**
+     * Convert the middleware list into a single callable stack.
+     */
+    private function buildStack(callable $finalHandler): callable
+    {
+        return array_reduce(
+            array_reverse($this->middlewares),
+            fn ($next, $middleware): \Closure => fn (Request $request, Response $response) => $this->invokeMiddleware($middleware, $request, $response, $next),
+            $finalHandler
+        );
+    }
 
-            $this->middlewares[$index]->handle(
-                $request,
-                $response,
-                $this->container,
-                fn () => $runner($index + 1)
-            );
-        };
+    /**
+     * Invoke a middleware instance or callable without else expression.
+     */
+    private function invokeMiddleware(callable|string $middleware, Request $request, Response $response, callable $next): void
+    {
+        if (is_string($middleware)) {
+            $middleware = $this->container->get($middleware);
+            $middleware->handle($request, $response, $this->container, $next);
+            return;
+        }
 
-        $runner();
+        $middleware($request, $response, $next);
     }
 }

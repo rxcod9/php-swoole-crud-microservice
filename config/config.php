@@ -178,7 +178,8 @@ return [
              */
             'reload_async' => true,
             // 'log_level' => SWOOLE_LOG_ERROR,
-            'log_file' => '/app/logs/swoole.log',
+            // 'log_file' => '/app/logs/swoole.log',
+            'log_file' => '/proc/self/fd/2',
         ],
 
         /**

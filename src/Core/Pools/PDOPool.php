@@ -107,7 +107,7 @@ final class PDOPool
      * Create a new PDO connection.
      * @param int $retry Current retry attempt count.
      * @throws RuntimeException
-     * 
+     *
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function make(int $retry = 0, int $maxRetry = 5): array
@@ -252,7 +252,6 @@ final class PDOPool
 
         // Pool full, let garbage collector close the PDO object
         unset($pdo);
-        $pdo = null;
         $this->decrementCreated();
         error_log(sprintf('[PUT] Pool full, PDO connection discarded. Total connections: %d', $this->created));
     }

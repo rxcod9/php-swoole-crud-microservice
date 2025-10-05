@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Tasks;
 
 use Monolog\Handler\StreamHandler;
+use Monolog\Level;
 use Monolog\Logger;
 
 /**
@@ -47,6 +48,9 @@ final class LogTask implements TaskInterface
         if (!$log) {
             $log = new Logger('access');
             $log->pushHandler(new StreamHandler('/app/logs/access.log'));
+
+            // Send all logs to stdout for Docker
+            $log->pushHandler(new StreamHandler('php://stdout', Level::Debug));
         }
 
         $log->log(

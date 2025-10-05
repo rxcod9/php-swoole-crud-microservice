@@ -46,6 +46,6 @@ final class HideServerHeaderMiddleware implements MiddlewareInterface
         // Remove default server header
         $response->header('Server', null);
 
-        $next();
+        $next($request, $response);
     }
 }

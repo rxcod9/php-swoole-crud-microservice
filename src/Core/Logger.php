@@ -79,10 +79,15 @@ class Logger
                     continue;
                 }
 
+                $level = $log['level'] ?? self::DEBUG;
                 $line = json_encode($log, JSON_UNESCAPED_SLASHES) . PHP_EOL;
 
                 // Non-blocking-ish: still file_put_contents, but off main coroutine
-                file_put_contents('php://stdout', $line, FILE_APPEND);
+                if ($level >= self::ERROR) {
+                    file_put_contents('php://stderr', $line, FILE_APPEND);
+                } else {
+                    file_put_contents('php://stdout', $line, FILE_APPEND);
+                }
                 file_put_contents($this->logFile, $line, FILE_APPEND);
             }
         });

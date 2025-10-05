@@ -46,7 +46,7 @@ final class CompressionMiddleware implements MiddlewareInterface
      */
     public function handle(Request $request, Response $response, Container $container, callable $next): void
     {
-        $next(); // call next middleware
+        $next($request, $response); // call next middleware
 
         if (strpos($response->header['Content-Type'] ?? '', 'application/json') !== false) {
             $response->header('Content-Encoding', 'gzip');

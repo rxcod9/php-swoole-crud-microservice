@@ -48,6 +48,6 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
         $response->header('X-XSS-Protection', '1; mode=block');
         $response->header('Referrer-Policy', 'no-referrer');
 
-        $next();
+        $next($request, $response);
     }
 }

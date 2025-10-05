@@ -6,12 +6,12 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 2000,
-    TOTAL_ITEMS: 2000,
+    TOTAL_USERS: 20000,
+    TOTAL_ITEMS: 20000,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     COOL_PERCENT: 0.1,          // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
-    HOT_UPDATE_RATIO: 0.1,       // 10% of reads go to hot IDs
+    HOT_UPDATE_RATIO: 0.01,       // 10% of reads go to hot IDs
     LIST_PAGES: 3,
     WEIGHTS_USERS: {
         LIST: 0.5,
@@ -31,14 +31,14 @@ const CONFIG = {
         MAX_VUS: 200,
         STAGES: [
             // Ramp up gradually over 10 minutes
-            { duration: '2m', target: 0.10 },   // 10% load
-            { duration: '2m', target: 0.25 },   // 25% load
-            { duration: '2m', target: 0.40 },   // 40% load
-            { duration: '2m', target: 0.60 },   // 60% load
-            { duration: '2m', target: 0.80 },   // 80% load
-            { duration: '2m', target: 1.00 },  // 100% load
+            { duration: '1m', target: 0.10 },   // 10% load
+            { duration: '1m', target: 0.25 },   // 25% load
+            { duration: '1m', target: 0.40 },   // 40% load
+            { duration: '1m', target: 0.60 },   // 60% load
+            { duration: '1m', target: 0.80 },   // 80% load
+            { duration: '1m', target: 1.00 },  // 100% load
             // Ramp down over 5 minutes
-            { duration: '2m', target: 0.80 },
+            { duration: '1m', target: 0.80 },
             { duration: '1m', target: 0.50 },
             { duration: '1m', target: 0.25 },
             { duration: '1m', target: 0.0 },
@@ -197,8 +197,6 @@ export default function (data) {
     if (VU_userIds.length === 0) VU_userIds = data.userIds.slice();
     if (VU_itemIds.length === 0) VU_itemIds = data.itemIds.slice();
 
-    // const rand = Math.random();
-
     function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUrl, trends, entity }) {
         const r = Math.random();
 
@@ -246,8 +244,13 @@ export default function (data) {
                 type: 'update',
                 weight: weights.UPDATE,
                 handler: () => {
-                    const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);if (!id) {
+                    const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                    if (!id) {
                         console.warn(`[${entity}] Skipping update: no ID available`);
+                        return;
+                    }
+                    if(coolIds.includes(id)) {
+                        console.warn(`[${entity}] Skipping update: not updating cool ID`);
                         return;
                     }
                     const obj = generateFn(id);
@@ -268,6 +271,10 @@ export default function (data) {
                     const res = http.del(`${baseUrl}/${id}`);
                     trends.delete?.add(res.timings.duration);
                     check(res, { [`${entity} DELETE success`]: r => r.status === 204 });
+                    // remove from list
+                    const idToRemove = id;
+                    vuIds = vuIds.filter(id => id !== idToRemove);
+                    coolIds = coolIds.filter(id => id !== idToRemove);
                 },
             },
         ].filter(a => a.weight); // Remove disabled actions (weight 0)

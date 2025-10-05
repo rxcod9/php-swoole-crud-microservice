@@ -47,7 +47,7 @@ final readonly class WebSocketServer
 
     /**
      * Start the WebSocket server.
-     * 
+     *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function start(): void

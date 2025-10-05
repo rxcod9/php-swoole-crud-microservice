@@ -49,7 +49,7 @@ final class MetricsMiddleware implements MiddlewareInterface
     {
         $start = microtime(true);
 
-        $next(); // call next middleware
+        $next($request, $response); // call next middleware
 
         $dur       = microtime(true) - $start;
         $reg       = Metrics::reg();

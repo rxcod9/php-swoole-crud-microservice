@@ -103,7 +103,7 @@ final class RedisPool
      * @param int $retry Current retry attempt count.
      *
      * @throws RuntimeException If connection fails after retries.
-     * 
+     *
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function make(int $retry = 0, int $maxRetry = 5): Redis

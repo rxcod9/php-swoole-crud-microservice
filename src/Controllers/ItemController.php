@@ -255,7 +255,9 @@ final class ItemController extends Controller
     )]
     public function show(array $params): array
     {
-        $data = $this->itemService->find((int)$params['id']);
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        $id   = (int)$params['id'];
+        $data = $this->itemService->find($id);
 
         return $this->json($data);
     }
@@ -294,7 +296,9 @@ final class ItemController extends Controller
     )]
     public function showBySku(array $params): array
     {
-        $data = $this->itemService->findBySku(urldecode((string)$params['sku']));
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['sku']);
+        $sku  = urldecode((string)$params['sku']);
+        $data = $this->itemService->findBySku($sku);
 
         return $this->json($data);
     }
@@ -333,8 +337,10 @@ final class ItemController extends Controller
     )]
     public function update(array $params): array
     {
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        $id      = (int)$params['id'];
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
-        $data    = $this->itemService->update((int)$params['id'], $payload);
+        $data    = $this->itemService->update($id, $payload);
 
         return $this->json($data);
     }
@@ -362,7 +368,9 @@ final class ItemController extends Controller
     )]
     public function destroy(array $params): array
     {
-        $ok = $this->itemService->delete((int)$params['id']);
+        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        $id = (int)$params['id'];
+        $ok = $this->itemService->delete($id);
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);
     }
 }

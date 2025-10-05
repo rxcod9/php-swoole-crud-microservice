@@ -63,7 +63,7 @@ final readonly class MetricsServer
 
     /**
      * Starts the Swoole HTTP server to serve metrics.
-     * 
+     *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function start(): void

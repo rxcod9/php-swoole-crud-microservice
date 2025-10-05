@@ -12,7 +12,7 @@
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-05
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/WorkerStartHandler.php
  */
 declare(strict_types=1);
@@ -20,18 +20,18 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Contexts\AppContext;
-use App\Core\Pools\PDOPool;
-use App\Core\Pools\RedisPool;
+use App\Core\Pools\PoolFacade;
 use App\Exceptions\CacheSetException;
-use App\Services\Cache\CacheService;
 use Carbon\Carbon;
 use Swoole\Http\Server;
 use Swoole\Table;
 use Swoole\Timer;
-use Throwable;
 
 /**
  * Handles WorkerStart event
+ * Responsibilities:
+ * - Initialize worker heartbeat in shared memory
+ * - Start periodic timers for heartbeat and pool autoscaling
  *
  * @category  Core
  * @package   App\Core\Events
@@ -39,7 +39,7 @@ use Throwable;
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-05
  */
 final class WorkerStartHandler
 {
@@ -48,54 +48,57 @@ final class WorkerStartHandler
 
     public function __construct(
         private readonly Table $table,
-        private readonly CacheService $cacheService,
-        private PDOPool &$pdoPool,
-        private RedisPool &$redisPool
+        private readonly PoolFacade $poolFacade
     ) {
         //
     }
 
     /**
+     * Entry point for worker start event
+     *
+     *
+     * @throws CacheSetException
+     *
      * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function __invoke(Server $server, int $workerId): void
     {
         $pid = posix_getpid();
         error_log(sprintf('Worker %d started with %d%s', $workerId, $pid, PHP_EOL));
 
-        // Write initial health
+        $this->initializeWorkerRow($workerId, $pid);
+        AppContext::setWorkerReady(true);
+
+        error_log("Worker {$workerId} with PID {$pid} ready\n");
+
+        $this->startTimers($workerId, $pid);
+    }
+
+    private function initializeWorkerRow(int $workerId, int $pid): void
+    {
         $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
             'first_heartbeat' => Carbon::now()->getTimestamp(),
             'last_heartbeat'  => Carbon::now()->getTimestamp(),
         ]);
+
         if (!$success) {
-            throw new CacheSetException('Unable to set Cache');
+            throw new CacheSetException('Unable to set initial worker cache');
         }
-
-        AppContext::setWorkerReady(true);
-        error_log("Worker {$workerId} started with {$pid} ready\n");
-
-        $this->startTimers($server, $workerId, $pid);
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    private function startTimers(Server $server, int $workerId, int $pid): void
+    private function startTimers(int $workerId, int $pid): void
     {
-        // Heartbeat every 5s
-        $timerId = Timer::tick(5000, function ($timerId) use ($server, $workerId, $pid): void {
-            $this->tick($timerId, $workerId, $pid);
-        });
-
-        $this->workerTimers[$workerId] = [$timerId]; // store timers per worker
+        $timerId                       = Timer::tick(5000, fn ($tid) => $this->handleTick($tid, $workerId, $pid));
+        $this->workerTimers[$workerId] = [$timerId];
     }
 
     /**
-     * Clear all timers for a given worker
-     *
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
     public function clearTimers(int $workerId): void
@@ -104,67 +107,47 @@ final class WorkerStartHandler
             return;
         }
 
-        foreach ($this->workerTimers[$workerId] as $t) {
-            Timer::clear($t);
+        foreach ($this->workerTimers[$workerId] as $timerId) {
+            Timer::clear($timerId);
         }
 
         unset($this->workerTimers[$workerId]);
     }
 
-    /**
-     * Handle periodic timer event (heartbeat, autoscale, etc.)
-     * Updates the shared memory table with current stats.
-     */
-    private function tick(
-        mixed $timerId,
-        int $workerId,
-        int $pid
-    ): void {
+    private function handleTick(mixed $timerId, int $workerId, int $pid): void
+    {
         error_log("Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
 
-        $mysqlStats     = $this->pdoPool->stats();
-        $mysqlCapacity  = $mysqlStats['capacity'];
-        $mysqlAvailable = $mysqlStats['available'];
-        $mysqlCreated   = $mysqlStats['created'];
-        $mysqlInUse     = $mysqlStats['in_use'];
+        $this->updateWorkerStats($workerId, $pid, $timerId);
+        $this->poolFacade->autoScale($workerId);
+        $this->poolFacade->runGC();
+    }
 
-        $redisStats     = $this->redisPool->stats();
-        $redisCapacity  = $redisStats['capacity'];
-        $redisAvailable = $redisStats['available'];
-        $redisCreated   = $redisStats['created'];
-        $redisInUse     = $redisStats['in_use'];
+    private function updateWorkerStats(int $workerId, int $pid, mixed $timerId): void
+    {
+        $stats = $this->poolFacade->getStats();
+        $pdo   = $stats['pdo'];
+        $redis = $stats['redis'];
 
-        $row     = $this->table->get((string) $workerId) ?? [];
+        $row = $this->table->get((string) $workerId) ?? [];
+
         $success = $this->table->set((string) $workerId, [
             'pid'             => $pid,
             'timer_id'        => $timerId,
             'first_heartbeat' => $row['first_heartbeat'] ?? Carbon::now()->getTimestamp(),
             'last_heartbeat'  => Carbon::now()->getTimestamp(),
-            'mysql_capacity'  => $mysqlCapacity,
-            'mysql_available' => $mysqlAvailable,
-            'mysql_created'   => $mysqlCreated,
-            'mysql_in_use'    => $mysqlInUse,
-            'redis_capacity'  => $redisCapacity,
-            'redis_available' => $redisAvailable,
-            'redis_created'   => $redisCreated,
-            'redis_in_use'    => $redisInUse,
+            'mysql_capacity'  => $pdo['capacity'],
+            'mysql_available' => $pdo['available'],
+            'mysql_created'   => $pdo['created'],
+            'mysql_in_use'    => $pdo['in_use'],
+            'redis_capacity'  => $redis['capacity'],
+            'redis_available' => $redis['available'],
+            'redis_created'   => $redis['created'],
+            'redis_in_use'    => $redis['in_use'],
         ]);
+
         if (!$success) {
-            throw new CacheSetException('Unable to set Cache');
+            throw new CacheSetException('Unable to update worker cache');
         }
-
-        try {
-            $this->pdoPool->autoScale();
-        } catch (Throwable $throwable) {
-            error_log(sprintf('[Worker %d] MySQL autoScale error: ', $workerId) . $throwable->getMessage() . "\n");
-        }
-
-        try {
-            $this->redisPool->autoScale();
-        } catch (Throwable $throwable) {
-            error_log(sprintf('[Worker %d] Redis autoScale error: ', $workerId) . $throwable->getMessage() . "\n");
-        }
-
-        $this->cacheService->gc(); // run garbage collection on cache table
     }
 }

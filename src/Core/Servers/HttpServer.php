@@ -28,6 +28,7 @@ use App\Core\Events\TaskFinishHandler;
 use App\Core\Events\TaskRequestHandler;
 use App\Core\Events\WorkerStartHandler;
 use App\Core\Pools\PDOPool;
+use App\Core\Pools\PoolFacade;
 use App\Core\Pools\RedisPool;
 use App\Core\Router;
 use App\Services\Cache\CacheService;
@@ -163,7 +164,9 @@ final class HttpServer
         $cacheService = $container->get(CacheService::class);
         $container->bind(CacheService::class, fn (): mixed => $cacheService);
 
-        $workerStartHandler = new WorkerStartHandler($table, $cacheService, $pdoPool, $redisPool);
+        $poolFacade = new PoolFacade($pdoPool, $redisPool, $cacheService);
+
+        $workerStartHandler = new WorkerStartHandler($table, $poolFacade);
 
         // Worker start event
         $this->server->on(

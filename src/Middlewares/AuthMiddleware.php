@@ -60,7 +60,7 @@ final class AuthMiddleware implements MiddlewareInterface
     {
         // Allow public paths without auth
         if (in_array($request->server['request_uri'], $this->publicPaths, true)) {
-            $next();
+            $next($request, $response);
             return;
         }
 
@@ -82,6 +82,6 @@ final class AuthMiddleware implements MiddlewareInterface
         ]);
 
         // Must call $next() to continue the chain
-        $next();
+        $next($request, $response);
     }
 }

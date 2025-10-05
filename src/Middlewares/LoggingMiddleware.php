@@ -46,7 +46,7 @@ final class LoggingMiddleware implements MiddlewareInterface
     {
         $start = microtime(true);
 
-        $next(); // call next middleware first
+        $next($request, $response); // call next middleware first
 
         $dur = microtime(true) - $start;
         error_log(sprintf(
