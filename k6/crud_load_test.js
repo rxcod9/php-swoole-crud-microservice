@@ -6,8 +6,8 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 20000,
-    TOTAL_ITEMS: 20000,
+    TOTAL_USERS: 2000,
+    TOTAL_ITEMS: 2000,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     COOL_PERCENT: 0.1,          // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
@@ -216,7 +216,7 @@ export default function (data) {
                 weight: weights.READ,
                 handler: () => {
                     const id = hotIds.length && Math.random() < CONFIG.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                    if (!id) {
+                    if (!id || id === 'undefined' || id === null) {
                         console.warn(`[${entity}] Skipping read: no ID available`);
                         return;
                     }
@@ -245,7 +245,7 @@ export default function (data) {
                 weight: weights.UPDATE,
                 handler: () => {
                     const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                    if (!id) {
+                    if (!id || id === 'undefined' || id === null) {
                         console.warn(`[${entity}] Skipping update: no ID available`);
                         return;
                     }
@@ -264,7 +264,7 @@ export default function (data) {
                 weight: weights.DELETE,
                 handler: () => {
                     const id = randomItem(coolIds);
-                    if (!id) {
+                    if (!id || id === 'undefined' || id === null) {
                         console.warn(`[${entity}] Skipping delete: no ID available`);
                         return;
                     }

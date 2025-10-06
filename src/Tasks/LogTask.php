@@ -48,9 +48,6 @@ final class LogTask implements TaskInterface
         if (!$log) {
             $log = new Logger('access');
             $log->pushHandler(new StreamHandler('/app/logs/access.log'));
-
-            // Send all logs to stdout for Docker
-            $log->pushHandler(new StreamHandler('php://stdout', Level::Debug));
         }
 
         $log->log(
