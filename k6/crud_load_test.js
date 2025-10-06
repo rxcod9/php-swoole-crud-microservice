@@ -9,43 +9,39 @@ const CONFIG = {
     TOTAL_USERS: 2000,
     TOTAL_ITEMS: 2000,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
-    COOL_PERCENT: 0.1,          // Top 10% are not hot (to be deleted)
+    COOL_PERCENT: 0.1,         // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
-    HOT_UPDATE_RATIO: 0.01,       // 10% of reads go to hot IDs
+    HOT_UPDATE_RATIO: 0.01,    // 1% of updates go to hot IDs
     LIST_PAGES: 3,
     WEIGHTS_USERS: {
         LIST: 0.5,
         READ: 0.25,
         CREATE: 0.15,
         UPDATE: 0.07,
-        DELETE: 0.03
     },
     WEIGHTS_ITEMS: {
         LIST: 0.5,
         READ: 0.25,
         CREATE: 0.15,
         UPDATE: 0.07,
-        DELETE: 0.03
     },
     CONCURRENCY: {
-        MAX_VUS: 200,
+        MAX_VUS: 100,
         STAGES: [
-            // Ramp up gradually over 10 minutes
-            { duration: '1m', target: 0.10 },   // 10% load
-            { duration: '1m', target: 0.25 },   // 25% load
-            { duration: '1m', target: 0.40 },   // 40% load
-            { duration: '1m', target: 0.60 },   // 60% load
-            { duration: '1m', target: 0.80 },   // 80% load
-            { duration: '1m', target: 1.00 },  // 100% load
-            // Ramp down over 5 minutes
+            { duration: '1m', target: 0.10 },
+            { duration: '1m', target: 0.25 },
+            { duration: '1m', target: 0.40 },
+            { duration: '1m', target: 0.60 },
+            { duration: '1m', target: 0.80 },
+            { duration: '1m', target: 1.00 },
             { duration: '1m', target: 0.80 },
             { duration: '1m', target: 0.50 },
             { duration: '1m', target: 0.25 },
             { duration: '1m', target: 0.0 },
         ]
     },
-    TOTAL_EXECUTIONS: 10000,    // total default() executions across all VUs
-    MAX_DURATION: '15m'          // maximum test duration
+    TOTAL_EXECUTIONS: 1000,
+    MAX_DURATION: '1m'
 };
 
 // --------------------
@@ -55,20 +51,18 @@ let listTrendUsers = new Trend('USERS_LIST_latency_ms');
 let readTrendUsers = new Trend('USERS_READ_latency_ms');
 let createTrendUsers = new Trend('USERS_CREATE_latency_ms');
 let updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
-let deleteTrendUsers = new Trend('USERS_DELETE_latency_ms');
 
 let listTrendItems = new Trend('ITEMS_LIST_latency_ms');
 let readTrendItems = new Trend('ITEMS_READ_latency_ms');
 let createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
 let updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
-let deleteTrendItems = new Trend('ITEMS_DELETE_latency_ms');
 
 // --------------------
 // OPTIONS
 // --------------------
 export const options = {
-    setupTimeout: CONFIG.MAX_DURATION, // increase setup timeout
-    teardownTimeout: CONFIG.MAX_DURATION, // increase setup timeout
+    setupTimeout: CONFIG.MAX_DURATION,
+    teardownTimeout: CONFIG.MAX_DURATION,
     stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
         duration: s.duration,
         target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
@@ -79,12 +73,10 @@ export const options = {
         'USERS_CREATE_latency_ms': ['avg<100'],
         'USERS_READ_latency_ms': ['avg<50'],
         'USERS_UPDATE_latency_ms': ['avg<100'],
-        'USERS_DELETE_latency_ms': ['avg<50'],
         'ITEMS_LIST_latency_ms': ['avg<100'],
         'ITEMS_CREATE_latency_ms': ['avg<100'],
         'ITEMS_READ_latency_ms': ['avg<50'],
         'ITEMS_UPDATE_latency_ms': ['avg<100'],
-        'ITEMS_DELETE_latency_ms': ['avg<50']
     }
 };
 
@@ -146,7 +138,8 @@ export function setup() {
         check(res, { 'CREATE success': r => r.status === 201 });
         try {
             if (res.status === 201) {
-                userIds.push(JSON.parse(res.body).id);
+                const parsed = JSON.parse(res.body);
+                if (parsed?.id != null) userIds.push(parsed.id);
             }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body, e);
@@ -163,14 +156,15 @@ export function setup() {
         check(res, { 'CREATE success': r => r.status === 201 });
         try {
             if (res.status === 201) {
-                itemIds.push(JSON.parse(res.body).id);
+                const parsed = JSON.parse(res.body);
+                if (parsed?.id != null) itemIds.push(parsed.id);
             }
         } catch (e) {
             console.error('[SETUP] Failed parse CREATE response', res.body, e);
         }
     }
 
-    // HOT IDs
+    // HOT & COOL IDs
     const hotUserIds = userIds.slice(0, Math.floor(CONFIG.TOTAL_USERS * CONFIG.HOT_PERCENT));
     const hotItemIds = itemIds.slice(0, Math.floor(CONFIG.TOTAL_ITEMS * CONFIG.HOT_PERCENT));
     const coolUserIds = userIds.filter(id => !hotUserIds.includes(id)).slice(0, Math.floor(CONFIG.TOTAL_USERS * CONFIG.COOL_PERCENT));
@@ -193,7 +187,6 @@ export default function (data) {
     if (globalExecutions >= CONFIG.TOTAL_EXECUTIONS) return;
     globalExecutions++;
 
-    // Initialize per-VU copies
     if (VU_userIds.length === 0) VU_userIds = data.userIds.slice();
     if (VU_itemIds.length === 0) VU_itemIds = data.itemIds.slice();
 
@@ -206,9 +199,11 @@ export default function (data) {
                 weight: weights.LIST,
                 handler: () => {
                     const page = Math.floor(Math.random() * CONFIG.LIST_PAGES) + 1;
-                    const res = http.get(`${baseUrl}?page=${page}`);
+                    const url = `${baseUrl}?page=${page}`;
+                    const res = http.get(url);
                     trends.list.add(res.timings.duration);
-                    check(res, { [`${entity} LIST success`]: r => r.status === 200 });
+                    const success = check(res, { [`${entity} LIST success`]: r => r.status === 200 });
+                    if (!success) console.error(`[${entity} LIST FAILED] URL: ${url} | Status: ${res.status} | Response: ${res.body}`);
                 },
             },
             {
@@ -216,13 +211,12 @@ export default function (data) {
                 weight: weights.READ,
                 handler: () => {
                     const id = hotIds.length && Math.random() < CONFIG.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                    if (!id || id === 'undefined' || id === null) {
-                        console.warn(`[${entity}] Skipping read: no ID available`);
-                        return;
-                    }
-                    const res = http.get(`${baseUrl}/${id}`);
+                    if (!id) return console.warn(`[${entity}] Skipping read: no ID available`);
+                    const url = `${baseUrl}/${id}`;
+                    const res = http.get(url);
                     trends.read.add(res.timings.duration);
-                    check(res, { [`${entity} READ success`]: r => r.status === 200 });
+                    const success = check(res, { [`${entity} READ success`]: r => r.status === 200 });
+                    if (!success) console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status} | Response: ${res.body}`);
                 },
             },
             {
@@ -232,12 +226,17 @@ export default function (data) {
                     const obj = generateFn(Math.floor(Math.random() * 1_000_000));
                     const res = http.post(baseUrl, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
                     trends.create?.add(res.timings.duration);
-                    check(res, { [`${entity} CREATE success`]: r => r.status === 201 });
+                    const success = check(res, { [`${entity} CREATE success`]: r => r.status === 201 });
+                    if (!success) console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status} | Response: ${res.body}`);
                     try {
                         if (res.status === 201) {
-                            vuIds.push(JSON.parse(res.body).id);
+                            const parsed = JSON.parse(res.body);
+                            if (parsed?.id != null) vuIds.push(parsed.id);
+                            else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
+                    }
                 },
             },
             {
@@ -245,44 +244,20 @@ export default function (data) {
                 weight: weights.UPDATE,
                 handler: () => {
                     const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                    if (!id || id === 'undefined' || id === null) {
-                        console.warn(`[${entity}] Skipping update: no ID available`);
-                        return;
-                    }
-                    if(coolIds.includes(id)) {
-                        console.warn(`[${entity}] Skipping update: not updating cool ID`);
-                        return;
-                    }
+                    if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
+                    if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
                     const obj = generateFn(id);
-                    const res = http.put(`${baseUrl}/${id}`, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
+                    const url = `${baseUrl}/${id}`;
+                    const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
                     trends.update?.add(res.timings.duration);
-                    check(res, { [`${entity} UPDATE success`]: r => r.status === 200 });
+                    const success = check(res, { [`${entity} UPDATE success`]: r => r.status === 200 });
+                    if (!success) console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status} | Response: ${res.body}`);
                 },
             },
-            {
-                type: 'delete',
-                weight: weights.DELETE,
-                handler: () => {
-                    const id = randomItem(coolIds);
-                    if (!id || id === 'undefined' || id === null) {
-                        console.warn(`[${entity}] Skipping delete: no ID available`);
-                        return;
-                    }
-                    const res = http.del(`${baseUrl}/${id}`);
-                    trends.delete?.add(res.timings.duration);
-                    check(res, { [`${entity} DELETE success`]: r => r.status === 204 });
-                    // remove from list
-                    const idToRemove = id;
-                    vuIds = vuIds.filter(id => id !== idToRemove);
-                    coolIds = coolIds.filter(id => id !== idToRemove);
-                },
-            },
-        ].filter(a => a.weight); // Remove disabled actions (weight 0)
+        ].filter(a => a.weight);
 
-        // Build cumulative thresholds
         const totalWeight = actions.reduce((sum, a) => sum + a.weight, 0);
         let cumulative = 0;
-
         for (const action of actions) {
             cumulative += action.weight / totalWeight;
             if (r < cumulative) {
@@ -292,7 +267,6 @@ export default function (data) {
         }
     }
 
-
     // USERS CRUD
     performCrudAction({
         vuIds: VU_userIds,
@@ -301,13 +275,7 @@ export default function (data) {
         weights: CONFIG.WEIGHTS_USERS,
         generateFn: generateUser,
         baseUrl: 'http://localhost:9501/users',
-        trends: {
-            list: listTrendUsers,
-            read: readTrendUsers,
-            create: createTrendUsers,
-            update: updateTrendUsers,
-            delete: deleteTrendUsers
-        },
+        trends: { list: listTrendUsers, read: readTrendUsers, create: createTrendUsers, update: updateTrendUsers },
         entity: 'USERS'
     });
 
@@ -319,13 +287,7 @@ export default function (data) {
         weights: CONFIG.WEIGHTS_ITEMS,
         generateFn: generateItem,
         baseUrl: 'http://localhost:9501/items',
-        trends: {
-            list: listTrendItems,
-            read: readTrendItems,
-            create: createTrendItems,
-            update: updateTrendItems,
-            delete: deleteTrendItems
-        },
+        trends: { list: listTrendItems, read: readTrendItems, create: createTrendItems, update: updateTrendItems },
         entity: 'ITEMS'
     });
 

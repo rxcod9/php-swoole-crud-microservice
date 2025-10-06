@@ -313,6 +313,34 @@ final class PDOPool
     }
 
     /**
+     * Retry a callback a few times with optional delay.
+     *
+     * @param callable(): mixed $callback
+     * @param int $attempts Number of attempts
+     * @param int $delayMs Delay between retries in milliseconds
+     * @return mixed
+     *
+     * @throws Throwable
+     */
+    public function retry(callable $callback, int $attempts = 3, int $delayMs = 100): mixed
+    {
+        $lastThrowable = null;
+
+        for ($i = 1; $i <= $attempts; $i++) {
+            try {
+                return $callback();
+            } catch (Throwable $t) {
+                $lastThrowable = $t;
+                if ($i < $attempts) {
+                    usleep($delayMs * 1000); // convert ms to microseconds
+                }
+            }
+        }
+
+        throw $lastThrowable; // all retries failed
+    }
+
+    /**
      * Execute a callback inside a DB transaction. Supports nested transactions.
      *
      * @template T

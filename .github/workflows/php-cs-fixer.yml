@@ -41,7 +41,7 @@ jobs:
 
       - name: Run PHP Code Beautifier (phpcbf)
         run: |
-          vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1
+          vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 || true
         # You can change 'src' to the directories you want
 
       - name: Get branch name

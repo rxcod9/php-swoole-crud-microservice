@@ -382,6 +382,7 @@ final class UserController extends Controller
 
         [$user] = $this->cacheService->getRecord('users', $id);
         if (!$user) {
+            // Calling find to validate if entiry exists
             $this->userService->find($id);
         }
 

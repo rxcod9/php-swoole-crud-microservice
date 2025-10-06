@@ -69,7 +69,9 @@ final readonly class ItemService
     {
         return $this->pdoPool->withConnection(function () use ($data): ?array {
             $id = $this->itemRepository->create($data);
-            return $this->itemRepository->find($id);
+            return $this->pdoPool->retry(function () use ($id): ?array {
+                return $this->itemRepository->find($id);
+            });
         });
     }
 
@@ -164,7 +166,9 @@ final readonly class ItemService
     {
         return $this->pdoPool->withConnection(function () use ($id, $data): ?array {
             $this->itemRepository->update($id, $data);
+            return $this->pdoPool->retry(function () use ($id): ?array {
             return $this->itemRepository->find($id);
+        });
         });
     }
 
