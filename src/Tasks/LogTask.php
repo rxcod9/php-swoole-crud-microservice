@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace App\Tasks;
 
 use Monolog\Handler\StreamHandler;
-use Monolog\Level;
 use Monolog\Logger;
 
 /**

@@ -51,7 +51,6 @@ final class UserRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->runInCoroutine(function (): void {
-
             // Setup schema for SQLite
             [$pdo, $pdoId] = $this->pool->get();
 
@@ -101,7 +100,6 @@ final class UserRepositoryTest extends TestCase
     public function testGetUserById(): void
     {
         $this->runInCoroutine(function (): void {
-
             $user = $this->userRepository->find(1);
 
             $this->assertNotNull($user, 'User with ID 1 should exist');

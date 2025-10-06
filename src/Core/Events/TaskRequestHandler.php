@@ -80,8 +80,8 @@ final readonly class TaskRequestHandler
                 ['class']
             );
 
-            $dispatcher = new Dispatcher($this->container);
-            $status                = $dispatcher->dispatch($task);
+            $taskRequestDispatcher = new Dispatcher($this->container);
+            $status                = $taskRequestDispatcher->dispatch($task);
             // Metrics and async logging
             $dur = microtime(true) - $start;
 

@@ -15,7 +15,6 @@
  * @since     2025-10-02
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/ItemController.php
  */
-
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -343,7 +342,7 @@ final class ItemController extends Controller
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
         // Calling find to validate if entiry exists
         $this->itemService->find($id);
-        $data    = $this->itemService->update($id, $payload);
+        $data = $this->itemService->update($id, $payload);
 
         return $this->json($data);
     }

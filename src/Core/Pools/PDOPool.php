@@ -318,7 +318,6 @@ final class PDOPool
      * @param callable(): mixed $callback
      * @param int $attempts Number of attempts
      * @param int $delayMs Delay between retries in milliseconds
-     * @return mixed
      *
      * @throws Throwable
      */

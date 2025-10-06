@@ -51,7 +51,6 @@ final class ItemRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->runInCoroutine(function (): void {
-
             // Setup schema for SQLite
             [$pdo, $pdoId] = $this->pool->get();
 
@@ -104,7 +103,6 @@ final class ItemRepositoryTest extends TestCase
     public function testGetItemById(): void
     {
         $this->runInCoroutine(function (): void {
-
             $item = $this->itemRepository->find(1);
 
             $this->assertNotNull($item, 'Item with ID 1 should exist');

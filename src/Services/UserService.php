@@ -18,7 +18,6 @@
  * @since     2025-10-02
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Services/UserService.php
  */
-
 declare(strict_types=1);
 
 namespace App\Services;
@@ -56,7 +55,8 @@ final readonly class UserService
     public function __construct(
         private PDOPool $pdoPool,
         private UserRepository $userRepository
-    ) {}
+    ) {
+    }
 
     /**
      * Create a new user and return the created user data.
