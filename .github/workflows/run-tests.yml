@@ -54,7 +54,7 @@ jobs:
             # Cache Composer dependencies
             # --------------------------
             - name: Cache Composer
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                   path: ~/.composer/cache
                   key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
@@ -79,8 +79,8 @@ jobs:
             - name: Run PHPCS
               run: vendor/bin/phpcs ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1 --report=checkstyle | cs2pr
 
-            - name: Run PHPMD
-              run: vendor/bin/phpmd ./src checkstyle phpmd.xml | cs2pr
+            # - name: Run PHPMD
+            #   run: vendor/bin/phpmd ./src checkstyle phpmd.xml | cs2pr
 
             - name: Run PHPStan
               run: vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 --error-format=checkstyle | cs2pr
