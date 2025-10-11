@@ -15,7 +15,6 @@
  * @since     2025-10-02
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/HealthController.php
  */
-
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -182,7 +181,7 @@ final class HealthController extends Controller
             ];
         }
 
-        usort($data, fn(array $a, array $b): int => ($b['mysql_in_use'] <=> $a['mysql_in_use']) !== 0 ? $b['mysql_in_use'] <=> $a['mysql_in_use'] : $b['redis_in_use'] <=> $a['redis_in_use']);
+        usort($data, fn (array $a, array $b): int => ($b['mysql_in_use'] <=> $a['mysql_in_use']) !== 0 ? $b['mysql_in_use'] <=> $a['mysql_in_use'] : $b['redis_in_use'] <=> $a['redis_in_use']);
 
         return $data;
     }
@@ -261,7 +260,7 @@ final class HealthController extends Controller
             ];
         }
 
-        usort($data, fn(array $a, array $b): int => $b['last_access'] <=> $a['last_access']);
+        usort($data, fn (array $a, array $b): int => $b['last_access'] <=> $a['last_access']);
 
         return $data;
     }
@@ -315,7 +314,6 @@ final class HealthController extends Controller
         return '<pre class="json"><code>' . htmlspecialchars($pretty, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
     }
 
-
     /**
      * Renders the Swoole table stats HTML.
      */
@@ -355,11 +353,10 @@ final class HealthController extends Controller
             if (is_int($value) && $value > 1000) {
                 $value = number_format($value);
             }
+
             $html .= sprintf('<tr><td>%s</td><td>%s</td></tr>', htmlspecialchars($key), htmlspecialchars((string)$value));
         }
 
-        $html .= '</table>';
-
-        return $html;
+        return $html . '</table>';
     }
 }
