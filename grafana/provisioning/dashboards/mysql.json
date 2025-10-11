@@ -1,3213 +1,1259 @@
 {
-    "title": "MySQL",
+    "id": null,
     "uid": "mysql",
+    "title": "MySQL",
     "timezone": "browser",
-    "refresh": "5s",
-    "panels": [
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 0
-            },
-            "id": 382,
-            "panels": [],
-            "title": "",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "decimals": 1,
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "rgba(245, 54, 54, 0.9)",
-                                "value": 0
-                            },
-                            {
-                                "color": "rgba(237, 129, 40, 0.89)",
-                                "value": 300
-                            },
-                            {
-                                "color": "rgba(50, 172, 45, 0.97)",
-                                "value": 3600
-                            }
-                        ]
-                    },
-                    "unit": "s"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 0,
-                "y": 1
-            },
-            "id": 12,
-            "interval": "$interval",
-            "maxDataPoints": 100,
-            "options": {
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "horizontal",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "10m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_uptime{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "5m",
-                    "intervalFactor": 1,
-                    "legendFormat": "",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 300
-                }
-            ],
-            "title": "MySQL Uptime",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "fixedColor": "rgb(31, 120, 193)",
-                        "mode": "fixed"
-                    },
-                    "decimals": 2,
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "rgba(245, 54, 54, 0.9)",
-                                "value": 0
-                            },
-                            {
-                                "color": "rgba(237, 129, 40, 0.89)",
-                                "value": 35
-                            },
-                            {
-                                "color": "rgba(50, 172, 45, 0.97)",
-                                "value": 75
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 6,
-                "y": 1
-            },
-            "id": 13,
-            "interval": "$interval",
-            "maxDataPoints": 100,
-            "options": {
-                "colorMode": "none",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "horizontal",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "10m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_queries{instance=\"$host\"}[$interval]) or irate(mysql_global_status_queries{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                }
-            ],
-            "title": "Current QPS",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "decimals": 0,
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "rgba(50, 172, 45, 0.97)",
-                                "value": 0
-                            },
-                            {
-                                "color": "rgba(237, 129, 40, 0.89)",
-                                "value": 90
-                            },
-                            {
-                                "color": "rgba(245, 54, 54, 0.9)",
-                                "value": 95
-                            }
-                        ]
-                    },
-                    "unit": "bytes"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 12,
-                "y": 1
-            },
-            "id": 51,
-            "interval": "$interval",
-            "maxDataPoints": 100,
-            "options": {
-                "colorMode": "none",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "horizontal",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "10m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_variables_innodb_buffer_pool_size{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "5m",
-                    "intervalFactor": 1,
-                    "legendFormat": "",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 300
-                }
-            ],
-            "title": "InnoDB Buffer Pool Size",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "decimals": 0,
-                    "mappings": [],
-                    "max": 100,
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "rgba(245, 54, 54, 0.9)",
-                                "value": 0
-                            },
-                            {
-                                "color": "rgba(237, 129, 40, 0.89)",
-                                "value": 40
-                            },
-                            {
-                                "color": "rgba(50, 172, 45, 0.97)",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "percent"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 18,
-                "y": 1
-            },
-            "id": 52,
-            "interval": "$interval",
-            "maxDataPoints": 100,
-            "options": {
-                "colorMode": "value",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "horizontal",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "10m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "(mysql_global_variables_innodb_buffer_pool_size{instance=\"$host\"} * 100) / on (instance) node_memory_MemTotal_bytes{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "5m",
-                    "intervalFactor": 1,
-                    "legendFormat": "",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 300
-                }
-            ],
-            "title": "Buffer Pool Size of Total RAM",
-            "type": "stat"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 5
-            },
-            "id": 383,
-            "panels": [],
-            "title": "Connections",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Max Connections"
-                        },
-                        "properties": [
-                            {
-                                "id": "custom.fillOpacity",
-                                "value": 0
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 6
-            },
-            "id": 92,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "max(max_over_time(mysql_global_status_threads_connected{instance=\"$host\"}[$interval])  or mysql_global_status_threads_connected{instance=\"$host\"} )",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Connections",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_max_used_connections{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Max Used Connections",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20,
-                    "target": ""
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_variables_max_connections{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Max Connections",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20,
-                    "target": ""
-                }
-            ],
-            "title": "MySQL Connections",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "Threads",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Peak Threads Running"
-                        },
-                        "properties": [
-                            {
-                                "id": "color",
-                                "value": {
-                                    "fixedColor": "#E24D42",
-                                    "mode": "fixed"
-                                }
-                            },
-                            {
-                                "id": "custom.lineWidth",
-                                "value": 0
-                            },
-                            {
-                                "id": "custom.pointSize",
-                                "value": 4
-                            },
-                            {
-                                "id": "custom.showPoints",
-                                "value": "always"
-                            }
-                        ]
-                    },
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Peak Threads Connected"
-                        },
-                        "properties": [
-                            {
-                                "id": "color",
-                                "value": {
-                                    "fixedColor": "#1F78C1",
-                                    "mode": "fixed"
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Avg Threads Running"
-                        },
-                        "properties": [
-                            {
-                                "id": "color",
-                                "value": {
-                                    "fixedColor": "#EAB839",
-                                    "mode": "fixed"
-                                }
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 6
-            },
-            "id": 10,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "lastNotNull",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "max_over_time(mysql_global_status_threads_connected{instance=\"$host\"}[$interval]) or\nmax_over_time(mysql_global_status_threads_connected{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "hide": false,
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Peak Threads Connected",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "max_over_time(mysql_global_status_threads_running{instance=\"$host\"}[$interval]) or\nmax_over_time(mysql_global_status_threads_running{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Peak Threads Running",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "expr": "avg_over_time(mysql_global_status_threads_running{instance=\"$host\"}[$interval]) or \navg_over_time(mysql_global_status_threads_running{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Avg Threads Running",
-                    "refId": "C",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Client Thread Activity",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 13
-            },
-            "id": 384,
-            "panels": [],
-            "title": "Table Locks",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 14
-            },
-            "id": 53,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_questions{instance=\"$host\"}[$interval]) or irate(mysql_global_status_questions{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Questions",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Questions",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Threads Created"
-                        },
-                        "properties": [
-                            {
-                                "id": "custom.fillOpacity",
-                                "value": 0
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 14
-            },
-            "id": 11,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_variables_thread_cache_size{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Thread Cache Size",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_threads_cached{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Threads Cached",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_threads_created{instance=\"$host\"}[$interval]) or irate(mysql_global_status_threads_created{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Threads Created",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Thread Cache",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 21
-            },
-            "id": 385,
-            "panels": [],
-            "title": "Temporary Objects",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 22
-            },
-            "id": 22,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_created_tmp_tables{instance=\"$host\"}[$interval]) or irate(mysql_global_status_created_tmp_tables{instance=\"$host\"}[5m])",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Created Tmp Tables",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_created_tmp_disk_tables{instance=\"$host\"}[$interval]) or irate(mysql_global_status_created_tmp_disk_tables{instance=\"$host\"}[5m])",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Created Tmp Disk Tables",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_created_tmp_files{instance=\"$host\"}[$interval]) or irate(mysql_global_status_created_tmp_files{instance=\"$host\"}[5m])",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Created Tmp Files",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Temporary Objects",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byValue",
-                            "options": {
-                                "op": "gte",
-                                "reducer": "allIsZero",
-                                "value": 0
-                            }
-                        },
-                        "properties": [
-                            {
-                                "id": "custom.hideFrom",
-                                "value": {
-                                    "legend": true,
-                                    "tooltip": true,
-                                    "viz": false
-                                }
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 22
-            },
-            "id": 311,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_select_full_join{instance=\"$host\"}[$interval]) or irate(mysql_global_status_select_full_join{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Select Full Join",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_select_full_range_join{instance=\"$host\"}[$interval]) or irate(mysql_global_status_select_full_range_join{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Select Full Range Join",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_select_range{instance=\"$host\"}[$interval]) or irate(mysql_global_status_select_range{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Select Range",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_select_range_check{instance=\"$host\"}[$interval]) or irate(mysql_global_status_select_range_check{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Select Range Check",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_select_scan{instance=\"$host\"}[$interval]) or irate(mysql_global_status_select_scan{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Select Scan",
-                    "metric": "",
-                    "refId": "E",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Select Types",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 29
-            },
-            "id": 386,
-            "panels": [],
-            "title": "Sorts",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {},
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 30
-            },
-            "id": 30,
-            "options": {},
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_sort_rows{instance=\"$host\"}[$interval]) or irate(mysql_global_status_sort_rows{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Sort Rows",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_sort_range{instance=\"$host\"}[$interval]) or irate(mysql_global_status_sort_range{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Sort Range",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_sort_scan{instance=\"$host\"}[$interval]) or irate(mysql_global_status_sort_scan{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Sort Scan",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_sort_merge_passes{instance=\"$host\"}[$interval]) or irate(mysql_global_status_sort_merge_passes{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Sort Merge Passes",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Sorts",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 37
-            },
-            "id": 387,
-            "panels": [],
-            "title": "Handlers",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 38
-            },
-            "id": 31,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_delete{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_delete{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Delete",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_first{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_first{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read First",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_key{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_key{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read Key",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_next{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_next{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read Next",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_prev{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_prev{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read Prev",
-                    "metric": "",
-                    "refId": "E",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_rnd{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_rnd{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read Rnd",
-                    "metric": "",
-                    "refId": "F",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_read_rnd_next{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_read_rnd_next{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Read Rnd Next",
-                    "metric": "",
-                    "refId": "G",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_update{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_update{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Update",
-                    "metric": "",
-                    "refId": "H",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_handler_write{instance=\"$host\"}[$interval]) or irate(mysql_global_status_handler_write{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Handler Write",
-                    "metric": "",
-                    "refId": "I",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Handlers",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 45
-            },
-            "id": 388,
-            "panels": [],
-            "title": "Table I/O",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 46
-            },
-            "id": 14,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_com_select{instance=\"$host\"}[$interval]) or irate(mysql_global_status_com_select{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Com Select",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_com_insert{instance=\"$host\"}[$interval]) or irate(mysql_global_status_com_insert{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Com Insert",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_com_update{instance=\"$host\"}[$interval]) or irate(mysql_global_status_com_update{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Com Update",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_com_delete{instance=\"$host\"}[$interval]) or irate(mysql_global_status_com_delete{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Com Delete",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Table I/O",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "bytes"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 46
-            },
-            "id": 15,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_bytes_received{instance=\"$host\"}[$interval]) or irate(mysql_global_status_bytes_received{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Bytes Received",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_bytes_sent{instance=\"$host\"}[$interval]) or irate(mysql_global_status_bytes_sent{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Bytes Sent",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Network Traffic",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 53
-            },
-            "id": 389,
-            "panels": [],
-            "title": "Replication",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 54
-            },
-            "id": 312,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_slave_status_slave_sql_running{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "SQL",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_slave_status_slave_io_running{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "IO",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_slave_status_seconds_behind_master{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Behind Master",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                }
-            ],
-            "title": "Replication Status",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 61
-            },
-            "id": 390,
-            "panels": [],
-            "title": "Buffer Pool",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 62
-            },
-            "id": 16,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_innodb_buffer_pool_pages_data{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Data",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_innodb_buffer_pool_pages_dirty{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Dirty",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_innodb_buffer_pool_pages_free{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Free",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_innodb_buffer_pool_pages_total{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Total",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL InnoDB Buffer Pool",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 62
-            },
-            "id": 17,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_buffer_pool_read_requests{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_buffer_pool_read_requests{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Reads",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_buffer_pool_reads{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_buffer_pool_reads{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Read Requests",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL InnoDB Buffer Pool Reads",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 69
-            },
-            "id": 391,
-            "panels": [],
-            "title": "Row Operations",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 70
-            },
-            "id": 18,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_read{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_read{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Read",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_inserted{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_inserted{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Inserted",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_updated{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_updated{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Updated",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_deleted{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_deleted{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Deleted",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL InnoDB Row Operations",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 77
-            },
-            "id": 392,
-            "panels": [],
-            "title": "Table Open Cache",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Table Open Cache"
-                        },
-                        "properties": [
-                            {
-                                "id": "custom.fillOpacity",
-                                "value": 0
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 78
-            },
-            "id": 19,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_variables_table_open_cache{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Table Open Cache",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_open_tables{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Open Tables",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_opened_tables{instance=\"$host\"}[$interval]) or irate(mysql_global_status_opened_tables{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Opened Tables",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Table Open Cache",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 12,
-                "y": 78
-            },
-            "id": 20,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_variables_table_definition_cache{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Table Def Cache",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "mysql_global_status_open_table_definitions{instance=\"$host\"}",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Open Table Defs",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_opened_table_definitions{instance=\"$host\"}[$interval]) or irate(mysql_global_status_opened_table_definitions{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Opened Table Defs",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Table Definition Cache",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 85
-            },
-            "id": 393,
-            "panels": [],
-            "title": "Table Scans",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisBorderShow": false,
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "barWidthFactor": 0.6,
-                        "drawStyle": "line",
-                        "fillOpacity": 20,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 2,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "min": 0,
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": 0
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 7,
-                "w": 12,
-                "x": 0,
-                "y": 86
-            },
-            "id": 21,
-            "options": {
-                "legend": {
-                    "calcs": [
-                        "mean",
-                        "max",
-                        "min"
-                    ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "hideZeros": false,
-                    "mode": "multi",
-                    "sort": "none"
-                }
-            },
-            "pluginVersion": "12.1.1",
-            "targets": [
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_read{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_read{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Read",
-                    "metric": "",
-                    "refId": "A",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_inserted{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_inserted{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Inserted",
-                    "metric": "",
-                    "refId": "B",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_updated{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_updated{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Updated",
-                    "metric": "",
-                    "refId": "C",
-                    "step": 20
-                },
-                {
-                    "calculatedInterval": "2m",
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
-                    },
-                    "datasourceErrors": {},
-                    "errors": {},
-                    "expr": "rate(mysql_global_status_innodb_rows_deleted{instance=\"$host\"}[$interval]) or irate(mysql_global_status_innodb_rows_deleted{instance=\"$host\"}[5m])",
-                    "format": "time_series",
-                    "interval": "$interval",
-                    "intervalFactor": 1,
-                    "legendFormat": "Rows Deleted",
-                    "metric": "",
-                    "refId": "D",
-                    "step": 20
-                }
-            ],
-            "title": "MySQL Row Operations",
-            "type": "timeseries"
-        }
-    ],
-    "templating": {
-        "list": [
-            {
-                "current": {
-                    "text": "1s",
-                    "value": "1s"
-                },
-                "name": "interval",
-                "options": [
-                    {
-                        "selected": false,
-                        "text": "1s",
-                        "value": "1s"
-                    },
-                    {
-                        "selected": false,
-                        "text": "5s",
-                        "value": "5s"
-                    },
-                    {
-                        "selected": false,
-                        "text": "1m",
-                        "value": "1m"
-                    },
-                    {
-                        "selected": false,
-                        "text": "5m",
-                        "value": "5m"
-                    },
-                    {
-                        "selected": false,
-                        "text": "1h",
-                        "value": "1h"
-                    },
-                    {
-                        "selected": false,
-                        "text": "6h",
-                        "value": "6h"
-                    },
-                    {
-                        "selected": false,
-                        "text": "1d",
-                        "value": "1d"
-                    }
-                ],
-                "query": "1s,5s,1m,5m,1h,6h,1d",
-                "refresh": 2,
-                "type": "interval"
-            },
-            {
-                "current": {
-                    "text": "mysqld-exporter:9104",
-                    "value": "mysqld-exporter:9104"
-                },
-                "datasource": "PBFA97CFB590B2093",
-                "includeAll": false,
-                "label": "Host",
-                "name": "host",
-                "options": [],
-                "query": "label_values(mysql_global_status_threads_connected, instance)",
-                "refresh": 1,
-                "regex": "",
-                "skipUrlSync": false,
-                "sort": 0,
-                "type": "query"
-            }
-        ]
-    },
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "10s",
     "time": {
         "from": "now-6h",
         "to": "now"
     },
-    "timepicker": {
-        "refresh_intervals": [
-            "5s",
-            "10s",
-            "30s",
-            "1m",
-            "5m",
-            "15m",
-            "30m",
-            "1h",
-            "2h",
-            "1d"
-        ],
-        "time_options": [
-            "5m",
-            "15m",
-            "1h",
-            "6h",
-            "12h",
-            "24h",
-            "2d",
-            "7d",
-            "30d"
-        ]
+    "templating": {
+        "list": []
     },
-    "version": 1
+    "annotations": {
+        "list": []
+    },
+    "panels": [
+        {
+            "id": 1,
+            "title": "Uptime",
+            "type": "stat",
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_uptime",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "title": "Threads Connected",
+            "type": "gauge",
+            "gridPos": {
+                "x": 6,
+                "y": 0,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_threads_connected",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 500,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "green"
+                    },
+                    {
+                        "value": 350,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 450,
+                        "color": "red"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 3,
+            "title": "Threads Running",
+            "type": "gauge",
+            "gridPos": {
+                "x": 12,
+                "y": 0,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_threads_running",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "green"
+                    },
+                    {
+                        "value": 70,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 90,
+                        "color": "red"
+                    }
+                ]
+            },
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "last"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                80
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "30s",
+                "frequency": "10s",
+                "handler": 1,
+                "name": "Threads Saturation Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 4,
+            "title": "Aborted Connections (Gone Away)",
+            "type": "stat",
+            "gridPos": {
+                "x": 18,
+                "y": 0,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_aborted_connects[1m])",
+                    "refId": "A"
+                }
+            ],
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                5
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "name": "Aborted Connections Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 5,
+            "title": "Max Connections Usage",
+            "type": "gauge",
+            "gridPos": {
+                "x": 0,
+                "y": 4,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "green"
+                    },
+                    {
+                        "value": 80,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 90,
+                        "color": "red"
+                    }
+                ]
+            },
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "last"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                90
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "1m",
+                "frequency": "10s",
+                "handler": 1,
+                "name": "Max Connections Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 6,
+            "title": "Questions Rate (QPS)",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 4,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_questions[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "title": "Slow Queries Rate",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 4,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_slow_queries[1m])",
+                    "refId": "A"
+                }
+            ],
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                5
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "2m",
+                "frequency": "30s",
+                "handler": 1,
+                "name": "Slow Queries Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 8,
+            "title": "Aborted Clients Rate",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 8,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_aborted_clients[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "title": "Open Tables",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 8,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_open_tables",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "title": "Open Files",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 12,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_open_files",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "title": "Created Temporary Tables",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 12,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_created_tmp_tables[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "title": "Temporary Tables on Disk",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 16,
+                "w": 12,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_created_tmp_disk_tables[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "title": "Query Cache Hits",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 16,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_qcache_hits[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 14,
+            "title": "Query Cache Inserts",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 16,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_qcache_inserts[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 15,
+            "title": "InnoDB Buffer Pool Size",
+            "type": "gauge",
+            "gridPos": {
+                "x": 0,
+                "y": 20,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_innodb_buffer_pool_size",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 16,
+            "title": "Buffer Pool Pages Free",
+            "type": "gauge",
+            "gridPos": {
+                "x": 6,
+                "y": 20,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_innodb_buffer_pool_pages_free",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 1000000,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "red"
+                    },
+                    {
+                        "value": 10000,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 50000,
+                        "color": "green"
+                    }
+                ]
+            },
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "last"
+                        },
+                        "evaluator": {
+                            "type": "lt",
+                            "params": [
+                                100000
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "name": "Buffer Pool Low Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 17,
+            "title": "Buffer Pool Pages Used",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 20,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_innodb_buffer_pool_pages_total - mysql_innodb_buffer_pool_pages_free",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 18,
+            "title": "Buffer Pool Hit Rate",
+            "type": "gauge",
+            "gridPos": {
+                "x": 18,
+                "y": 20,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "(mysql_innodb_buffer_pool_read_requests - mysql_innodb_buffer_pool_reads) / mysql_innodb_buffer_pool_read_requests",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 19,
+            "title": "InnoDB Rows Read",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 24,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_innodb_rows_read[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 20,
+            "title": "InnoDB Rows Inserted",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 24,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_innodb_rows_inserted[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 21,
+            "title": "InnoDB Rows Updated",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 24,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_innodb_rows_updated[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 22,
+            "title": "InnoDB Rows Deleted",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 24,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_innodb_rows_deleted[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 23,
+            "title": "Replication Lag",
+            "type": "gauge",
+            "gridPos": {
+                "x": 0,
+                "y": 28,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_slave_status_seconds_behind_master",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 600,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "green"
+                    },
+                    {
+                        "value": 60,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 300,
+                        "color": "red"
+                    }
+                ]
+            },
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "last"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                60
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "name": "Replication Lag Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        },
+        {
+            "id": 24,
+            "title": "Slave IO Running",
+            "type": "stat",
+            "gridPos": {
+                "x": 6,
+                "y": 28,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_slave_status_slave_io_running",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 25,
+            "title": "Slave SQL Running",
+            "type": "stat",
+            "gridPos": {
+                "x": 12,
+                "y": 28,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_slave_status_slave_sql_running",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 26,
+            "title": "CPU Usage",
+            "type": "gauge",
+            "gridPos": {
+                "x": 0,
+                "y": 32,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "100 - avg(node_cpu_seconds_total{mode='idle'}) * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 70,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 90,
+                        "color": "red"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 27,
+            "title": "Memory Usage",
+            "type": "gauge",
+            "gridPos": {
+                "x": 6,
+                "y": 32,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)/node_memory_MemTotal_bytes * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 70,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 90,
+                        "color": "red"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 28,
+            "title": "Disk Usage",
+            "type": "gauge",
+            "gridPos": {
+                "x": 12,
+                "y": 32,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "node_filesystem_avail_bytes / node_filesystem_size_bytes * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 20,
+                        "color": "red"
+                    },
+                    {
+                        "value": 50,
+                        "color": "orange"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 29,
+            "title": "Table Locks Waited",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 32,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_table_locks_waited[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 30,
+            "title": "Table Locks Immediate",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 36,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_table_locks_immediate[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 31,
+            "title": "Handler Read First",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 36,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_handler_read_first[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 32,
+            "title": "Handler Read Next",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 36,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_handler_read_next[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 33,
+            "title": "Handler Read Key",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 36,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_handler_read_key[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 34,
+            "title": "Handler Read Random",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_handler_read_rnd[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 35,
+            "title": "Handler Read Random Next",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_handler_read_rnd_next[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 36,
+            "title": "Select Full Join",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_select_full_join[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 37,
+            "title": "Select Range",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_select_range[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 38,
+            "title": "Select Range Check",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 44,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_select_range_check[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 39,
+            "title": "Sort Rows",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 44,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_sort_rows[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 40,
+            "title": "Sort Scan",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 44,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_sort_scan[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 41,
+            "title": "Bytes Sent",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 44,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_bytes_sent[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 42,
+            "title": "Bytes Received",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 48,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_bytes_received[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 43,
+            "title": "Connections",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 6,
+                "y": 48,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "rate(mysql_global_status_connections[1m])",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 44,
+            "title": "Max Used Connections",
+            "type": "gauge",
+            "gridPos": {
+                "x": 12,
+                "y": 48,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_max_used_connections",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 45,
+            "title": "Threads Cached",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 48,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_threads_cached",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 46,
+            "title": "Aborted Clients Total",
+            "type": "stat",
+            "gridPos": {
+                "x": 0,
+                "y": 52,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_aborted_clients",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 47,
+            "title": "Aborted Connections Total",
+            "type": "stat",
+            "gridPos": {
+                "x": 6,
+                "y": 52,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_aborted_connects",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 48,
+            "title": "Table Locks Immediate Total",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 52,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_table_locks_immediate",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 49,
+            "title": "Table Locks Waited Total",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 18,
+                "y": 52,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_table_locks_waited",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 50,
+            "title": "Threads Running Max",
+            "type": "gauge",
+            "gridPos": {
+                "x": 0,
+                "y": 56,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "mysql_global_status_threads_running",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "min": 0,
+                "max": 100,
+                "thresholds": [
+                    {
+                        "value": 0,
+                        "color": "green"
+                    },
+                    {
+                        "value": 70,
+                        "color": "orange"
+                    },
+                    {
+                        "value": 90,
+                        "color": "red"
+                    }
+                ]
+            },
+            "alert": {
+                "alertRuleTags": {},
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A",
+                                "1m",
+                                "now"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "last"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                80
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "for": "30s",
+                "frequency": "10s",
+                "handler": 1,
+                "name": "Threads Max Alert",
+                "executionErrorState": "alerting",
+                "noDataState": "no_data",
+                "notifications": []
+            }
+        }
+    ]
 }

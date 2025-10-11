@@ -69,6 +69,7 @@ final readonly class UserService
     {
         return $this->pdoPool->withConnection(function () use ($data): ?array {
             $id = $this->userRepository->create($data);
+            error_log('Created user with ID: ' . var_export($id, true));
             return $this->pdoPool->retry(function () use ($id): ?array {
                 return $this->userRepository->find($id);
             });

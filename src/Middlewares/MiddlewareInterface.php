@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Container;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -42,5 +41,5 @@ interface MiddlewareInterface
      *
      * @param callable $next Middleware must call $next() to continue the chain
      */
-    public function handle(Request $request, Response $response, Container $container, callable $next): void;
+    public function handle(Request $request, Response $response, callable $next): void;
 }

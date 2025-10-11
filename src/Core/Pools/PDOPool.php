@@ -51,11 +51,8 @@ final class PDOPool
 
     private int $created = 0;
 
-    /**
-     * Re-entrant connection stack to track nested withConnection calls
-     */
-    /** @var array<int, array{0:PDO,1:int}> Re-entrant connection stack for nested withConnection calls */
-    private array $connectionStack = [];
+    /** @var array<int, PDO> Active PDO instances per coroutine */
+    private array $active = [];
 
     /**
      * PDOPool constructor.
@@ -178,7 +175,9 @@ final class PDOPool
         if (($available <= 1) && $this->created < $this->max) {
             $toCreate = 1;
             error_log(sprintf('[SCALE-UP PDO] Creating %d new connections (used: %d, available: %d)', $toCreate, $used, $available));
-            return $this->make();
+
+            [$pdo, $pdoId] = $this->make();
+            return [$pdo, $pdoId];
         }
 
         $item = $this->channel->pop($timeout);
@@ -190,9 +189,12 @@ final class PDOPool
 
         if (!$this->isConnected($pdo)) {
             unset($pdo);
-            $this->decrementCreated();
+            $this->created = max(0, $this->created - 1);
+            error_log(sprintf('PDO connection destroyed. Total connections: %d', $this->created));
             // create a fresh connection synchronously (preserve previous semantics)
-            return $this->make();
+
+            [$pdo, $pdoId] = $this->make();
+            return [$pdo, $pdoId];
         }
 
         return [$pdo, $pdoId];
@@ -205,7 +207,7 @@ final class PDOPool
     {
         try {
             $stmt = $pdo->query('SELECT 1');
-            $stmt->fetch(\PDO::FETCH_ASSOC);
+            $stmt->fetchAll(\PDO::FETCH_ASSOC);
             // Clear any remaining result set to be safe in pool context
             $this->clearStatement($stmt);
             return true;
@@ -252,18 +254,14 @@ final class PDOPool
 
         // Pool full, let garbage collector close the PDO object
         unset($pdo);
-        $this->decrementCreated();
-        error_log(sprintf('[PUT] Pool full, PDO connection discarded. Total connections: %d', $this->created));
-    }
-
-    private function decrementCreated(): void
-    {
         $this->created = max(0, $this->created - 1);
+        error_log(sprintf('PDO connection destroyed. Total connections: %d', $this->created));
+        error_log(sprintf('[PUT] Pool full, PDO connection discarded. Total connections: %d', $this->created));
     }
 
     /**
      * Execute a callback within a pooled PDO connection.
-     * Re-entrant safe: nested calls reuse the same PDO.
+     * Re-entrant safe: nested calls reuse the same PDO for the current coroutine.
      *
      * @template T
      * @param callable(PDO,int):T $callback
@@ -271,44 +269,61 @@ final class PDOPool
      *
      * @throws Throwable
      */
-    public function withConnection(callable $callback): mixed
+    public function withConnection(callable $callback, int $retry = 0, int $maxRetry = 5): mixed
     {
-        // Check if we are already inside a connection (nested call)
-        [$pdo, $pdoId] = end($this->connectionStack) ?: [null, null];
+        $cid = Coroutine::getCid();
 
-        if ($pdo) {
-            // nested call: reuse existing PDO if healthy otherwise remove and retry
+        $outermost = false;
+
+        if (!isset($this->active[$cid])) {
+            // Outermost call for this coroutine
+            [$pdo, $pdoId]      = $this->get();
+            $this->active[$cid] = [$pdo, $pdoId];
+            $outermost          = true;
+        } else {
+            // Nested call, reuse the same PDO
+            [$pdo, $pdoId] = $this->active[$cid];
+            // check if connection is still alive
             if (!$this->isConnected($pdo)) {
-                error_log('[POOL] Nested PDO is dead, recreating');
-                array_pop($this->connectionStack);
-                $this->decrementCreated();
-                return $this->withConnection($callback);
+                // Connection is dead, remove from active and get a new one
+                unset($this->active[$cid]);
+                $this->created = max(0, $this->created - 1);
+                error_log(sprintf('PDO connection destroyed. Total connections: %d', $this->created));
+                [$pdo, $pdoId]      = $this->get();
+                $this->active[$cid] = [$pdo, $pdoId];
             }
-
-            return $callback($pdo, $pdoId);
         }
 
-        // Acquire a fresh connection (outermost call)
-        [$pdo, $pdoId]           = $this->get();
-        $this->connectionStack[] = [$pdo, $pdoId];
-
         try {
-            /** @var T $result */
-            $result = $callback($pdo, $pdoId);
+            return $callback($pdo, $pdoId);
+        } catch (PDOException $pdoException) {
+            if (shouldPDORetry($pdoException)) {
+                ++$retry;
+                if ($retry <= $maxRetry || $maxRetry === -1) {
+                    $backoff = (1 << $retry) * 100000; // microseconds
+                    error_log(sprintf('[RETRY] Retrying PDO connection in %.2f seconds...', $backoff / 1000000));
+                    Coroutine::sleep($backoff / 1000000);
 
-            // Return connection to pool
-            $this->put($pdo, $pdoId);
+                    // Clear the active PDO so next attempt fetches a fresh connection
+                    if ($outermost) {
+                        unset($this->active[$cid]);
+                        $this->created = max(0, $this->created - 1);
+                        error_log(sprintf('PDO connection destroyed. Total connections: %d', $this->created));
+                    }
 
-            array_pop($this->connectionStack);
+                    return $this->withConnection($callback, $retry, $maxRetry);
+                }
+            }
 
-            return $result;
-        } catch (Throwable $throwable) {
-            // Discard on exception to avoid reusing potentially broken connection
-            unset($pdo);
-            $this->decrementCreated();
-
-            array_pop($this->connectionStack);
-            throw $throwable;
+            throw $pdoException;
+        } finally {
+            if ($outermost) {
+                [$pdo, $pdoId] = $this->active[$cid] ?? [null, null];
+                unset($this->active[$cid]);
+                if ($pdo !== null && $pdoId !== null) {
+                    $this->put($pdo, $pdoId); // Return connection to pool
+                }
+            }
         }
     }
 
@@ -377,14 +392,6 @@ final class PDOPool
     }
 
     /**
-     * Check if currently inside a pooled connection
-     */
-    public function isWithinConnection(): bool
-    {
-        return $this->connectionStack !== [];
-    }
-
-    /**
      * Get pool statistics.
      *
      * @return array ['capacity', 'available', 'created', 'in_use']
@@ -434,7 +441,8 @@ final class PDOPool
                 $conn = $this->channel->pop(0.01);
                 if ($conn) {
                     unset($conn);
-                    $this->decrementCreated();
+                    $this->created = max(0, $this->created - 1);
+                    error_log(sprintf('PDO connection destroyed. Total connections: %d', $this->created));
                 }
             }
 

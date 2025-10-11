@@ -250,7 +250,7 @@ final class ItemController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function show(array $params): array
@@ -291,7 +291,7 @@ final class ItemController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function showBySku(array $params): array
@@ -332,7 +332,7 @@ final class ItemController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'Item updated'),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function update(array $params): array
@@ -365,7 +365,7 @@ final class ItemController extends Controller
         ],
         responses: [
             new OA\Response(response: 204, description: 'Item deleted'),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function destroy(array $params): array

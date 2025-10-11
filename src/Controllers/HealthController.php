@@ -15,6 +15,7 @@
  * @since     2025-10-02
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Controllers/HealthController.php
  */
+
 declare(strict_types=1);
 
 namespace App\Controllers;
@@ -24,6 +25,7 @@ use App\Core\Controller;
 use App\Tables\TableWithLRUAndGC;
 use Carbon\Carbon;
 use OpenApi\Attributes as OA;
+use Swoole\Http\Server;
 use Swoole\Table;
 
 /**
@@ -42,6 +44,7 @@ use Swoole\Table;
 final class HealthController extends Controller
 {
     public function __construct(
+        private readonly Server $server,
         private readonly Table $table,
         private readonly TableWithLRUAndGC $tableWithLRUAndGC
     ) {
@@ -81,6 +84,7 @@ final class HealthController extends Controller
             'cache'         => $this->tableWithLRUAndGC->stats(),
             'cacheCount'    => count($cacheData),
             'cacheData'     => $cacheData,
+            'server'        => $this->server->stats(),
         ]);
     }
 
@@ -105,6 +109,7 @@ final class HealthController extends Controller
         $cacheHtml       = $this->renderCacheHtml();
         $workerStatsHtml = $this->renderTableStatsHtml($this->table, 'Workers Table');
         $cacheStatsHtml  = $this->renderTableStatsHtml($this->tableWithLRUAndGC, 'Cache Table');
+        $serverStatsHtml = $this->renderServerStatsHtml();
 
         // Render full HTML page
         return $this->buildHtmlPage(
@@ -116,6 +121,7 @@ final class HealthController extends Controller
                 <p>PID: ' . posix_getpid() . "</p>
                 {$workerStatsHtml}
                 {$cacheStatsHtml}
+                {$serverStatsHtml}
                 {$workerHtml}
                 {$cacheHtml}"
         );
@@ -176,7 +182,7 @@ final class HealthController extends Controller
             ];
         }
 
-        usort($data, fn (array $a, array $b): int => ($b['mysql_in_use'] <=> $a['mysql_in_use']) !== 0 ? $b['mysql_in_use'] <=> $a['mysql_in_use'] : $b['redis_in_use'] <=> $a['redis_in_use']);
+        usort($data, fn(array $a, array $b): int => ($b['mysql_in_use'] <=> $a['mysql_in_use']) !== 0 ? $b['mysql_in_use'] <=> $a['mysql_in_use'] : $b['redis_in_use'] <=> $a['redis_in_use']);
 
         return $data;
     }
@@ -255,7 +261,7 @@ final class HealthController extends Controller
             ];
         }
 
-        usort($data, fn (array $a, array $b): int => $b['last_access'] <=> $a['last_access']);
+        usort($data, fn(array $a, array $b): int => $b['last_access'] <=> $a['last_access']);
 
         return $data;
     }
@@ -309,6 +315,7 @@ final class HealthController extends Controller
         return '<pre class="json"><code>' . htmlspecialchars($pretty, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
     }
 
+
     /**
      * Renders the Swoole table stats HTML.
      */
@@ -329,5 +336,30 @@ final class HealthController extends Controller
         $sizeHtml .= '</table>';
 
         return $statsHtml . $sizeHtml;
+    }
+
+    /**
+     * Renders the Swoole server stats HTML table.
+     */
+    private function renderServerStatsHtml(): string
+    {
+        $stats = $this->server->stats();
+        if (!$stats) {
+            return '<p>No server stats available.</p>';
+        }
+
+        $html = '<h3>Server Stats</h3><table><tr><th>Property</th><th>Value</th></tr>';
+
+        foreach ($stats as $key => $value) {
+            // Format large numbers nicely
+            if (is_int($value) && $value > 1000) {
+                $value = number_format($value);
+            }
+            $html .= sprintf('<tr><td>%s</td><td>%s</td></tr>', htmlspecialchars($key), htmlspecialchars((string)$value));
+        }
+
+        $html .= '</table>';
+
+        return $html;
     }
 }

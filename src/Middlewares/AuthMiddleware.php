@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Container;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -56,7 +55,7 @@ final class AuthMiddleware implements MiddlewareInterface
      *
      * @param callable $next Middleware must call $next() to continue the chain
      */
-    public function handle(Request $request, Response $response, Container $container, callable $next): void
+    public function handle(Request $request, Response $response, callable $next): void
     {
         // Allow public paths without auth
         if (in_array($request->server['request_uri'], $this->publicPaths, true)) {
@@ -76,10 +75,10 @@ final class AuthMiddleware implements MiddlewareInterface
         }
 
         // Bind authenticated user
-        $container->bind('currentUser', fn (): array => [
-            'id'   => 1,
-            'role' => 'admin',
-        ]);
+        // $container->bind('currentUser', fn (): array => [
+        //     'id'   => 1,
+        //     'role' => 'admin',
+        // ]);
 
         // Must call $next() to continue the chain
         $next($request, $response);

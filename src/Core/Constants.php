@@ -59,4 +59,6 @@ class Constants
     public const PDO_SERVER_GONE_AWAY_ERROR_CODE = 2006;
 
     public const PDO_SERVER_GONE_AWAY_MESSAGE = 'MySQL server has gone away';
+
+    public const PDO_NO_ERROR_CODE = '00000';
 }

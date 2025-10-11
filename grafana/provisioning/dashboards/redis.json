@@ -1,108 +1,275 @@
 {
-  "uid": "redis",
-  "title": "Redis",
-  "schemaVersion": 37,
-  "timezone": "browser",
-  "refresh": "5s",
-  "version": 1,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Redis",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1,
+  "links": [],
   "panels": [
     {
-      "type": "stat",
-      "title": "Redis Up",
-      "gridPos": {"x":0,"y":0,"w":6,"h":3},
-      "targets":[{"expr":"redis_up","refId":"A"}],
-      "fieldConfig":{"defaults":{"thresholds":{"mode":"absolute","steps":[{"value":0,"color":"red"},{"value":1,"color":"green"}]}}}
+      "type": "row",
+      "title": "Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
     },
     {
-      "type": "gauge",
-      "title": "Connected Clients",
-      "gridPos": {"x":6,"y":0,"w":6,"h":3},
-      "targets":[{"expr":"redis_connected_clients","refId":"B"}]
+      "title": "Total Memory Usage",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "redis_memory_used_bytes", "legendFormat": "Used Memory", "refId": "A" },
+        { "expr": "redis_memory_peak_bytes", "legendFormat": "Peak Memory", "refId": "B" }
+      ],
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 6 },
+      "thresholds": [{ "value": 80, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
     },
     {
-      "type": "gauge",
-      "title": "Blocked Clients",
-      "gridPos": {"x":12,"y":0,"w":6,"h":3},
-      "targets":[{"expr":"redis_blocked_clients","refId":"C"}]
-    },
-    {
-      "type": "timeseries",
-      "title": "Memory Usage (Used vs Peak)",
-      "gridPos": {"x":0,"y":3,"w":12,"h":6},
-      "targets":[
-        {"expr":"redis_memory_used_bytes","legendFormat":"Used","refId":"D"},
-        {"expr":"redis_memory_peak_bytes","legendFormat":"Peak","refId":"E"}
-      ]
-    },
-    {
-      "type": "gauge",
       "title": "Memory Fragmentation Ratio",
-      "gridPos": {"x":12,"y":3,"w":6,"h":3},
-      "targets":[{"expr":"redis_memory_fragmentation_ratio","refId":"F"}]
-    },
-    {
-      "type": "timeseries",
-      "title": "Total Keys & Expiring Keys",
-      "gridPos": {"x":0,"y":9,"w":12,"h":6},
-      "targets":[
-        {"expr":"redis_db_keys","legendFormat":"Total Keys","refId":"G"},
-        {"expr":"redis_db_keys_expiring","legendFormat":"Expiring Keys","refId":"H"}
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Evicted & Expired Keys",
-      "gridPos": {"x":12,"y":9,"w":12,"h":6},
-      "targets":[
-        {"expr":"redis_evicted_keys_total","legendFormat":"Evicted","refId":"I"},
-        {"expr":"redis_expired_keys_total","legendFormat":"Expired","refId":"J"}
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Commands per Second",
-      "gridPos": {"x":0,"y":15,"w":12,"h":6},
-      "targets":[
-        {"expr":"rate(redis_commands_total[1m])","legendFormat":"Ops/sec","refId":"K"},
-        {"expr":"redis_instantaneous_ops_per_sec","legendFormat":"Instant Ops","refId":"L"}
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Persistence Metrics",
-      "gridPos": {"x":0,"y":21,"w":12,"h":6},
-      "targets":[
-        {"expr":"redis_rdb_last_save_time_seconds","legendFormat":"RDB Last Save","refId":"M"},
-        {"expr":"redis_rdb_last_bgsave_duration_seconds","legendFormat":"RDB Save Duration","refId":"N"},
-        {"expr":"redis_aof_current_size_bytes","legendFormat":"AOF Size","refId":"O"}
-      ]
-    },
-    {
       "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "redis_memory_fragmentation_ratio", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 1, "w": 6, "h": 4 },
+      "thresholds": [{ "value": 1.5, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Memory Peak vs Allocated",
+      "type": "bargauge",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "redis_memory_allocated_bytes", "refId": "A", "legendFormat": "Allocated" },
+        { "expr": "redis_memory_peak_bytes", "refId": "B", "legendFormat": "Peak" }
+      ],
+      "gridPos": { "x": 18, "y": 1, "w": 6, "h": 4 }
+    },
+    {
+      "type": "row",
+      "title": "CPU & Processes",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "collapsed": false
+    },
+    {
+      "title": "CPU System & User",
+      "type": "graph",
+      "targets": [
+        { "expr": "rate(redis_cpu_sys_seconds_total[1m])", "legendFormat": "CPU Sys", "refId": "A" },
+        { "expr": "rate(redis_cpu_user_seconds_total[1m])", "legendFormat": "CPU User", "refId": "B" }
+      ],
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 6 },
+      "thresholds": [{ "value": 90, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Commands Processed Per Second",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_commands_processed_total[1m])", "legendFormat": "Cmd/s", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 6 },
+      "thresholds": [{ "value": 10000, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Connected Clients",
+      "type": "stat",
+      "targets": [{ "expr": "redis_connected_clients", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 14, "w": 6, "h": 4 },
+      "thresholds": [{ "value": 1000, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Blocked Clients",
+      "type": "stat",
+      "targets": [{ "expr": "redis_blocked_clients", "refId": "A" }],
+      "gridPos": { "x": 6, "y": 14, "w": 6, "h": 4 },
+      "thresholds": [{ "value": 5, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Slow Queries",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_slowlog_entries_total[5m])", "legendFormat": "Slow Queries/s", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 4 }
+    },
+    {
+      "type": "row",
+      "title": "Keyspace",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "collapsed": false
+    },
+    {
+      "title": "Keys per DB",
+      "type": "table",
+      "targets": [
+        { "expr": "redis_db_keys", "legendFormat": "{{db}} keys", "refId": "A" },
+        { "expr": "redis_db_keys_expiring", "legendFormat": "{{db}} expiring", "refId": "B" }
+      ],
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 }
+    },
+    {
+      "title": "Expired Keys per Second",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_expired_keys_total[1m])", "legendFormat": "Expired Keys/s", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 4 },
+      "thresholds": [{ "value": 100, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "title": "Evicted Keys per Second",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_evicted_keys_total[1m])", "legendFormat": "Evicted Keys/s", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 4 },
+      "thresholds": [{ "value": 50, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+    },
+    {
+      "type": "row",
+      "title": "Persistence",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "collapsed": false
+    },
+    {
+      "title": "RDB Last Save Time",
+      "type": "stat",
+      "targets": [{ "expr": "redis_last_save_time_seconds", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 29, "w": 6, "h": 4 }
+    },
+    {
+      "title": "AOF Enabled",
+      "type": "stat",
+      "targets": [{ "expr": "redis_aof_enabled", "refId": "A" }],
+      "gridPos": { "x": 6, "y": 29, "w": 6, "h": 4 },
+      "thresholds": [{ "value": 1, "colorMode": "critical", "fill": true, "line": true, "op": "lt" }]
+    },
+    {
+      "title": "AOF Current Size",
+      "type": "graph",
+      "targets": [{ "expr": "redis_aof_current_size_bytes", "legendFormat": "AOF Size", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 29, "w": 12, "h": 4 }
+    },
+    {
       "title": "AOF Rewrite In Progress",
-      "gridPos": {"x":12,"y":21,"w":6,"h":3},
-      "targets":[{"expr":"redis_aof_rewrite_in_progress","refId":"P"}]
-    },
-    {
-      "type": "timeseries",
-      "title": "Network Traffic",
-      "gridPos": {"x":0,"y":27,"w":12,"h":6},
-      "targets":[
-        {"expr":"rate(redis_net_input_bytes_total[1m])","legendFormat":"In","refId":"Q"},
-        {"expr":"rate(redis_net_output_bytes_total[1m])","legendFormat":"Out","refId":"R"}
-      ]
-    },
-    {
-      "type": "heatmap",
-      "title": "Command Latency",
-      "gridPos": {"x":12,"y":27,"w":12,"h":6},
-      "targets":[{"expr":"redis_command_duration_seconds_bucket","refId":"S"}]
-    },
-    {
       "type": "stat",
-      "title": "Redis Role",
-      "gridPos": {"x":0,"y":33,"w":6,"h":3},
-      "targets":[{"expr":"redis_instance_role","refId":"T"}]
+      "targets": [{ "expr": "redis_aof_rewrite_in_progress", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 33, "w": 6, "h": 4 }
+    },
+    {
+      "title": "RDB Save In Progress",
+      "type": "stat",
+      "targets": [{ "expr": "redis_rdb_bgsave_in_progress", "refId": "A" }],
+      "gridPos": { "x": 6, "y": 33, "w": 6, "h": 4 }
+    },
+    {
+      "title": "AOF Pending Fsync",
+      "type": "graph",
+      "targets": [{ "expr": "redis_aof_pending_bio_fsync", "legendFormat": "Pending fsync", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 33, "w": 12, "h": 4 }
+    },
+    {
+      "type": "row",
+      "title": "Replication",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
+      "collapsed": false
+    },
+    {
+      "title": "Connected Slaves",
+      "type": "stat",
+      "targets": [{ "expr": "redis_connected_slaves", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 38, "w": 6, "h": 4 }
+    },
+    {
+      "title": "Master Link Status",
+      "type": "stat",
+      "targets": [{ "expr": "redis_master_link_status", "refId": "A" }],
+      "gridPos": { "x": 6, "y": 38, "w": 6, "h": 4 },
+      "thresholds": [{ "value": 1, "colorMode": "critical", "fill": true, "line": true, "op": "lt" }]
+    },
+    {
+      "title": "Replication Lag",
+      "type": "graph",
+      "targets": [{ "expr": "redis_master_last_io_seconds", "legendFormat": "Master Lag", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 4 }
+    },
+    {
+      "title": "Replication Partial Syncs",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_partial_resync_total[1m])", "legendFormat": "Partial Syncs/s", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 42, "w": 12, "h": 4 }
+    },
+    {
+      "title": "Replication Full Syncs",
+      "type": "graph",
+      "targets": [{ "expr": "rate(redis_full_resync_total[1m])", "legendFormat": "Full Syncs/s", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 42, "w": 12, "h": 4 }
+    },
+    {
+      "type": "row",
+      "title": "Latency & Command Stats",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
+      "collapsed": false
+    },
+    {
+      "title": "Command Latency Heatmap",
+      "type": "heatmap",
+      "targets": [
+        {
+          "expr": "rate(redis_commands_latencies_usec_sum[5m]) / rate(redis_commands_latencies_usec_count[5m])",
+          "legendFormat": "Avg Command Latency (us)",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 6 }
+    },
+    {
+      "title": "Instantaneous Ops/sec",
+      "type": "graph",
+      "targets": [{ "expr": "redis_instantaneous_ops_per_sec", "legendFormat": "Ops/sec", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 53, "w": 12, "h": 4 }
+    },
+    {
+      "title": "Network In/Out",
+      "type": "graph",
+      "targets": [
+        { "expr": "rate(redis_net_input_bytes_total[1m])", "legendFormat": "Input Bytes/s", "refId": "A" },
+        { "expr": "rate(redis_net_output_bytes_total[1m])", "legendFormat": "Output Bytes/s", "refId": "B" }
+      ],
+      "gridPos": { "x": 12, "y": 53, "w": 12, "h": 4 }
+    },
+    {
+      "title": "Eviction Policy",
+      "type": "stat",
+      "targets": [{ "expr": "redis_eviction_policy", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 57, "w": 6, "h": 4 }
+    },
+    {
+      "title": "Keyspace Hits & Misses",
+      "type": "graph",
+      "targets": [
+        { "expr": "rate(redis_keyspace_hits_total[1m])", "legendFormat": "Hits/s", "refId": "A" },
+        { "expr": "rate(redis_keyspace_misses_total[1m])", "legendFormat": "Misses/s", "refId": "B" }
+      ],
+      "gridPos": { "x": 6, "y": 57, "w": 12, "h": 4 }
+    },
+    {
+      "title": "Connected Clients by Commands",
+      "type": "table",
+      "targets": [{ "expr": "redis_clients_by_command", "refId": "A" }],
+      "gridPos": { "x": 18, "y": 57, "w": 6, "h": 4 }
     }
-  ]
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["redis", "production"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Redis",
+  "uid": "redis",
+  "version": 1
 }

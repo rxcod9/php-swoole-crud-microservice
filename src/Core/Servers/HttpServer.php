@@ -142,6 +142,7 @@ final class HttpServer
         $container->bind(Table::class, fn (): \Swoole\Table => $table);
         $container->bind(TableWithLRUAndGC::class, fn (): \App\Tables\TableWithLRUAndGC => $tableWithLRUAndGC);
         $container->bind(Config::class, fn (): Config => new Config($config));
+        $container->bind(Container::class, fn (): Container => $container);
 
         // Initialize pools per worker
         $dbConf  = $this->config['db'][$this->config['db']['driver'] ?? 'mysql'];

@@ -26,22 +26,22 @@ const CONFIG = {
         UPDATE: 0.07,
     },
     CONCURRENCY: {
-        MAX_VUS: 100,
+        MAX_VUS: 500,
         STAGES: [
             { duration: '1m', target: 0.10 },
             { duration: '1m', target: 0.25 },
             { duration: '1m', target: 0.40 },
-            { duration: '1m', target: 0.60 },
-            { duration: '1m', target: 0.80 },
-            { duration: '1m', target: 1.00 },
-            { duration: '1m', target: 0.80 },
-            { duration: '1m', target: 0.50 },
+            { duration: '2m', target: 0.60 },
+            { duration: '2m', target: 0.80 },
+            { duration: '2m', target: 1.00 },
+            { duration: '2m', target: 0.80 },
+            { duration: '2m', target: 0.50 },
             { duration: '1m', target: 0.25 },
             { duration: '1m', target: 0.0 },
         ]
     },
-    TOTAL_EXECUTIONS: 1000,
-    MAX_DURATION: '1m'
+    TOTAL_EXECUTIONS: 10000,
+    MAX_DURATION: '5m'
 };
 
 // --------------------

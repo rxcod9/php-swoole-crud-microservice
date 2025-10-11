@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace App\Middlewares;
 
 use App\Core\Config;
-use App\Core\Container;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -52,7 +51,7 @@ final class CorsMiddleware implements MiddlewareInterface
      *
      * @param callable $next Middleware must call $next() to continue the chain
      */
-    public function handle(Request $request, Response $response, Container $container, callable $next): void
+    public function handle(Request $request, Response $response, callable $next): void
     {
         $cors           = $this->config->get('cors') ?? [];
         $originsAllowed = $cors['origin'] ?? null;

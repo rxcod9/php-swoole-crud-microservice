@@ -240,6 +240,7 @@ final readonly class CacheService
         $this->tableCacheService->gc();
 
         // Redis cache cleanup
-        $this->redisCacheService->gc();
+        // Let it evict by redis policy
+        // $this->redisCacheService->gc();
     }
 }

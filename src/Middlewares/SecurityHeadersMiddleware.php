@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Container;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -41,7 +40,7 @@ use Swoole\Http\Response;
  */
 final class SecurityHeadersMiddleware implements MiddlewareInterface
 {
-    public function handle(Request $request, Response $response, Container $container, callable $next): void
+    public function handle(Request $request, Response $response, callable $next): void
     {
         $response->header('X-Frame-Options', 'DENY');
         $response->header('X-Content-Type-Options', 'nosniff');

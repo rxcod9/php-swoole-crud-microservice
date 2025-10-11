@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * src/Exceptions/CreateFailedException.php
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ * PHP version 8.4
+ *
+ * @category  Exceptions
+ * @package   App\Exceptions
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Exceptions/CreateFailedException.php
+ */
+declare(strict_types=1);
+
+namespace App\Exceptions;
+
+use RuntimeException;
+
+/**
+ * Class CreateFailedException
+ * Project: rxcod9/php-swoole-crud-microservice
+ * Description: PHP Swoole CRUD Microservice
+ *
+ * @category  Exceptions
+ * @package   App\Exceptions
+ * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright Copyright (c) 2025
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-02
+ */
+final class CreateFailedException extends RuntimeException
+{
+    //
+}

@@ -186,7 +186,8 @@ final class RedisPool
         }
 
         if (!$conn->isConnected()) {
-            $this->decrementCreated();
+            $this->created = max(0, $this->created - 1);
+            error_log(sprintf('Redis connection destroyed. Total connections: %d', $this->created));
             // create a fresh connection synchronously (preserve previous semantics)
             return $this->make();
         }
@@ -213,13 +214,9 @@ final class RedisPool
 
         // Pool full, let garbage collector close the Redis object
         $redis->close();
-        $this->decrementCreated();
-        error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
-    }
-
-    private function decrementCreated(): void
-    {
         $this->created = max(0, $this->created - 1);
+        error_log(sprintf('Redis connection created. Total connections: %d', $this->created));
+        error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
     }
 
     /**
@@ -302,7 +299,8 @@ final class RedisPool
                 $conn = $this->channel->pop(0.01); // non-blocking pop
                 if ($conn) {
                     $conn->close();
-                    $this->decrementCreated();
+                    $this->created = max(0, $this->created - 1);
+                    error_log(sprintf('Redis connection created. Total connections: %d', $this->created));
                 }
             }
 

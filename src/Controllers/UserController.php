@@ -279,7 +279,7 @@ final class UserController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function show(array $params): array
@@ -325,7 +325,7 @@ final class UserController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function showByEmail(array $params): array
@@ -371,7 +371,7 @@ final class UserController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'User updated'),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function update(array $params): array
@@ -412,7 +412,7 @@ final class UserController extends Controller
         ],
         responses: [
             new OA\Response(response: 204, description: 'User deleted'),
-            new OA\Response(response: 404, description: Messages::ERROR_NOT_FOUND),
+            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
     public function destroy(array $params): array

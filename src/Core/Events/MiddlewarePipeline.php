@@ -90,7 +90,7 @@ final class MiddlewarePipeline
     {
         if (is_string($middleware)) {
             $middleware = $this->container->get($middleware);
-            $middleware->handle($request, $response, $this->container, $next);
+            $middleware->handle($request, $response, $next);
             return;
         }
 

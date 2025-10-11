@@ -27,6 +27,7 @@ use App\Core\Router;
 use App\Middlewares\CompressionMiddleware;
 use App\Middlewares\CorsMiddleware;
 use App\Middlewares\HideServerHeaderMiddleware;
+use App\Middlewares\LoggingMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\SecurityHeadersMiddleware;
 use ReflectionClass;
@@ -103,11 +104,13 @@ final readonly class RequestHandler
      */
     private function registerGlobalMiddlewares(MiddlewarePipeline $middlewarePipeline): void
     {
-        $middlewarePipeline->addMiddleware(CorsMiddleware::class);
-        $middlewarePipeline->addMiddleware(SecurityHeadersMiddleware::class);
-        $middlewarePipeline->addMiddleware(RateLimitMiddleware::class);
-        $middlewarePipeline->addMiddleware(HideServerHeaderMiddleware::class);
+        // $middlewarePipeline->addMiddleware(MetricsMiddleware::class);
+        $middlewarePipeline->addMiddleware(LoggingMiddleware::class);
         $middlewarePipeline->addMiddleware(CompressionMiddleware::class);
+        $middlewarePipeline->addMiddleware(HideServerHeaderMiddleware::class);
+        $middlewarePipeline->addMiddleware(SecurityHeadersMiddleware::class);
+        $middlewarePipeline->addMiddleware(CorsMiddleware::class);
+        $middlewarePipeline->addMiddleware(RateLimitMiddleware::class);
     }
 
     /**

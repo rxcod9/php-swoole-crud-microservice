@@ -21,10 +21,11 @@ namespace App\Repositories;
 
 use App\Core\Messages;
 use App\Core\Pools\PDOPool;
+use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
 use InvalidArgumentException;
 use PDO;
-use PDOException;
+use Throwable;
 
 /**
  * Repository for managing items in the database.
@@ -55,7 +56,7 @@ final readonly class ItemRepository
      *
      * @param array<int, mixed> $data Item data ('sku', 'title', 'price')
      *
-     * @throws RuntimeException If the insert operation fails.
+     * @throws CreateFailedException If the insert operation fails.
      *
      * @return int The ID of the newly created item.
      */
@@ -72,28 +73,43 @@ final readonly class ItemRepository
                 $stmt->bindValue(':price', isset($data['price']) ? (float)$data['price'] : null, PDO::PARAM_STR);
                 $stmt->execute();
 
-                return (int)$pdo->lastInsertId();
-            } catch (PDOException $pdoException) {
+                $lastInsertId = $pdo->lastInsertId();
+                // ✅ Fallback if returned 0 or empty
+                if (!$lastInsertId || $lastInsertId === '0') {
+                    $result       = $pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
+                    $lastInsertId = $result ?: false;
+                }
+
+                error_log('Last Insert ID: ' . var_export($lastInsertId, true));
+                if ($lastInsertId === false || $lastInsertId === null || $lastInsertId === '' || $lastInsertId === '0') {
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    throw new CreateFailedException(Messages::CREATE_FAILED, 500);
+                }
+
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                return (int)$lastInsertId;
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -121,35 +137,42 @@ final readonly class ItemRepository
                 $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1');
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+                // Execute the prepared statement
                 $stmt->execute();
 
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($result === false) {
-                    throw new ResourceNotFoundException(Messages::ERROR_NOT_FOUND, 404);
+                // Fetch all results as associative arrays
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+
+                // Return the first result if available
+                $result = $results[0] ?? null;
+                if ($result === null) {
+                    throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'Item id#' . $id), 404);
                 }
 
                 return $result;
-            } catch (PDOException $pdoException) {
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -177,35 +200,42 @@ final readonly class ItemRepository
                 $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1');
 
                 $stmt->bindValue(':sku', $sku, PDO::PARAM_STR);
+                // Execute the prepared statement
                 $stmt->execute();
 
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($result === false) {
-                    throw new ResourceNotFoundException(Messages::ERROR_NOT_FOUND, 404);
+                // Fetch all results as associative arrays
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+
+                // Return the first result if available
+                $result = $results[0] ?? null;
+                if ($result === null) {
+                    throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'Item sku#' . $sku), 404);
                 }
 
                 return $result;
-            } catch (PDOException $pdoException) {
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -311,28 +341,31 @@ final readonly class ItemRepository
                 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
                 $stmt->execute();
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (PDOException $pdoException) {
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                return $results;
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -399,35 +432,43 @@ final readonly class ItemRepository
                     $stmt->bindValue(':' . $key, $val, $type);
                 }
 
+                // Execute the prepared statement
                 $stmt->execute();
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($data === false) {
+
+                // Fetch all results as associative arrays
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+
+                // Return the first result if available
+                $result = $results[0] ?? null;
+                if ($result === null) {
                     return 0; // No rows returned
                 }
 
                 // Safely access the 'filtered' key
-                return (int) ($data['filtered'] ?? 0);
-            } catch (PDOException $pdoException) {
+                return (int) ($result['filtered'] ?? 0);
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -452,36 +493,43 @@ final readonly class ItemRepository
             try {
                 $stmt = $pdo->prepare('SELECT count(*) as total FROM items');
 
+                // Execute the prepared statement
                 $stmt->execute();
 
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($data === false) {
+                // Fetch all results as associative arrays
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+
+                // Return the first result if available
+                $result = $results[0] ?? null;
+                if ($result === null) {
                     return 0; // No rows returned
                 }
 
                 // Safely access the 'total' key
-                return (int) ($data['total'] ?? 0);
-            } catch (PDOException $pdoException) {
+                return (int) ($result['total'] ?? 0);
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -515,28 +563,31 @@ final readonly class ItemRepository
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
                 $stmt->execute();
-                return $stmt->rowCount() > 0;
-            } catch (PDOException $pdoException) {
+                $result = $stmt->rowCount() > 0;
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                return $result;
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
@@ -566,28 +617,31 @@ final readonly class ItemRepository
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
                 $stmt->execute();
 
-                return $stmt->rowCount() > 0;
-            } catch (PDOException $pdoException) {
+                $result = $stmt->rowCount() > 0;
+                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                return $result;
+            } catch (Throwable $throwable) {
                 // Log exception here
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - Code: %s | PDOException: %s',
+                        Messages::PDO_EXCEPTION_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,
-                        $pdoException->getCode(),
-                        $pdoException->getMessage()
+                        $throwable->getCode(),
+                        $throwable->getMessage()
                     )
                 );
-                throw $pdoException;
+                throw $throwable;
             } finally {
                 // Log PDO error code if $stmt exists
                 $errorCode = $stmt?->errorCode(); // returns '00000' if no error
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
+                // Log only if there was an error
                 error_log(
                     sprintf(
-                        '[%s:%d] pdoId #%s - finally called | PDO errorCode: %s | errorInfo: %s',
+                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         self::class,
                         __LINE__,
                         $pdoId,

@@ -126,7 +126,7 @@ final class Router
             }
         }
 
-        throw new RouteNotFoundException(Messages::ERROR_NOT_FOUND, 404);
+        throw new RouteNotFoundException(Messages::ROUTE_NOT_FOUND, 404);
     }
 
     /**

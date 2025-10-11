@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace App\Middlewares;
 
 use App\Core\Config;
-use App\Core\Container;
 use App\Services\Cache\CacheService;
 use Carbon\Carbon;
 use Swoole\Http\Request;
@@ -63,7 +62,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
         //
     }
 
-    public function handle(Request $request, Response $response, Container $container, callable $next): void
+    public function handle(Request $request, Response $response, callable $next): void
     {
         $rateLimitConfig = $this->config->get('rateLimit') ?? [];
         // Allow public paths without auth

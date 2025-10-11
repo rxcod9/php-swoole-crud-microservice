@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Container;
 use App\Core\Metrics;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -45,7 +44,7 @@ final class MetricsMiddleware implements MiddlewareInterface
     /**
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    public function handle(Request $request, Response $response, Container $container, callable $next): void
+    public function handle(Request $request, Response $response, callable $next): void
     {
         $start = microtime(true);
 
