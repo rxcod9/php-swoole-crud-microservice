@@ -95,6 +95,6 @@ final readonly class Dispatcher
         }
 
         /** @var object $controller */
-        return $controller->{$method}($params);
+        return call_user_func_array([$controller, $method], [$params]);
     }
 }

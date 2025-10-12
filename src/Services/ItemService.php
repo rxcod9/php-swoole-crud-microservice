@@ -43,9 +43,9 @@ use PDO;
  * @method    int   count()
  * @method    bool delete(int $id)
  * @method    int   filteredCount()
- * @method    array find(int $id)
- * @method    array findBySku(string $sku)
- * @method    array list(int $limit = 20, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method    array<string, mixed> find(int $id)
+ * @method    array<string, mixed> findBySku(string $sku)
+ * @method    array<string, mixed> list(int $limit = 20, int $offset = 0, array<string, mixed> $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  */
 final readonly class ItemService
 {
@@ -67,7 +67,7 @@ final readonly class ItemService
     /**
      * Create a new item and return the created item data.
      *
-     * @param array<int, mixed> $data Item data.
+     * @param array<string, mixed> $data Item data.
      *
      * @return array<string, mixed> Created item record.
      *
@@ -167,9 +167,9 @@ final readonly class ItemService
      * Update an item by ID and return the updated item data.
      *
      * @param int               $id   Item ID.
-     * @param array<int, mixed> $data Updated item data.
+     * @param array<string, mixed> $data Updated item data.
      *
-     * @return array|null Updated item record or null if not found.
+     * @return array<string, mixed> Updated item record.
      */
     public function update(int $id, array $data): array
     {
@@ -181,15 +181,20 @@ final readonly class ItemService
 
     /**
      * Magic method to forward calls to the repository.
+     *
+     * @param mixed $name Method name.
+     * @param mixed $arguments Method arguments.
+     * @return mixed Result from the repository method.
+     * @throws BadMethodCallException If the method does not exist in the repository.
      */
-    public function __call(mixed $name, mixed $arguments)
+    public function __call(mixed $name, mixed $arguments): mixed
     {
         if (!method_exists($this->itemRepository, $name)) {
             throw new BadMethodCallException(sprintf('Method %s does not exist in ItemRepository', $name));
         }
 
         return $this->pdoPool->withConnection(function () use ($name, $arguments): mixed {
-            return $this->itemRepository->$name(...$arguments);
+            return call_user_func_array([$this->itemRepository, $name], $arguments);
         });
     }
 }

@@ -56,7 +56,7 @@ final readonly class ItemRepository
     /**
      * Create a new item in the database.
      *
-     * @param array<int, mixed> $data Item data ('sku', 'title', 'price')
+     * @param array<string, mixed> $data Item data ('sku', 'title', 'price')
      *
      * @throws CreateFailedException If the insert operation fails.
      *
@@ -100,22 +100,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -125,7 +127,7 @@ final readonly class ItemRepository
      *
      * @param int $id Item ID
      *
-     * @return array|null Item data or null if not found
+     * @return array<string, mixed> Item data or null if not found
      */
     public function find(int $id): array
     {
@@ -162,22 +164,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FIND',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -187,7 +191,7 @@ final readonly class ItemRepository
      *
      * @param string $sku Item SKU
      *
-     * @return array|null Item data or null if not found
+     * @return array<string, mixed> Item data if not found
      */
     public function findBySku(string $sku): array
     {
@@ -224,22 +228,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -249,7 +255,7 @@ final readonly class ItemRepository
      *
      * @param int               $limit   Max rows
      * @param int               $offset  Offset
-     * @param array<int, mixed> $filters Filter conditions
+     * @param array<string, mixed> $filters Filter conditions
      * @param string            $sortBy  Sort column
      * @param string            $sortDir Sort direction
      *
@@ -353,22 +359,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'LIST',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'LIST',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -455,25 +463,25 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
-
-            return 0;
         });
     }
 
@@ -515,22 +523,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -539,7 +549,7 @@ final readonly class ItemRepository
      * Update an existing item.
      *
      * @param int               $id   Item ID
-     * @param array<int, mixed> $data Item data ('sku', 'title', 'price')
+     * @param array<string, mixed> $data Item data ('sku', 'title', 'price')
      *
      * @return bool True if updated
      */
@@ -572,22 +582,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -625,22 +637,24 @@ final readonly class ItemRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }

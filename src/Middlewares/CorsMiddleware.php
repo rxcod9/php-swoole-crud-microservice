@@ -55,7 +55,7 @@ final class CorsMiddleware implements MiddlewareInterface
     {
         $cors           = $this->config->get('cors') ?? [];
         $originsAllowed = $cors['origin'] ?? null;
-        if ($originsAllowed) {
+        if ($originsAllowed !== null) {
             $response->header('Access-Control-Allow-Origin', $originsAllowed);
         }
 

@@ -43,14 +43,17 @@ use PDO;
  * @method    int   count()
  * @method    bool delete(int $id)
  * @method    int   filteredCount()
- * @method    array find(int $id)
- * @method    array findByEmail(string $email)
- * @method    array list(int $limit = 20, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @method    array<string, mixed> find(int $id)
+ * @method    array<string, mixed> findByEmail(string $email)
+ * @method    array<string, mixed> list(int $limit = 20, int $offset = 0, array<string, mixed> $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  */
 final readonly class UserService
 {
     use Retryable;
 
+    /**
+     * Tag for logging.
+     */
     public const TAG = 'UserService';
 
     /**
@@ -67,7 +70,7 @@ final readonly class UserService
     /**
      * Create a new user and return the created user data.
      *
-     * @param array<int, mixed> $data User data.
+     * @param array<string, mixed> $data User data.
      *
      * @return array<string, mixed> Created user record.
      *
@@ -89,7 +92,7 @@ final readonly class UserService
      *
      * @param int               $limit   Max rows (default 100, max 1000)
      * @param int               $offset  Offset for pagination
-     * @param array<int, mixed> $filters Associative array of filters
+     * @param array<string, mixed> $filters Associative array of filters
      * @param string            $sortBy  Column to sort by
      * @param string            $sortDir Sort direction ('ASC' or 'DESC')
      *
@@ -167,9 +170,9 @@ final readonly class UserService
      * Update an user by ID and return the updated user data.
      *
      * @param int               $id   User ID.
-     * @param array<int, mixed> $data Updated user data.
+     * @param array<string, mixed> $data Updated user data.
      *
-     * @return array|null Updated user record or null if not found.
+     * @return array<string, mixed> Updated user record if not found.
      */
     public function update(int $id, array $data): array
     {
@@ -181,15 +184,20 @@ final readonly class UserService
 
     /**
      * Magic method to forward calls to the repository.
+     *
+     * @param mixed $name Method name.
+     * @param mixed $arguments Method arguments.
+     * @return mixed Result from the repository method.
+     * @throws BadMethodCallException If the method does not exist in the repository.
      */
-    public function __call(mixed $name, mixed $arguments)
+    public function __call(mixed $name, mixed $arguments): mixed
     {
         if (!method_exists($this->userRepository, $name)) {
             throw new BadMethodCallException(sprintf('Method %s does not exist in UserRepository', $name));
         }
 
         return $this->pdoPool->withConnection(function () use ($name, $arguments): mixed {
-            return $this->userRepository->$name(...$arguments);
+            return call_user_func_array([$this->userRepository, $name], $arguments);
         });
     }
 }

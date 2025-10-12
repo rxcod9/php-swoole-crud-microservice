@@ -75,7 +75,6 @@ final readonly class TaskDispatcher
         }
 
         // check interface
-
         $reflectionClass = new ReflectionClass($class);
         if (!$reflectionClass->implementsInterface(TaskInterface::class)) {
             throw new TaskContractViolationException(sprintf('Implement TaskInterface in your Task class %s.', $class));
@@ -120,24 +119,15 @@ final readonly class TaskDispatcher
     /**
      * Invoke the handle method or __invoke() of the task instance.
      *
-     * @param mixed $controller Task instance
+     * @param TaskInterface $task Task instance
      * @param array<int, mixed> $arguments Arguments to pass to the method
+     *
+     * @return mixed Response from the task method
      *
      * @throws TaskContractViolationException If the task does not have a handle method or is not invokable
      */
-    private function handle(Controller $controller, array $arguments): void
+    private function handle(TaskInterface $task, array $arguments): mixed
     {
-        if (method_exists($controller, 'handle')) {
-            $controller->handle(...$arguments);
-            return;
-        }
-
-        if (is_callable($controller)) {
-            // covers __invoke()
-            $controller(...$arguments);
-            return;
-        }
-
-        throw new TaskContractViolationException('Task ' . $controller::class . ' must have a handle() method or be invokable (__invoke)');
+        return $task->handle(...$arguments);
     }
 }

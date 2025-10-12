@@ -45,18 +45,24 @@ final class RateLimitMiddleware implements MiddlewareInterface
 {
     public const TAG = 'RateLimitMiddleware';
 
-    public $table;
-
     // exclude paths
+    /** @var array<int, string> List of paths to exclude from rate limiting */
     private array $excludePaths = [
         '/health',
         '/health.html',
     ];
 
+    /** @var array<string, int> Rate limiting options */
     private array $options = [
         'windowSec' => 60, // 60 seconds
     ];
 
+    /**
+     * Constructor
+     *
+     * @param CacheService $cacheService Cache service for storing rate limit data
+     * @param Config       $config       Configuration service for accessing rate limit settings
+     */
     public function __construct(
         private readonly CacheService $cacheService,
         private readonly Config $config
@@ -64,6 +70,15 @@ final class RateLimitMiddleware implements MiddlewareInterface
         //
     }
 
+    /**
+     * Handle the incoming request.
+     *
+     * @param Request $request  The incoming HTTP request
+     * @param Response $response The HTTP response to be sent
+     * @param callable $next Middleware must call $next() to continue the chain
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
+     */
     public function handle(Request $request, Response $response, callable $next): void
     {
         $rateLimitConfig = $this->config->get('rateLimit') ?? [];
@@ -79,14 +94,14 @@ final class RateLimitMiddleware implements MiddlewareInterface
         $clientIp       = $request->server['remote_addr'] ?? '';
         $skipIpPatterns = $rateLimitConfig['skip_ip_patterns'] ?? null; // '/^172\.17\.\d+\.\d+$/'; // matches default Docker bridge
 
-        if ($skipIpPatterns && preg_match($skipIpPatterns, $clientIp)) {
+        if ($skipIpPatterns !== null && preg_match($skipIpPatterns, $clientIp)) {
             $next($request, $response);
             return;
         }
 
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'IP: ' . $ip);
 
-        [$row]     = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
+        [$row]     = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip);
         $nowSec    = Carbon::now()->getTimestamp();
         $count     = 0;
         $oldest    = $nowSec;

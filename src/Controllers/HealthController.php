@@ -42,6 +42,13 @@ use Swoole\Table;
  */
 final class HealthController extends Controller
 {
+    /**
+     * Constructor for HealthController.
+     *
+     * @param Server             $server         Swoole HTTP server instance.
+     * @param Table              $table          Swoole table for worker status.
+     * @param TableWithLRUAndGC<string, array<string, mixed>>  $tableWithLRUAndGC Swoole table with LRU and GC for cache.
+     */
     public function __construct(
         private readonly Server $server,
         private readonly Table $table,
@@ -328,6 +335,11 @@ final class HealthController extends Controller
 
     /**
      * Renders the Swoole table stats HTML.
+     *
+     * @param Table|TableWithLRUAndGC $table The Swoole table instance.
+     * @param string $title The title for the stats section.
+     * @return string The rendered HTML string.
+     * @psalm-param TableWithLRUAndGC<string, array<string, mixed>> $table
      */
     private function renderTableStatsHtml(Table|TableWithLRUAndGC $table, string $title = 'Table'): string
     {

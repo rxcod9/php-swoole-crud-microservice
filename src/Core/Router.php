@@ -122,7 +122,7 @@ final class Router
      *
      * @throws RouteNotFoundException If no route matches
      *
-     * @return array{0: mixed, 1: array<string, string>, 2: array} [action, params, middlewares]
+     * @return array{0: mixed, 1: array<string, string>, 2: array<class-string>} [action, params, middlewares]
      */
     public function match(string $method, string $uri): array
     {
@@ -134,16 +134,6 @@ final class Router
         $routesForMethod = $this->routes[$upperMethod] ?? [];
 
         foreach ($routesForMethod as [$compiled, $action, $middlewares]) {
-            if (!isset($compiled['regex'], $compiled['vars'])) {
-                // Skip invalid route entries
-                continue;
-            }
-
-            if (!is_array($compiled['vars'])) {
-                // Skip invalid route entries
-                continue;
-            }
-
             if (preg_match($compiled['regex'], $path, $matches)) {
                 $params = [];
                 foreach ($compiled['vars'] as $i => $name) {
@@ -189,7 +179,8 @@ final class Router
      */
     public function getRouteByPath(string $method, string $uri): array
     {
-        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $parsedPath = parse_url($uri, PHP_URL_PATH);
+        $path       = $parsedPath !== false ? $parsedPath : '/';
         foreach ($this->routes as $routeMethod => $routes) {
             if (strtoupper($routeMethod) !== strtoupper($method)) {
                 continue;

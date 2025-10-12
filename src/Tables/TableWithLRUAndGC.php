@@ -32,38 +32,36 @@ use Swoole\Table;
  * Extensible wrapper around Swoole\Table with user-defined schema.
  * Behaves like Table but allows overrides for eviction and GC.
  *
- * @category  Tables
- * @package   App\Tables
- * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @copyright Copyright (c) 2025
- * @license   MIT
- * @version   1.0.0
- * @since     2025-10-02
- * @var       const TYPE_INT = 1;
- * @var       const TYPE_FLOAT = 2;
- * @var       const TYPE_STRING = 3;
- * @var       ?int  $size;
- * @var       ?int  $memorySize;
- * @method    bool  column(string $name, int $type, int $size = 0)
- * @method    bool  create()
- * @method    bool  destroy()
- * @method    bool  set(string $key, array<key, mixed> $value)
- * @method    mixed get(string $key, ?string $field = null)
- * @method    int   count()
- * @method    bool  del(string $key)
- * @method    bool  delete(string $key)
- * @method    bool  exists(string $key)
- * @method    bool  exist(string $key)
- * @method    float incr(string $key, string $column, int|float $incrby = 1): int|float
- * @method    float decr(string $key, string $column, int|float $incrby = 1): int|float
- * @method    int getSize()
- * @method    int getMemorySize()
- * @method    false stats(): arra
- * @method    void  rewind()
- * @method    bool  valid()
- * @method    void  next()
- * @method    mixed current()
- * @method    mixed key()
+ * @category   Tables
+ * @package    App\Tables
+ * @author     Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright  Copyright (c) 2025
+ * @license    MIT
+ * @version    1.0.0
+ * @since      2025-10-02
+ * @method     bool  column(string $name, int $type, int $size = 0)
+ * @method     bool  create()
+ * @method     bool  destroy()
+ * @method     bool  set(string $key, array<key, mixed> $value)
+ * @method     mixed get(string $key, ?string $field = null)
+ * @method     int   count()
+ * @method     bool  del(string $key)
+ * @method     bool  delete(string $key)
+ * @method     bool  exists(string $key)
+ * @method     bool  exist(string $key)
+ * @method     int|float incr(string $key, string $column, int|float $incrby = 1)
+ * @method     int|float decr(string $key, string $column, int|float $incrby = 1)
+ * @method     int getSize()
+ * @method     int getMemorySize()
+ * @method     false stats(): arra
+ * @method     void  rewind()
+ * @method     bool  valid()
+ * @method     void  next()
+ * @method     mixed current()
+ * @method     mixed key()
+ * @template   TKey of array-key
+ * @template   TValue of array<string, mixed>
+ * @implements Iterator<TKey, TValue>
  */
 class TableWithLRUAndGC implements Iterator, Countable
 {
@@ -87,12 +85,15 @@ class TableWithLRUAndGC implements Iterator, Countable
     /**
      * Get a row from the cache table.
      * Only updates last_access if a threshold time has passed to avoid write storms.
+     *
+     * @param string $key The key to retrieve.
+     * @return array<string, mixed>|null The row data or null if not found or expired.
      */
     public function get(string $key): ?array
     {
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
         $row = $this->table->get($key);
-        if (!$row) {
+        if ($row === false || $row === null) {
             return null;
         }
 
@@ -108,6 +109,12 @@ class TableWithLRUAndGC implements Iterator, Countable
 
     /**
      * Set row with user-defined schema.
+     *
+     * @param string $key The key to set.
+     * @param array<string, mixed> $row The row data to set.
+     * @param int $localTtl Optional TTL for this specific entry (overrides default ttl).
+     * @return bool True on success, false on failure.
+     * @throws CacheSetException If unable to set the cache.
      */
     public function set(string $key, array $row, int $localTtl = 0): bool
     {
@@ -115,7 +122,6 @@ class TableWithLRUAndGC implements Iterator, Countable
         $exists = $this->table->exist($key);
         if (
             !$exists &&
-            is_countable($this->table) &&
             count($this->table) >= ($this->maxSize - $this->bufferSize)
         ) {
             $this->evict();
@@ -180,31 +186,49 @@ class TableWithLRUAndGC implements Iterator, Countable
 
     /**
      * Proxy unknown calls to Swoole\Table.
+     *
+     * @param mixed $name The method name.
+     * @param mixed $arguments The method arguments.
+     * @return mixed The result of the method call.
+     * @throws BadMethodCallException If the method does not exist on Swoole\Table
      */
-    public function __call(mixed $name, mixed $arguments)
+    public function __call(mixed $name, mixed $arguments): mixed
     {
         if (!method_exists($this->table, $name)) {
             throw new BadMethodCallException(sprintf('Method %s does not exist on Swoole\Table', $name));
         }
 
-        return $this->table->$name(...$arguments);
+        return call_user_func_array([$this->table, $name], $arguments);
     }
 
-    /* -------------------------
-     * Property access
-     * ------------------------- */
+    /**
+     * Proxy property access to Swoole\Table.
+     *
+     * @param string $name The property name.
+     * @return mixed The property value.
+     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
+     */
     public function __get(string $name): mixed
     {
         if (property_exists($this->table, $name)) {
+            /** @phpstan-ignore-next-line */
             return $this->table->$name;
         }
 
         throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
+    /**
+     * Proxy property setting to Swoole\Table.
+     *
+     * @param string $name The property name.
+     * @param mixed $value The property value.
+     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
+     */
     public function __set(string $name, mixed $value): void
     {
         if (property_exists($this->table, $name)) {
+            /** @phpstan-ignore-next-line */
             $this->table->$name = $value;
             return;
         }
@@ -212,14 +236,29 @@ class TableWithLRUAndGC implements Iterator, Countable
         throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
+    /**
+     * Proxy isset to Swoole\Table.
+     *
+     * @param string $name The property name.
+     * @return bool True if the property is set, false otherwise.
+     */
     public function __isset(string $name): bool
     {
+        /** @phpstan-ignore-next-line */
         return isset($this->table->$name);
     }
 
+    /**
+     * Proxy unset to Swoole\Table.
+     *
+     * @param string $name The property name.
+     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
+     */
     public function __unset(string $name): void
     {
+        /** @phpstan-ignore-next-line */
         if (isset($this->table->$name)) {
+            /** @phpstan-ignore-next-line */
             unset($this->table->$name);
             return;
         }
@@ -227,60 +266,92 @@ class TableWithLRUAndGC implements Iterator, Countable
         throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
-    /* -------------------------
-     * ArrayAccess
-     * ------------------------- */
-    public function offsetExists($offset): bool
+    /**
+     * OffsetExists for ArrayAccess
+     * @param mixed $offset The offset to check.
+     * @return bool True if the offset exists, false otherwise.
+     */
+    public function offsetExists(mixed $offset): bool
     {
         return isset($this->table[$offset]);
     }
 
-    public function offsetGet($offset)
+    /**
+     * OffsetGet for ArrayAccess
+     * @param mixed $offset The offset to get.
+     * @return mixed The value at the offset or null if not found.
+     */
+    public function offsetGet(mixed $offset): mixed
     {
         return $this->table[$offset] ?? null;
     }
 
-    public function offsetSet($offset, $value): void
+    /**
+     * OffsetSet for ArrayAccess
+     * @param mixed $offset The offset to set.
+     * @param mixed $value The value to set.
+     */
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->table[$offset] = $value;
     }
 
-    public function offsetUnset($offset): void
+    /**
+     * OffsetUnset for ArrayAccess
+     * @param mixed $offset The offset to unset.
+     */
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->table[$offset]);
     }
 
-    /* -------------------------
-     * Iterator
-     * ------------------------- */
+    /**
+     * Rewind the iterator (Iterator interface).
+     */
     public function rewind(): void
     {
         $this->table->rewind();
     }
 
+    /**
+     * Get current element (Iterator interface).
+     * @return array<string, mixed> The current element.
+     */
     public function current(): mixed
     {
         return $this->table->current();
     }
 
+    /**
+     * Get current key (Iterator interface).
+     * @return int|string The current key.
+     */
     public function key(): mixed
     {
         return $this->table->key();
     }
 
+    /**
+     * Move to next element (Iterator interface).
+     */
     public function next(): void
     {
         $this->table->next();
     }
 
+    /**
+     * Check if current position is valid (Iterator interface).
+     * @return bool True if valid, false otherwise.
+     */
     public function valid(): bool
     {
         return $this->table->valid();
     }
 
-    /* -------------------------
-     * Countable
-     * ------------------------- */
+    /**
+     * Count elements (Countable interface).
+     * @return int<0, max> The number of elements in the table.
+     */
     public function count(): int
     {
         return count($this->table);

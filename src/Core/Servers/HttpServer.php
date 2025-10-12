@@ -265,7 +265,7 @@ final class HttpServer
     /**
      * Disable a worker and remove its entry from the health table.
      *
-     * @param string $workerId The ID of the worker to disable
+     * @param int $workerId The ID of the worker to disable
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
      */

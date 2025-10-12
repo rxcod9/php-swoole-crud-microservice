@@ -57,7 +57,7 @@ final readonly class UserRepository
     /**
      * Create a new user in the database.
      *
-     * @param array<int, mixed> $data User data ('name', 'email')
+     * @param array<string, mixed> $data User data ('name', 'email')
      *
      * @throws CreateFailedException on failure
      *
@@ -103,22 +103,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -128,9 +130,9 @@ final readonly class UserRepository
      *
      * @param int $id User ID
      *
-     * @return array|null User data or null if not found
+     * @return array<string, mixed> User data if not found
      */
-    public function find(int $id): ?array
+    public function find(int $id): array
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding user with ID: ' . var_export($id, true));
@@ -168,22 +170,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FIND',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -193,9 +197,9 @@ final readonly class UserRepository
      *
      * @param string $email Email address
      *
-     * @return array|null User data or null
+     * @return array<string, mixed> User data
      */
-    public function findByEmail(string $email): ?array
+    public function findByEmail(string $email): array
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($email) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL', 'pdoId: ' . $pdoId . ' Finding user with email: ' . var_export($email, true));
@@ -231,22 +235,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -256,7 +262,7 @@ final readonly class UserRepository
      *
      * @param int               $limit   Max rows (default 100, max 1000)
      * @param int               $offset  Offset for pagination
-     * @param array<int, mixed> $filters Associative array of filters
+     * @param array<string, mixed> $filters Associative array of filters
      * @param string            $sortBy  Column to sort by
      * @param string            $sortDir Sort direction ('ASC' or 'DESC')
      *
@@ -363,22 +369,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'LIST',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'LIST',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -386,7 +394,7 @@ final readonly class UserRepository
     /**
      * Count filtered users.
      *
-     * @param array<int, mixed> $filters Optional filters
+     * @param array<string, mixed> $filters Optional filters
      *
      * @return int Number of filtered users
      */
@@ -467,25 +475,25 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
-
-            return 0;
         });
     }
 
@@ -528,22 +536,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -552,7 +562,7 @@ final readonly class UserRepository
      * Update a user.
      *
      * @param int               $id   User ID
-     * @param array<int, mixed> $data User data ('name', 'email')
+     * @param array<string, mixed> $data User data ('name', 'email')
      *
      * @return bool True if updated
      */
@@ -585,22 +595,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }
@@ -639,22 +651,24 @@ final readonly class UserRepository
                 );
                 throw $throwable;
             } finally {
-                // Log PDO error code if $stmt exists
-                $errorCode = $stmt?->errorCode(); // returns '00000' if no error
-                $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
+                if (isset($stmt)) {
+                    // Log PDO error code if $stmt exists
+                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
+                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
-                // Log only if there was an error
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        $pdoId,
-                        $errorCode ?? 'N/A',
-                        $errorInfo ? implode(', ', $errorInfo) : 'N/A'
-                    )
-                );
+                    // Log only if there was an error
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
+                        sprintf(
+                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                            $pdoId,
+                            $errorCode ?? 'N/A',
+                            implode(', ', $errorInfo)
+                        )
+                    );
 
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                }
             }
         });
     }

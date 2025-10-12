@@ -39,10 +39,23 @@ use Carbon\Carbon;
  */
 final readonly class TableCacheService
 {
+    /**
+     * Cache type identifier
+     */
     public const CACHE_TYPE = 'Table';
 
+    /**
+     * Tag for logging
+     */
     public const TAG = 'TableCacheService';
 
+    /**
+     * Constructor
+     *
+     * @param TableWithLRUAndGC<string, array<string, mixed>> $tableWithLRUAndGC Swoole Table with LRU and GC
+     * @param int               $recordTtl         Default TTL for individual records (in seconds)
+     * @param int               $listTtl           Default TTL for lists (in seconds)
+     */
     public function __construct(
         private TableWithLRUAndGC $tableWithLRUAndGC,
         private int $recordTtl = 300,
@@ -51,11 +64,17 @@ final readonly class TableCacheService
         //
     }
 
+    /**
+     * Get a value from the cache by key.
+     *
+     * @param string $key Cache key
+     * @return mixed|null Cached value or null if not found or expired
+     */
     public function get(string $key): mixed
     {
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
         $row = $this->tableWithLRUAndGC->get($key);
-        if (!$row) {
+        if ($row === null) {
             return null;
         }
 
@@ -73,6 +92,15 @@ final readonly class TableCacheService
         return $row['value'];
     }
 
+    /**
+     * Set a value in the cache with a TTL.
+     *
+     * @param string $key   Cache key
+     * @param mixed  $value Value to cache
+     * @param int    $ttl   Time to live in seconds
+     * @return bool True on success, false on failure
+     * @throws CacheSetException If unable to set the cache
+     */
     public function set(string $key, mixed $value, int $ttl): bool
     {
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
@@ -90,58 +118,129 @@ final readonly class TableCacheService
         return $success;
     }
 
+    /**
+     * Get a cached record by a specific column value.
+     *
+     * @param string          $entity Entity name (e.g., 'users')
+     * @param string          $column Column name (e.g., 'id', 'email')
+     * @param int|string      $value  Column value to look up
+     * @return array<string, mixed>|null Cached record as associative array or null if not found
+     */
     public function getRecordByColumn(string $entity, string $column, int|string $value): mixed
     {
         $key   = $this->recordKeyByColumn($entity, $column, $value);
         $value = $this->get($key);
-        return $value ? json_decode($value, true) : null;
+        return $value !== null ? json_decode($value, true) : null;
     }
 
+    /**
+     * Set a cached record by a specific column value.
+     *
+     * @param string          $entity   Entity name (e.g., 'users')
+     * @param string          $column   Column name (e.g., 'id', 'email')
+     * @param int|string      $value    Column value to look up
+     * @param mixed           $data     Record data to cache (associative array)
+     * @param int|null        $localTtl Optional TTL for this record (in seconds). Defaults to service's recordTtl.
+     * @return bool True on success, false on failure
+     * @throws CacheSetException If unable to set the cache
+     */
     public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data, ?int $localTtl = null): bool
     {
         $key = $this->recordKeyByColumn($entity, $column, $value);
         return $this->set($key, json_encode($data), $localTtl ?? $this->recordTtl);
     }
 
+    /**
+     * Invalidate a cached record by a specific column value.
+     *
+     * @param string          $entity Entity name (e.g., 'users')
+     * @param string          $column Column name (e.g., 'id', 'email')
+     * @param int|string      $value  Column value to look up
+     * @return bool True on success, false on failure
+     */
     public function invalidateRecordByColumn(string $entity, string $column, int|string $value): bool
     {
         $key = $this->recordKeyByColumn($entity, $column, $value);
         return $this->tableWithLRUAndGC->del($key);
     }
 
+    /**
+     * Generate cache key for a record by column.
+     *
+     * @param string     $entity Entity name
+     * @param string     $column Column name
+     * @param int|string $value  Column value
+     * @return string Cache key
+     */
     private function recordKeyByColumn(string $entity, string $column, int|string $value): string
     {
         return sprintf('%s:record:%s:%s', $entity, $column, $value);
     }
 
+    /**
+     * Get a cached record by its ID.
+     * This is a convenience method that calls getRecordByColumn with 'id' as the column.
+     *
+     * @param string     $entity Entity name (e.g., 'users')
+     * @param int|string $id     Record ID
+     * @return array<string, mixed>|null Cached record as associative array or null if not found
+     */
     public function getRecord(string $entity, int|string $id): mixed
     {
         return $this->getRecordByColumn($entity, 'id', $id);
     }
 
+    /**
+     * Set a cached record by its ID.
+     * This is a convenience method that calls setRecordByColumn with 'id' as the column.
+     *
+     * @param string          $entity   Entity name (e.g., 'users')
+     * @param int|string      $id       Record ID
+     * @param mixed           $data     Record data to cache (associative array)
+     * @param int|null        $localTtl Optional TTL for this record (in seconds). Defaults to service's recordTtl.
+     * @throws CacheSetException If unable to set the cache
+     */
     public function setRecord(string $entity, int|string $id, mixed $data, ?int $localTtl = null): void
     {
         $this->setRecordByColumn($entity, 'id', $id, $data, $localTtl);
     }
 
+    /**
+     * Invalidate a cached record by its ID.
+     * This is a convenience method that calls invalidateRecordByColumn with 'id' as the column.
+     *
+     * @param string     $entity Entity name (e.g., 'users')
+     * @param int|string $id     Record ID
+     */
     public function invalidateRecord(string $entity, int|string $id): void
     {
         $this->invalidateRecordByColumn($entity, 'id', $id);
     }
 
     /**
-     * ---------------------------
-     * LIST CACHE (versioned)
-     * ---------------------------
+     * Get a cached list of records based on query parameters.
+     *
+     * @param string            $entity Entity name (e.g., 'users')
+     * @param array<string, mixed> $query  Query parameters (e.g., ['page' => 1, 'limit' => 10])
+     * @return mixed Cached list of records or null if not found
      */
     public function getList(string $entity, array $query): mixed
     {
         $version = $this->getListVersion($entity);
         $key     = $this->listKey($entity, $query, $version);
         $value   = $this->get($key);
-        return $value ? json_decode($value, true) : null;
+        return $value !== null ? json_decode($value, true) : null;
     }
 
+    /**
+     * Set a cached list of records based on query parameters.
+     *
+     * @param string            $entity   Entity name (e.g., 'users')
+     * @param array<string, mixed> $query    Query parameters (e.g., ['page' => 1, 'limit' => 10])
+     * @param mixed             $data     List of records to cache (array)
+     * @param int|null         $localTtl Optional TTL for this list (in seconds). Defaults to service's listTtl.
+     * @throws CacheSetException If unable to set the cache
+     */
     public function setList(string $entity, array $query, mixed $data, ?int $localTtl = null): void
     {
         $version = $this->getListVersion($entity);
@@ -149,13 +248,19 @@ final readonly class TableCacheService
         $this->set($key, json_encode($data), $localTtl ?? $this->listTtl);
     }
 
+    /**
+     * Invalidate all cached lists for an entity by incrementing its version.
+     * This effectively invalidates all existing list caches without deleting them.
+     *
+     * @param string $entity Entity name (e.g., 'users')
+     */
     public function invalidateLists(string $entity): void
     {
         $key = $entity . ':version';
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
 
         $row = $this->tableWithLRUAndGC->get($key);
-        if (!$row) {
+        if ($row !== null) {
             $this->tableWithLRUAndGC->set($key, [
                 'value'       => 1,
                 'expires_at'  => Carbon::now()->getTimestamp() + 86400, // keep version for a day
@@ -164,14 +269,20 @@ final readonly class TableCacheService
             return;
         }
 
-        $version = (int) ($row['value'] ?? 0);
         $this->tableWithLRUAndGC->set($key, [
-            'value'       => $version + 1,
+            'value'       => 1,
             'expires_at'  => Carbon::now()->getTimestamp() + 86400, // keep version for a day
             'last_access' => Carbon::now()->getTimestamp(), // keep version for a day
         ]);
     }
 
+    /**
+     * Get the current list version for an entity.
+     * If no version exists, defaults to 1.
+     *
+     * @param string $entity Entity name (e.g., 'users')
+     * @return int Current list version
+     */
     private function getListVersion(string $entity): int
     {
         $key = $entity . ':version';
@@ -179,7 +290,7 @@ final readonly class TableCacheService
 
         $row = $this->tableWithLRUAndGC->get($key);
 
-        if (!$row) {
+        if ($row === null) {
             return 1;
         }
 
@@ -190,7 +301,7 @@ final readonly class TableCacheService
      * Generate cache keys for lists.
      *
      * @param string            $entity  Entity name
-     * @param array<int, mixed> $query   Query parameters
+     * @param array<string, mixed> $query   Query parameters
      * @param int               $version List version
      */
     private function listKey(string $entity, array $query, int $version): string
@@ -209,6 +320,14 @@ final readonly class TableCacheService
         return $key;
     }
 
+    /**
+     * Increment a numeric column in the cache.
+     *
+     * @param string     $key    Cache key
+     * @param string     $column Column name to increment
+     * @param int|float $incrby Amount to increment by (default is 1)
+     * @return int|float New value after increment
+     */
     public function incr(string $key, string $column, int|float $incrby = 1): int|float
     {
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
@@ -218,10 +337,11 @@ final readonly class TableCacheService
 
     /**
      * Update last_access timestamp if column exists.
-     */
-    /**
-     * Update last_access timestamp if enough time has passed.
-     * Only writes to the table when necessary.
+     *
+     * @param string     $key Cache key
+     * @param array<string, mixed> $row Current row data
+     * @param int|null   $now Optional current timestamp to use
+     * @return array<string, mixed> Updated row data
      */
     private function touch(string $key, array $row, ?int $now = null): array
     {
@@ -249,6 +369,7 @@ final readonly class TableCacheService
      * Garbage collect old list versions for multiple entities in one loop
      *
      * @param string[] $entities
+     * @param int      $keepVersions Number of recent versions to keep (default is 2)
      *
      * @SuppressWarnings("PHPMD.UnusedLocalVariable")
      */
@@ -277,6 +398,12 @@ final readonly class TableCacheService
         }
     }
 
+    /**
+     * Get current list versions for multiple entities
+     *
+     * @param string[] $entities
+     * @return array<string, int> Associative array of entity => version
+     */
     private function getEntityVersions(array $entities): array
     {
         $versions = [];
@@ -287,6 +414,13 @@ final readonly class TableCacheService
         return $versions;
     }
 
+    /**
+     * Match a key to an entity based on known entities
+     *
+     * @param string   $key      Cache key
+     * @param string[] $entities List of known entities
+     * @return string|null Matched entity or null if no match
+     */
     private function matchEntity(string $key, array $entities): ?string
     {
         foreach ($entities as $entity) {
@@ -298,6 +432,12 @@ final readonly class TableCacheService
         return null;
     }
 
+    /**
+     * Extract version number from a cache key
+     *
+     * @param string $key Cache key
+     * @return int Extracted version number or 0 if not found
+     */
     private function extractVersion(string $key): int
     {
         preg_match('/v(\d+):/', $key, $matches);

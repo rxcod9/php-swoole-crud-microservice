@@ -18,7 +18,6 @@
 declare(strict_types=1);
 
 use App\Core\Constants;
-use App\Exceptions\CreateFailedException;
 
 // -----------------------------------------------------------------------------
 // Log
@@ -58,7 +57,7 @@ if (!\function_exists('env')) {
     {
         logDebug(__FUNCTION__, 'called', ['key' => $key, 'default' => $default]);
 
-        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? (getenv($key) !== false ? getenv($key) : $default);
 
         logDebug(__FUNCTION__, 'resolved', ['key' => $key, 'value' => $value]);
         return $value;
@@ -160,10 +159,16 @@ if (!\function_exists('shouldPDORetry')) {
 // -----------------------------------------------------------------------------
 // shouldRetry()
 // -----------------------------------------------------------------------------
-if (!\function_exists('shouldRetry')) {
+if (!\function_exists('shouldRetry') && !\function_exists('shouldRetry')) {
+    /**
+     * Determine if an exception should trigger a retry.
+     */
     function shouldRetry(Throwable $throwable): bool
     {
-        logDebug(__FUNCTION__, 'called', ['class' => $throwable::class, 'msg' => $throwable->getMessage()]);
+        logDebug(__FUNCTION__, 'called', [
+            'class' => $throwable::class,
+            'msg'   => $throwable->getMessage(),
+        ]);
 
         if ($throwable instanceof PDOException) {
             $pdoRetry = shouldPDORetry($throwable);
@@ -171,12 +176,10 @@ if (!\function_exists('shouldRetry')) {
             return $pdoRetry;
         }
 
-        if ($throwable instanceof CreateFailedException) {
-            logDebug(__FUNCTION__, 'matched CreateFailedException -> retry');
-            return true;
-        }
+        $retryableExceptions = [
+            \App\Exceptions\CreateFailedException::class,
+        ];
 
-        $retryableExceptions = [CreateFailedException::class];
         foreach ($retryableExceptions as $retryableException) {
             if ($throwable instanceof $retryableException) {
                 logDebug(__FUNCTION__, 'matched retryable class', ['class' => $retryableException]);

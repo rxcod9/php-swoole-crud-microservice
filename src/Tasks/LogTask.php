@@ -38,8 +38,12 @@ final class LogTask implements TaskInterface
 {
     /**
      * Handles logging of the provided arguments.
+     *
+     * @param mixed ...$arguments Arguments to log, expected to be [level, data]
+     *
+     * @return mixed Always returns true on successful logging
      */
-    public function handle(...$arguments): void
+    public function handle(mixed ...$arguments): mixed
     {
         [$level, $data] = $arguments;
 
@@ -55,5 +59,7 @@ final class LogTask implements TaskInterface
             'request',
             $data
         );
+
+        return true;
     }
 }

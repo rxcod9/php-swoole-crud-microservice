@@ -188,7 +188,7 @@ final class RedisPool
 
         // Pop a connection from the channel (waits up to $timeout seconds)
         $conn = $this->channel->pop($timeout);
-        if (!$conn) {
+        if ($conn === false) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[ERROR] Redis pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', $timeout, $available, $used, $this->created));
             throw new RedisPoolExhaustedException('Redis pool exhausted', 503);
         }
@@ -261,7 +261,7 @@ final class RedisPool
         }
 
         // Execute the command dynamically
-        return $redis->{$cmd}(...$args);
+        return call_user_func_array([$redis, $cmd], $args);
     }
 
     /**

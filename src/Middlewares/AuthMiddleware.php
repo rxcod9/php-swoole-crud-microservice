@@ -40,7 +40,11 @@ use Swoole\Http\Response;
  */
 final class AuthMiddleware implements MiddlewareInterface
 {
-    // allow unauthenticated paths
+    /**
+     * allow unauthenticated paths
+     *
+     * @var array<int, string> List of public paths that do not require authentication
+     */
     private array $publicPaths = [
         '/',
         '/health',

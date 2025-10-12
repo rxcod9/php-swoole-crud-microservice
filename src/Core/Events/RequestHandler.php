@@ -117,7 +117,9 @@ final readonly class RequestHandler
      */
     private function handleException(Request $request, Response $response, string $reqId, float $start, Throwable $throwable): void
     {
-        $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path       = $parsedPath !== false ? $parsedPath : '/';
+
         $status = is_int($throwable->getCode()) ? $throwable->getCode() : 500;
 
         $response->header('Content-Type', 'application/json');
@@ -283,7 +285,8 @@ final readonly class RequestHandler
         $dispatcher = new Dispatcher($this->container);
         $payload    = $dispatcher->dispatch($action, $params, $request);
 
-        $path         = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $parsedPath   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path         = $parsedPath !== false ? $parsedPath : '/';
         $status       = $payload['__status'] ?? 200;
         $json         = $payload['__json'] ?? null;
         $html         = $payload['__html'] ?? null;

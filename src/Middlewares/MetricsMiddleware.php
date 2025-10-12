@@ -69,15 +69,16 @@ final class MetricsMiddleware implements MiddlewareInterface
         $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
         $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
 
-        $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $status = $response->status ?? 200;
+        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path       = $parsedPath !== false ? $parsedPath : '/';
+        $status     = 200; // $response->status ?? 200
 
         [$route] = $this->router->getRouteByPath(
             $request->server['request_method'],
             $path ?? '/'
         );
 
-        if ($route && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+        if ($route !== null && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
             $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
             $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
         }

@@ -35,6 +35,9 @@ interface TaskInterface
 {
     /**
      * Handles logging of the provided payload.
+     *
+     * @param mixed ...$arguments Arguments to process
+     *
      */
-    public function handle(...$arguments): void;
+    public function handle(mixed ...$arguments): mixed;
 }
