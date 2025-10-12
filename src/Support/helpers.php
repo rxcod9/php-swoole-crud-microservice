@@ -159,7 +159,7 @@ if (!\function_exists('shouldPDORetry')) {
 // -----------------------------------------------------------------------------
 // shouldRetry()
 // -----------------------------------------------------------------------------
-if (!\function_exists('shouldRetry') && !\function_exists('shouldRetry')) {
+if (!\function_exists('shouldRetry')) {
     /**
      * Determine if an exception should trigger a retry.
      */
