@@ -50,7 +50,7 @@ final class LoggingMiddleware implements MiddlewareInterface
 
         $dur = microtime(true) - $start;
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf(
-            "[%s] %s %s %d - %.2fms\n",
+            "[%s] %s %s - %.2fms\n",
             $request->server['request_method'] ?? '-',
             $request->server['request_uri'] ?? '-',
             $response->status ?? '-',
