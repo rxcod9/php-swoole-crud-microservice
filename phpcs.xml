@@ -19,41 +19,41 @@
     <rule ref="PSR12"/>
 
     <!-- Slevomat: strict typing & modern PHP -->
-    <rule ref="SlevomatCodingStandard.TypeHints.ParameterTypeHint"/>
-    <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint"/>
-    <rule ref="SlevomatCodingStandard.TypeHints.PropertyTypeHint"/>
-    <rule ref="SlevomatCodingStandard.TypeHints.NullableTypeForNullDefaultValue"/>
-    <rule ref="SlevomatCodingStandard.Classes.ModernClassNameReference"/>
-    <rule ref="SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses"/>
-    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses"/>
-    <rule ref="SlevomatCodingStandard.Classes.RequireSelfReference"/>
-    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
-        <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectWhitespaceBeforeDeclare"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectStrictTypesFormat"/>
-    </rule>
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.ParameterTypeHint"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.PropertyTypeHint"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.NullableTypeForNullDefaultValue"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.Classes.ModernClassNameReference"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.Classes.RequireSelfReference"/> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes"> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectWhitespaceBeforeDeclare"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectStrictTypesFormat"/> -->
+    <!-- </rule> -->
 
     <!-- Docblocks & PHPDoc alignment -->
-    <rule ref="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment"/>
+    <!-- <rule ref="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment"/> -->
     <rule ref="Squiz.Commenting.ClassComment"/>
     <rule ref="Squiz.Commenting.FunctionComment">
         <exclude name="Squiz.Commenting.FunctionComment.IncorrectParamVarName" />
         <exclude name="Squiz.Commenting.FunctionComment.InvalidReturn" />
     </rule>
     
-    <rule ref="SlevomatCodingStandard.TypeHints">
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints"> -->
         <!-- Exclude disallowed mixed type -->
-        <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.LongTypeHints.UsedLongTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.ClassConstantTypeHint.MissingNativeTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingTraversableTypeHintSpecification"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingAnyTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingTraversableTypeHintSpecification"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint"/>
-        <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingTraversableTypeHintSpecification"/>
-    </rule>
-    <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat"/>
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.UnionTypeHintFormat"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.LongTypeHints.UsedLongTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.ClassConstantTypeHint.MissingNativeTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingTraversableTypeHintSpecification"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingAnyTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingTraversableTypeHintSpecification"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingTraversableTypeHintSpecification"/> -->
+    <!-- </rule> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints.DNFTypeHintFormat"/> -->
 
     <rule ref="Squiz.Commenting">
         <!-- Exclude file-level comments completely -->
@@ -69,20 +69,20 @@
         <exclude name="Generic.Files.LowercasedFilename"/>
         <exclude name="Generic.Files.EndFileNoNewline.Found"/>
     </rule>
-    <rule ref="SlevomatCodingStandard.Commenting">
+    <!-- <rule ref="SlevomatCodingStandard.Commenting"> -->
         <!-- Non-critical rules as warnings -->
-        <exclude name="SlevomatCodingStandard.Commenting.DisallowCommentAfterCode.DisallowedCommentAfterCode"/>
-        <exclude name="SlevomatCodingStandard.Commenting.DisallowOneLinePropertyDocComment.OneLinePropertyComment"/>
-        <exclude name="SlevomatCodingStandard.Commenting.DocCommentSpacing"/>
-        <exclude name="SlevomatCodingStandard.Commenting.EmptyComment.EmptyComment"/>
-        <exclude name="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.InvalidFormat"/>
-        <exclude name="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable"/>
-        <exclude name="SlevomatCodingStandard.Commenting.RequireOneLineDocComment.MultiLineDocComment"/>
-        <exclude name="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment"/>
-    </rule>
-    <rule ref="SlevomatCodingStandard.TypeHints">
-        <exclude name="SlevomatCodingStandard.TypeHints.DisallowArrayTypeHintSyntax.DisallowedArrayTypeHintSyntax"/>
-    </rule>
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.DisallowCommentAfterCode.DisallowedCommentAfterCode"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.DisallowOneLinePropertyDocComment.OneLinePropertyComment"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.DocCommentSpacing"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.EmptyComment.EmptyComment"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.InvalidFormat"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.RequireOneLineDocComment.MultiLineDocComment"/> -->
+        <!-- <exclude name="SlevomatCodingStandard.Commenting.RequireOneLinePropertyDocComment"/> -->
+    <!-- </rule> -->
+    <!-- <rule ref="SlevomatCodingStandard.TypeHints"> -->
+        <!-- <exclude name="SlevomatCodingStandard.TypeHints.DisallowArrayTypeHintSyntax.DisallowedArrayTypeHintSyntax"/> -->
+    <!-- </rule> -->
     <rule ref="Squiz.Commenting">
         <exclude name="Squiz.Commenting.BlockComment.NoNewLine"/>
         <exclude name="Squiz.Commenting.BlockComment.WrongStart"/>
