@@ -116,7 +116,7 @@ final readonly class RequestHandler
     /**
      * Centralized exception handler for all request failures.
      */
-    private function handleException(Request $request, Response $response, string $reqId, int $start, Throwable $throwable): void
+    private function handleException(Request $request, Response $response, string $reqId, float $start, Throwable $throwable): void
     {
         $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = is_int($throwable->getCode()) ? $throwable->getCode() : 500;
