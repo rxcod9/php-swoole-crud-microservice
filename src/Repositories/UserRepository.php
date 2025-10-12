@@ -81,7 +81,7 @@ final readonly class UserRepository
                 // Return ID of the newly created user
                 $lastInsertId = $pdo->lastInsertId();
 
-                if ($lastInsertId === false || $lastInsertId === null || $lastInsertId === '' || $lastInsertId === '0') {
+                if (in_array($lastInsertId, [false, null, '', '0'], true)) {
                     $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                     throw new CreateFailedException(Messages::CREATE_FAILED, 500);
                 }
