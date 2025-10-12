@@ -54,6 +54,8 @@ final class UserController extends Controller
     /**
      * Create a new user.
      * Expects JSON body with user data.
+     *
+     * @return array<string, mixed> Created user data
      */
     #[OA\Post(
         path: '/users',
@@ -76,18 +78,21 @@ final class UserController extends Controller
     )]
     public function create(): array
     {
-        $data = json_decode($this->request->rawContent() ?: '[]', true);
-        $data = $this->userService->create($data);
+        $data = json_decode($this->request->rawContent() ?? '[]', true);
+
+        $user = $this->userService->create($data);
 
         // Invalidate cache
         $this->cacheService->invalidateLists('users');
 
-        return $this->json($data, 201);
+        return $this->json($user, 201);
     }
 
     /**
      * List users with optional pagination.
      * Query params: limit (default 100), offset (default 0)
+     *
+     * @return array<string, mixed> List of users with pagination info
      */
     #[OA\Get(
         path: '/users',
@@ -156,7 +161,7 @@ final class UserController extends Controller
         $query = [
             'limit'         => $limit,
             'offset'        => $offset,
-            'filters'       => array_filter($filters),
+            'filters'       => array_filter($filters, fn (?string $v): bool => $v !== null),
             'sortBy'        => $sortBy,
             'sortDirection' => $sortDirection,
         ];
@@ -177,12 +182,14 @@ final class UserController extends Controller
 
     /**
      * Attempt to retrieve cached user list.
-     * @param array $query Contains limit, offset, filters, sortBy, sortDirection
+     * @param array<string, mixed> $query Contains limit, offset, filters, sortBy, sortDirection
+     *
+     * @return array<string, mixed>|null Cached user list or null if not found
      */
     private function getCachedUserList(array $query): ?array
     {
         [$users, $cacheTagType] = $this->cacheService->getList('users', $query);
-        if ($users) {
+        if ($users !== null) {
             return $this->json(data: $users, cacheTagType: $cacheTagType);
         }
 
@@ -191,7 +198,9 @@ final class UserController extends Controller
 
     /**
      * Fetch users from service and cache results.
-     * @param array $query Contains limit, offset, filters, sortBy, sortDirection
+     * @param array<string, mixed> $query Contains limit, offset, filters, sortBy, sortDirection
+     *
+     * @return array<string, mixed> Fetched user list
      */
     private function fetchAndCacheUsers(array $query): array
     {
@@ -216,6 +225,8 @@ final class UserController extends Controller
 
     /**
      * Private helper: resolve pagination params
+     *
+     * @return array{int, int} [limit, offset]
      */
     private function resolvePagination(): array
     {
@@ -232,6 +243,8 @@ final class UserController extends Controller
 
     /**
      * Private helper: resolve filter params
+     *
+     * @return array<string, string|null> Associative array of filters
      */
     private function resolveFilters(): array
     {
@@ -245,6 +258,8 @@ final class UserController extends Controller
 
     /**
      * Private helper: resolve sorting params
+     *
+     * @return array{string, string} [sortBy, sortDirection]
      */
     private function resolveSorting(): array
     {
@@ -256,6 +271,10 @@ final class UserController extends Controller
 
     /**
      * Show a single user by ID.
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> User data
      */
     #[OA\Get(
         path: '/users/{id}',
@@ -289,7 +308,7 @@ final class UserController extends Controller
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id                    = (int)$params['id'];
         [$user, $cacheTagType] = $this->cacheService->getRecord('users', $id);
-        if ($user) {
+        if ($user !== null) {
             return $this->json(data: $user, cacheTagType: $cacheTagType);
         }
 
@@ -302,6 +321,10 @@ final class UserController extends Controller
 
     /**
      * Show a single user by Email.
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> User data
      */
     #[OA\Get(
         path: '/users/email/{email}',
@@ -335,7 +358,7 @@ final class UserController extends Controller
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['email']);
         $email                 = (string)$params['email'];
         [$user, $cacheTagType] = $this->cacheService->getRecordByColumn('users', 'email', $email);
-        if ($user) {
+        if ($user !== null) {
             return $this->json(data: $user, cacheTagType: $cacheTagType);
         }
 
@@ -349,6 +372,11 @@ final class UserController extends Controller
 
     /**
      * Update a user by ID.
+     * Expects JSON body with updated user data.
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Updated user data
      */
     #[OA\Put(
         path: '/users/{id}',
@@ -379,26 +407,30 @@ final class UserController extends Controller
     public function update(array $params): array
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
-        $id      = (int)$params['id'];
-        $payload = json_decode($this->request->rawContent() ?: '[]', true);
+        $id   = (int)$params['id'];
+        $data = json_decode($this->request->rawContent() ?? '[]', true);
 
         [$user] = $this->cacheService->getRecord('users', $id);
-        if (!$user) {
+        if ($user !== null) {
             // Calling find to validate if entiry exists
             $this->userService->find($id);
         }
 
-        $data = $this->userService->update((int)$params['id'], $payload);
+        $user = $this->userService->update((int)$params['id'], $data);
 
-        $this->cacheService->invalidateRecord('users', (int) $payload['id']);
-        $this->cacheService->invalidateRecordByColumn('users', 'email', (string) $payload['email']);
+        $this->cacheService->invalidateRecord('users', (int) $data['id']);
+        $this->cacheService->invalidateRecordByColumn('users', 'email', (string) $data['email']);
         $this->cacheService->invalidateLists('users');
 
-        return $this->json($data);
+        return $this->json($user);
     }
 
     /**
      * Delete a user by ID.
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Deletion status
      */
     #[OA\Delete(
         path: '/users/{id}',

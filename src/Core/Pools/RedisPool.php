@@ -66,7 +66,7 @@ final class RedisPool
      * Initializes the pool with min connections and sets up the channel.
      * Auto-scaling parameters are also configured.
      *
-     * @param array<int, mixed> $conf       Redis connection config (host, port, password, database)
+     * @param array<string, mixed> $conf       Redis connection config (host, port, password, database)
      * @param int               $min        Minimum connections to pre-create
      * @param int               $max        Maximum connections allowed
      * @param float             $idleBuffer Fraction of max pool used to decide scale-down
@@ -80,6 +80,11 @@ final class RedisPool
 
     /**
      * Initialize pool inside a coroutine (e.g. from onWorkerStart).
+     * Pre-creates minimum connections to avoid delays during first use.
+     *
+     * @param int $maxRetry Maximum retry attempts for connection creation (-1 for infinite retries)
+     *
+     * @throws ChannelException If unable to push to channel
      */
     public function init(int $maxRetry = 5): void
     {
@@ -104,9 +109,10 @@ final class RedisPool
      *
      * @param int $attempt Current retry attempt count.
      *
-     * @throws RuntimeException If connection fails after retries.
+     * @throws RedisConnectionFailedException If connection fails after retries.
+     * @throws RedisConnectionException If connection fails due to other errors.
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function make(int $attempt = 0, int $maxRetry = 5): Redis
     {
@@ -117,7 +123,7 @@ final class RedisPool
             $connected = $redis->connect($this->conf['host'] ?? '127.0.0.1', $this->conf['port'] ?? 6379);
 
             // Authenticate if password is provided
-            if ($connected && !empty($this->conf['password'])) {
+            if ($connected && $this->conf['password'] !== null && $this->conf['password'] !== '') {
                 $redis->auth($this->conf['password']);
             }
 
@@ -161,7 +167,8 @@ final class RedisPool
      *
      * @param float $timeout Seconds to wait for a connection
      *
-     * @throws RuntimeException If pool is exhausted or not initialized
+     * @throws RedisPoolNotInitializedException If pool is not initialized
+     * @throws RedisPoolExhaustedException If pool is exhausted or not initialized
      */
     public function get(float $timeout = 1.0): Redis
     {
@@ -200,10 +207,12 @@ final class RedisPool
      * Return a Redis connection back to the pool.
      *
      * @param Redis $redis The Redis connection to return.
+     *
+     * @throws ChannelException If unable to push to channel
      */
     public function put(Redis $redis): void
     {
-        if (!$this->channel->isFull() && $redis->isConnected()) {
+        if (!(bool) $this->channel->isFull() && $redis->isConnected()) {
             $success = $this->channel->push($redis);
             if ($success === false) {
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
@@ -216,7 +225,7 @@ final class RedisPool
         // Pool full, let garbage collector close the Redis object
         $redis->close();
         $this->created = max(0, $this->created - 1);
-        if ($this->channel->isFull()) {
+        if ((bool) $this->channel->isFull()) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
         } else {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis dead connection closed. Total connections: %d', $this->created));
@@ -233,15 +242,16 @@ final class RedisPool
      * @param string            $cmd  Redis command (lowercase or uppercase)
      * @param array<int, mixed> $args Arguments to the Redis command
      *
-     * @throws RuntimeException If command is unsupported
+     * @throws UnsupportedRedisCommandException If command is unsupported
      *
      * @return mixed Result of Redis command
      */
     public function command(string $cmd, array $args = []): mixed
     {
+        /** @var \Redis $redis */
         $redis = $this->get();
         // Ensure connection is returned after use
-        defer(fn (): false => isset($redis) && $this->put($redis));
+        defer(fn () => $this->put($redis));
 
         $cmd = strtolower($cmd);
 
@@ -257,7 +267,7 @@ final class RedisPool
     /**
      * Get current pool statistics.
      *
-     * @return array Associative array with 'capacity', 'available', 'created', and 'in_use' keys.
+     * @return array<string, int> Associative array with 'capacity', 'available', 'created', and 'in_use' keys.
      */
     public function stats(): array
     {
@@ -272,6 +282,8 @@ final class RedisPool
     /**
      * Manual trigger for auto-scaling logic.
      * Can be called periodically (e.g., via a timer) to adjust pool size.
+     *
+     * @throws ChannelException If unable to push to channel
      */
     public function autoScale(): void
     {
@@ -301,7 +313,7 @@ final class RedisPool
             $toClose    = min($this->created - $this->min, $excessIdle);
             for ($i = 0; $i < $toClose; ++$i) {
                 $conn = $this->channel->pop(0.01); // non-blocking pop
-                if ($conn) {
+                if ($conn !== false && $conn instanceof Redis) {
                     $conn->close();
                     $this->created = max(0, $this->created - 1);
                     logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection created. Total connections: %d', $this->created));

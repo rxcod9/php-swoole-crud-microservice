@@ -77,12 +77,12 @@ final readonly class RequestHandler
      */
     public function __invoke(Request $request, Response $response): void
     {
+        $reqId = bin2hex(random_bytes(8));
+        $start = microtime(true);
+
         try {
             $workerReadyChecker = new WorkerReadyChecker();
             $workerReadyChecker->wait();
-
-            $reqId = bin2hex(random_bytes(8));
-            $start = microtime(true);
 
             // Prepare middleware pipeline
             $middlewarePipeline = new MiddlewarePipeline($this->container);
@@ -200,7 +200,7 @@ final readonly class RequestHandler
      * Determine if the given Throwable belongs to the App\Exception namespace.
      *
      */
-    public static function isAppException(Throwable $throwable): bool
+    private function isAppException(Throwable $throwable): bool
     {
         $reflectionClass = new ReflectionClass($throwable);
         $namespace       = $reflectionClass->getNamespaceName();
@@ -244,14 +244,12 @@ final readonly class RequestHandler
     /**
      * Dispatch the request to the appropriate controller action and send the response.
      *
-     * @param mixed                $action   The action handler (e.g. controller@method)
+     * @param string               $action   The action handler (e.g. controller@method)
      * @param array<string,string> $params   Route parameters extracted from the URL
      * @param Request              $request  The incoming HTTP request
      * @param string               $reqId    Unique request ID for logging
      * @param Response             $response The HTTP response to be sent
      * @param float                $start    Timestamp when the request handling started (for metrics)
-     *
-     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     private function dispatch(
         string $action,
@@ -296,15 +294,15 @@ final readonly class RequestHandler
         $response->status($status);
         $response->header('X-Cache-Type', $cacheTagType);
         // Format response
-        if ($html) {
+        if ($html !== null) {
             $response->header('Content-Type', $ctype ?? 'text/html');
             $response->end($status === 204 ? '' : $html);
-        } elseif ($text) {
+        } elseif ($text !== null) {
             $response->header('Content-Type', $ctype ?? 'text/plain');
             $response->end($status === 204 ? '' : $text);
         } else {
             $response->header('Content-Type', $ctype ?? 'application/json');
-            $response->end($status === 204 ? '' : json_encode($json ?: $payload));
+            $response->end($status === 204 ? '' : json_encode($json ?? $payload));
         }
 
         // Metrics & Logging

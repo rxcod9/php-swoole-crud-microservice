@@ -53,6 +53,11 @@ final class MetricsController extends Controller
         //
     }
 
+    /**
+     * Metrics check endpoint to verify the service is running.
+     *
+     * @return array<string, mixed> Metrics data or error message
+     */
     #[OA\Get(
         path: '/metrics',
         summary: 'Metrics Check',

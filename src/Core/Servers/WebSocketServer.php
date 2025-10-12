@@ -48,7 +48,7 @@ final readonly class WebSocketServer
     /**
      * Start the WebSocket server.
      *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function start(): void
     {
@@ -76,7 +76,7 @@ final readonly class WebSocketServer
 
         // Event: Task received
         /**
-         * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+         * @SuppressWarnings("PHPMD.UnusedFormalParameter")
          */
         $ws->on('task', function ($server, $task): true {
             return true;

@@ -51,6 +51,8 @@ final class ItemController extends Controller
     /**
      * Create a new item.
      * Expects JSON body with item data.
+     *
+     * @return array<string, mixed> Created item data
      */
     #[OA\Post(
         path: '/items',
@@ -74,7 +76,7 @@ final class ItemController extends Controller
     )]
     public function create(): array
     {
-        $data = json_decode($this->request->rawContent() ?: '[]', true);
+        $data = json_decode($this->request->rawContent() ?? '[]', true);
         $item = $this->itemService->create($data);
         return $this->json($item, 201);
     }
@@ -82,6 +84,8 @@ final class ItemController extends Controller
     /**
      * List items with optional pagination.
      * Query params: limit (default 100), offset (default 0)
+     *
+     * @return array<string, mixed> List of items with pagination info
      */
     #[OA\Get(
         path: '/items',
@@ -226,6 +230,10 @@ final class ItemController extends Controller
     /**
      * Show a single item by ID.
      * URL param: id
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Item data
      */
     #[OA\Get(
         path: '/items/{id}',
@@ -267,6 +275,10 @@ final class ItemController extends Controller
     /**
      * Show a single item by ID.
      * URL param: id
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Item data
      */
     #[OA\Get(
         path: '/items/sku/{sku}',
@@ -299,7 +311,7 @@ final class ItemController extends Controller
     public function showBySku(array $params): array
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['sku']);
-        $sku  = urldecode((string)$params['sku']);
+        $sku  = urldecode($params['sku']);
         $data = $this->itemService->findBySku($sku);
 
         return $this->json($data);
@@ -309,6 +321,10 @@ final class ItemController extends Controller
      * Update a item by ID.
      * URL param: id
      * Expects JSON body with updated item data.
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Updated item data
      */
     #[OA\Put(
         path: '/items/{id}',
@@ -340,18 +356,22 @@ final class ItemController extends Controller
     public function update(array $params): array
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
-        $id      = (int)$params['id'];
-        $payload = json_decode($this->request->rawContent() ?: '[]', true);
+        $id   = (int)$params['id'];
+        $data = json_decode($this->request->rawContent() ?? '[]', true);
         // Calling find to validate if entiry exists
         $this->itemService->find($id);
-        $data = $this->itemService->update($id, $payload);
+        $item = $this->itemService->update($id, $data);
 
-        return $this->json($data);
+        return $this->json($item);
     }
 
     /**
      * Delete a item by ID.
      * URL param: id
+     *
+     * @param array<string, string|null> $params Route parameters
+     *
+     * @return array<string, mixed> Deletion status
      */
     #[OA\Delete(
         path: '/items/{id}',

@@ -42,6 +42,7 @@ use Swoole\Coroutine\Channel;
  */
 class Logger
 {
+    // Log levels
     public const DEBUG = 100;
 
     public const INFO = 200;
@@ -52,17 +53,28 @@ class Logger
 
     public const CRITICAL = 500;
 
+    // Channel for log messages
     private readonly Channel $channel;
 
+    // Flag to indicate if the logger is running
     private bool $running = false;
 
+    /**
+     * Constructor
+     *
+     * @param string $logFile Path to the log file
+     * @param int $minLevel Minimum log level to record
+     * @param int $bufferSize Size of the channel buffer
+     */
     public function __construct(private readonly string $logFile = '/app/logs/app.log', private readonly int $minLevel = self::DEBUG, int $bufferSize = 10000)
     {
         $this->channel = new Channel($bufferSize);
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * Start the logger coroutine to process log messages.
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function start(): void
     {
@@ -86,6 +98,9 @@ class Logger
         });
     }
 
+    /**
+     * Stop the logger coroutine.
+     */
     public function stop(): void
     {
         $this->running = false;
@@ -93,7 +108,13 @@ class Logger
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * Log a message with a given level.
+     *
+     * @param int $level Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function log(int $level, string $message, array $context = []): void
     {
@@ -116,31 +137,62 @@ class Logger
         }
     }
 
+    /**
+     * Log a debug message.
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     */
     public function debug(string $message, array $context = []): void
     {
         $this->log(self::DEBUG, $message, $context);
     }
 
+    /**
+     * Log an info message.
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     */
     public function info(string $message, array $context = []): void
     {
         $this->log(self::INFO, $message, $context);
     }
 
+    /**
+     * Log a warning message.
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     */
     public function warning(string $message, array $context = []): void
     {
         $this->log(self::WARNING, $message, $context);
     }
 
+    /**
+     * Log an error message.
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     */
     public function error(string $message, array $context = []): void
     {
         $this->log(self::ERROR, $message, $context);
     }
 
+    /**
+     * Log a critical message.
+     * @param string $message Log message
+     * @param array<string, mixed> $context Additional context data
+     */
     public function critical(string $message, array $context = []): void
     {
         $this->log(self::CRITICAL, $message, $context);
     }
 
+    /**
+     * Get the string representation of a log level.
+     *
+     * @param int $level Log level
+     * @return string Log level name
+     */
     private function getLevelName(int $level): string
     {
         return match ($level) {

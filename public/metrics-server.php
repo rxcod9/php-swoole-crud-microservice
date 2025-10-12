@@ -36,7 +36,7 @@ $dotenv->required([
 /**
  * Load application configuration.
  *
- * @var array $config Application configuration array.
+ * @var array<string, mixed> $config Application configuration array.
  */
 $config = require_once __DIR__ . '/../config/config.php';
 

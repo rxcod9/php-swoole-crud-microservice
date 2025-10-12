@@ -54,13 +54,14 @@ final readonly class Dispatcher
      * injects the request if supported, and invokes the method with parameters.
      *
      * @param string            $action Action in the format 'Controller@method'
-     * @param array<int, mixed> $params Parameters to pass to the method
+     * @param array<string, string> $params Parameters to pass to the method
      * @param mixed             $req    Request object (optional)
      *
-     * @throws InvalidArgumentException If the action format is invalid
-     * @throws RuntimeException         If the controller or method does not exist
+     * @throws InvalidArgumentException If the action format is invalid OR If the resolved controller is not an object
+     * @throws ClassNotFoundException If the controller class does not exist
+     * @throws ControllerMethodNotFoundException If the method does not exist in the controller
      *
-     * @return array Response from the controller method
+     * @return array<string, mixed> Response from the controller method
      */
     public function dispatch(string $action, array $params, mixed $req = null): array
     {
@@ -77,6 +78,10 @@ final readonly class Dispatcher
 
         $controller = $this->container->get($fqcn);
 
+        if (!is_object($controller)) {
+            throw new InvalidArgumentException(sprintf('Controller %s is not a valid object.', $fqcn));
+        }
+
         if (!method_exists($controller, $method)) {
             throw new ControllerMethodNotFoundException(sprintf('Method %s does not exist in controller %s.', $method, $fqcn));
         }
@@ -89,6 +94,7 @@ final readonly class Dispatcher
             $controller->setRequest($req);
         }
 
+        /** @var object $controller */
         return $controller->{$method}($params);
     }
 }

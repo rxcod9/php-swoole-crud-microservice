@@ -45,6 +45,8 @@ trait Retryable
      * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
+     * @see shouldRetry()
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function retry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
     {
@@ -77,6 +79,8 @@ trait Retryable
      * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function forceRetry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
     {

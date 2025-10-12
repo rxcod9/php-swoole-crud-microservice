@@ -77,10 +77,10 @@ final class HttpServer
      * Initializes the Swoole HTTP server, sets up event handlers, shared memory table,
      * connection pools, and request handling logic.
      *
-     * @param array<int, mixed> $config Server configuration array
+     * @param array<string, mixed> $config Server configuration array
      * @param Router            $router Router instance for HTTP request routing
      *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function __construct(
         private array $config,
@@ -209,7 +209,7 @@ final class HttpServer
 
         // Worker error event (crash/fatal error)
         /**
-         * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+         * @SuppressWarnings("PHPMD.UnusedFormalParameter")
          */
         $this->server->on(
             'WorkerError',
@@ -267,7 +267,7 @@ final class HttpServer
      *
      * @param string $workerId The ID of the worker to disable
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function disableWorker(
         int $workerId,

@@ -22,7 +22,6 @@ namespace App\Core\Events;
 use App\Core\Container;
 use App\Core\Pools\PDOPool;
 use App\Core\Pools\RedisPool;
-use App\Exceptions\DatabasePoolNotInitializedException;
 
 /**
  * Class PoolBinder
@@ -51,10 +50,6 @@ final class PoolBinder
 
     public function bind(Container $container): void
     {
-        if (!property_exists($this, 'pdoPool') || !$this->pdoPool instanceof \App\Core\Pools\PDOPool || !isset($this->redisPool)) {
-            throw new DatabasePoolNotInitializedException('Database pools not initialized');
-        }
-
         $container->bind(PDOPool::class, fn (): \App\Core\Pools\PDOPool => $this->pdoPool);
         $container->bind(RedisPool::class, fn (): \App\Core\Pools\RedisPool => $this->redisPool);
     }

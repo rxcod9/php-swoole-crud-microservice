@@ -33,17 +33,34 @@ namespace App\Core;
  */
 final class Config
 {
+    /**
+     * Constructor to initialize configuration.
+     *
+     * @param array<string, mixed> $config Configuration array.
+     */
     public function __construct(private array $config)
     {
         //
     }
 
+    /**
+     * Get all configuration settings.
+     *
+     * @return array<string, mixed> All configuration settings.
+     */
     public function all(): array
     {
         return $this->config;
     }
 
-    public function get($key)
+    /**
+     * Get a specific configuration value by key.
+     *
+     * @param string $key Configuration key.
+     *
+     * @return mixed Configuration value or null if key does not exist.
+     */
+    public function get(string $key): mixed
     {
         return $this->config[$key] ?? null;
     }

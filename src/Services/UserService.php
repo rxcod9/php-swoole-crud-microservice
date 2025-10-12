@@ -41,10 +41,10 @@ use PDO;
  * @version   1.0.0
  * @since     2025-10-02
  * @method    int   count()
- * @method    array delete(int $id)
+ * @method    bool delete(int $id)
  * @method    int   filteredCount()
  * @method    array find(int $id)
- * @method    array findBySku(string $sku)
+ * @method    array findByEmail(string $email)
  * @method    array list(int $limit = 20, int $offset = 0, array $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
  */
 final readonly class UserService
@@ -69,14 +69,16 @@ final readonly class UserService
      *
      * @param array<int, mixed> $data User data.
      *
-     * @return array Created user record.
+     * @return array<string, mixed> Created user record.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
-    public function create(array $data): ?array
+    public function create(array $data): array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): ?array {
+        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): array {
             $id = $this->userRepository->create($data);
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'pdoId: #' . $pdoId . ' Created user with ID: ' . var_export($id, true));
-            return $this->pdoPool->forceRetryConnection($pdoId, function () use ($id): ?array {
+            return $this->pdoPool->forceRetryConnection($pdoId, function () use ($id): array {
                 return $this->userRepository->find($id);
             });
         });
@@ -91,7 +93,7 @@ final readonly class UserService
      * @param string            $sortBy  Column to sort by
      * @param string            $sortDir Sort direction ('ASC' or 'DESC')
      *
-     * @return array Array of records
+     * @return array<int, mixed> Array of records
      */
     public function pagination(
         int $limit = 20,
@@ -100,10 +102,7 @@ final readonly class UserService
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        return $this->pdoPool->withConnection(function (
-            PDO $pdo,
-            int $pdoId
-        ) use (
+        return $this->pdoPool->withConnection(function () use (
             $limit,
             $offset,
             $filters,
@@ -172,9 +171,9 @@ final readonly class UserService
      *
      * @return array|null Updated user record or null if not found.
      */
-    public function update(int $id, array $data): ?array
+    public function update(int $id, array $data): array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): ?array {
+        return $this->pdoPool->withConnection(function () use ($id, $data): array {
             $this->userRepository->update($id, $data);
             return $this->userRepository->find($id);
         });
@@ -189,7 +188,7 @@ final readonly class UserService
             throw new BadMethodCallException(sprintf('Method %s does not exist in UserRepository', $name));
         }
 
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($name, $arguments): mixed {
+        return $this->pdoPool->withConnection(function () use ($name, $arguments): mixed {
             return $this->userRepository->$name(...$arguments);
         });
     }

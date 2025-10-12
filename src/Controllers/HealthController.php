@@ -50,6 +50,12 @@ final class HealthController extends Controller
         //
     }
 
+    /**
+     * Health check JSON endpoint.
+     * Returns the health status of the service including worker and cache stats.
+     *
+     * @return array<string,mixed>
+     */
     #[OA\Get(
         path: '/health',
         summary: 'Health Check',
@@ -89,6 +95,8 @@ final class HealthController extends Controller
 
     /**
      * Health check HTML endpoint.
+     *
+     * @return array<string,mixed>
      */
     public function checkHtml(): array
     {
@@ -200,6 +208,8 @@ final class HealthController extends Controller
 
     /**
      * Renders the worker rows HTML.
+     *
+     * @param list<non-empty-array<mixed>> $data
      */
     private function getWorkerRowsHtml(array $data): string
     {
@@ -221,8 +231,8 @@ final class HealthController extends Controller
         </tr>';
 
         foreach ($data as $wid => $row) {
-            $statusClass = $row['alive'] ? 'alive' : 'dead';
-            $statusText  = $row['alive'] ? 'Alive' : 'Dead';
+            $statusClass = (bool)$row['alive'] ? 'alive' : 'dead';
+            $statusText  = (bool)$row['alive'] ? 'Alive' : 'Dead';
             $rows .= "<tr>
                 <td>{$wid}</td>
                 <td>{$row['pid']}</td>
@@ -279,6 +289,8 @@ final class HealthController extends Controller
 
     /**
      * Renders the cache rows HTML.
+     *
+     * @param list<non-empty-array<mixed>> $data
      */
     private function getCacheRowsHtml(array $data): string
     {
@@ -342,7 +354,7 @@ final class HealthController extends Controller
     private function renderServerStatsHtml(): string
     {
         $stats = $this->server->stats();
-        if (!$stats) {
+        if ($stats === []) {
             return '<p>No server stats available.</p>';
         }
 

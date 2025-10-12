@@ -84,8 +84,6 @@ final class Container
      *
      * @param string $id Identifier for the service.
      *
-     * @throws RuntimeException If the identifier cannot be resolved.
-     *
      * @return mixed The resolved service instance.
      */
     public function get(string $id): mixed
@@ -128,7 +126,7 @@ final class Container
         $ctor = $reflectionClass->getConstructor();
 
         // No constructor: just create the instance
-        if (!$ctor) {
+        if ($ctor === null) {
             return new $class();
         }
 
@@ -137,7 +135,8 @@ final class Container
             $t = $parameter->getType();
 
             // Resolve class dependencies recursively
-            if ($t && !$t->isBuiltin()) {
+            /** @var \ReflectionNamedType|null $t */
+            if ($t !== null && !$t->isBuiltin()) {
                 $args[] = $this->get($t->getName());
                 continue;
             }

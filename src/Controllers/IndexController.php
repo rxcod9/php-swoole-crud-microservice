@@ -55,6 +55,11 @@ final class IndexController extends Controller
         //
     }
 
+    /**
+     * Home endpoint.
+     *
+     * @return array<string,mixed> JSON response
+     */
     #[OA\Get(
         path: '/',
         summary: 'Home',

@@ -63,8 +63,8 @@ final readonly class TaskDispatcher
      * @param array<int, mixed> $arguments Parameters to pass to the method
      * @param Task              $task      Request object
      *
-     * @throws InvalidArgumentException If the class format is invalid
-     * @throws RuntimeException         If the task or handle method does not exist
+     * @throws TaskNotFoundException If the class format is invalid
+     * @throws TaskContractViolationException         If the task or handle method does not exist
      *
      * @return bool Response from the task method
      */
@@ -117,17 +117,27 @@ final readonly class TaskDispatcher
         }
     }
 
-    private function handle($instance, array $arguments)
+    /**
+     * Invoke the handle method or __invoke() of the task instance.
+     *
+     * @param mixed $controller Task instance
+     * @param array<int, mixed> $arguments Arguments to pass to the method
+     *
+     * @throws TaskContractViolationException If the task does not have a handle method or is not invokable
+     */
+    private function handle(Controller $controller, array $arguments): void
     {
-        if (method_exists($instance, 'handle')) {
-            return $instance->handle(...$arguments);
+        if (method_exists($controller, 'handle')) {
+            $controller->handle(...$arguments);
+            return;
         }
 
-        if (is_callable($instance)) {
+        if (is_callable($controller)) {
             // covers __invoke()
-            return $instance(...$arguments);
+            $controller(...$arguments);
+            return;
         }
 
-        throw new TaskContractViolationException('Task ' . $instance::class . ' must have a handle() method or be invokable (__invoke)');
+        throw new TaskContractViolationException('Task ' . $controller::class . ' must have a handle() method or be invokable (__invoke)');
     }
 }

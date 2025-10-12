@@ -60,6 +60,7 @@ final readonly class MetricsServer
     /**
      * MetricsServer constructor.
      *
+     * @param array<string, mixed> $config Configuration array containing Redis settings.
      * @param int $port The port to listen on (default: 9310).
      */
     public function __construct(
@@ -72,7 +73,8 @@ final readonly class MetricsServer
     /**
      * Starts the Swoole HTTP server to serve metrics.
      *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function start(): void
     {
@@ -83,9 +85,6 @@ final readonly class MetricsServer
          *
          * @param Request  $_        The incoming HTTP request (unused).
          * @param Response $response The HTTP response object.
-         *
-         * @SuppressWarnings(PHPMD.StaticAccess)
-         * @SuppressWarnings(PHPMD.UnusedFormalParameter)
          */
         $server->on('request', function (Request $request, Response $response): void {
             try {
@@ -134,7 +133,7 @@ final readonly class MetricsServer
      * Determine if the given Throwable belongs to the App\Exception namespace.
      *
      */
-    public static function isAppException(Throwable $throwable): bool
+    private function isAppException(Throwable $throwable): bool
     {
         $reflectionClass = new ReflectionClass($throwable);
         $namespace       = $reflectionClass->getNamespaceName();

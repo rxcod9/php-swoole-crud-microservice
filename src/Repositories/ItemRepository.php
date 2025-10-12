@@ -127,7 +127,7 @@ final readonly class ItemRepository
      *
      * @return array|null Item data or null if not found
      */
-    public function find(int $id): ?array
+    public function find(int $id): array
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
             try {
@@ -189,7 +189,7 @@ final readonly class ItemRepository
      *
      * @return array|null Item data or null if not found
      */
-    public function findBySku(string $sku): ?array
+    public function findBySku(string $sku): array
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($sku) {
             try {
@@ -253,7 +253,7 @@ final readonly class ItemRepository
      * @param string            $sortBy  Sort column
      * @param string            $sortDir Sort direction
      *
-     * @return array List of items
+     * @return array<int, mixed> List of items
      */
     public function list(
         int $limit = 20,
@@ -376,7 +376,7 @@ final readonly class ItemRepository
     /**
      * Count items with optional filters.
      *
-     * @param array<int, mixed> $filters Filter conditions
+     * @param array<string, mixed> $filters Filter conditions
      *
      * @return int Number of filtered items
      */

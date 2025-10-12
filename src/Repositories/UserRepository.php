@@ -260,7 +260,7 @@ final readonly class UserRepository
      * @param string            $sortBy  Column to sort by
      * @param string            $sortDir Sort direction ('ASC' or 'DESC')
      *
-     * @return array Array of users
+     * @return array<int, mixed> Array of users
      */
     public function list(
         int $limit = 20,

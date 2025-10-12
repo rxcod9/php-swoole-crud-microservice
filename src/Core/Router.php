@@ -36,8 +36,20 @@ use App\Exceptions\RouteNotFoundException;
 final class Router
 {
     /**
-     * @var array<string, array<int, array{regex: string, vars: array<int, string>, path: string}, string, array>>
-     *                                                                                                             Stores the registered routes grouped by HTTP method.
+     * Registered routes.
+     *
+     * Structure:
+     * [
+     *   'GET' => [
+     *       [ 'regex' => '#^/users/([^/]+)$#', 'vars' => ['id'], 'path' => '/users/{id}' ], 'UserController@show', ['AuthMiddleware']
+     *   ],
+     *   'POST' => [
+     *       [ 'regex' => '#^/users$#', 'vars' => [], 'path' => '/users' ], 'UserController@create', ['AuthMiddleware']
+     *   ],
+     *   ...
+     * ]
+     *
+     * @var array<string, array<int, array{0: array{regex: string, vars: array<int, string>, path: string}, 1: string, 2: array<class-string>}>>
      */
     private array $routes = [];
 
@@ -103,23 +115,40 @@ final class Router
     }
 
     /**
-     * Matches an incoming HTTP request to a registered route.
+     * Match a request method and URI against registered routes.
      *
-     * @param string $method HTTP method
+     * @param string $method HTTP method (GET, POST, etc.)
      * @param string $uri    Request URI
      *
-     * @throws RuntimeException If no route matches (404)
+     * @throws RouteNotFoundException If no route matches
      *
-     * @return array{0: string, 1: array<string, string>, 2: array<class-string>} Matched action, parameters, and middlewares
+     * @return array{0: mixed, 1: array<string, string>, 2: array} [action, params, middlewares]
      */
     public function match(string $method, string $uri): array
     {
-        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
-        foreach ($this->routes[strtoupper($method)] ?? [] as [$compiled, $action, $middlewares]) {
-            if (preg_match($compiled['regex'], $path, $m)) {
+        $parsedPath = parse_url($uri, PHP_URL_PATH);
+        $path       = $parsedPath !== false ? $parsedPath : '/';
+
+        $upperMethod = strtoupper($method);
+
+        $routesForMethod = $this->routes[$upperMethod] ?? [];
+
+        foreach ($routesForMethod as [$compiled, $action, $middlewares]) {
+            if (!isset($compiled['regex'], $compiled['vars'])) {
+                // Skip invalid route entries
+                continue;
+            }
+
+            if (!is_array($compiled['vars'])) {
+                // Skip invalid route entries
+                continue;
+            }
+
+            if (preg_match($compiled['regex'], $path, $matches)) {
                 $params = [];
                 foreach ($compiled['vars'] as $i => $name) {
-                    $params[$name] = $m[$i + 1];
+                    // Ensure the match exists and is a string
+                    $params[$name] = $matches[$i + 1] ?? '';
                 }
 
                 return [$action, $params, $middlewares];

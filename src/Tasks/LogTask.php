@@ -46,8 +46,8 @@ final class LogTask implements TaskInterface
         static $log = null;
         if (!$log) {
             $log = new Logger('access');
-            // $log->pushHandler(new StreamHandler('/app/logs/access.log'));
-            $log->pushHandler(new StreamHandler('php://stdout'));
+            $log->pushHandler(new StreamHandler('/app/logs/access.log'));
+            // $log->pushHandler(new StreamHandler('php://stdout'));
         }
 
         $log->log(

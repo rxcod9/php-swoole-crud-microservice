@@ -71,7 +71,7 @@ abstract class Controller
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: application/json)
      *
-     * @return array The structured response containing status and JSON data.
+     * @return array<string, mixed> The structured response containing status and JSON data.
      */
     protected function json(
         mixed $data,
@@ -94,7 +94,7 @@ abstract class Controller
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: text/html)
      *
-     * @return array The structured response containing status and HTML data.
+     * @return array<string, mixed> The structured response containing status and HTML data.
      */
     protected function html(
         mixed $data,
@@ -117,7 +117,7 @@ abstract class Controller
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: text/plain)
      *
-     * @return array The structured response containing status and Text data.
+     * @return array<string, mixed> The structured response containing status and Text data.
      */
     protected function text(
         mixed $data,

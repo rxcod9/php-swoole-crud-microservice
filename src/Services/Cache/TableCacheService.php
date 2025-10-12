@@ -250,7 +250,7 @@ final readonly class TableCacheService
      *
      * @param string[] $entities
      *
-     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
+     * @SuppressWarnings("PHPMD.UnusedLocalVariable")
      */
     public function gcOldListVersions(array $entities, int $keepVersions = 2): void
     {

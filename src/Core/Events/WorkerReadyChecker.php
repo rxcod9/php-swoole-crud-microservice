@@ -43,7 +43,7 @@ final class WorkerReadyChecker
     public const TAG = 'WorkerReadyChecker';
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function wait(int $timeoutMs = 2000): void
     {

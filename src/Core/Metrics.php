@@ -20,7 +20,8 @@ declare(strict_types=1);
 namespace App\Core;
 
 use Prometheus\CollectorRegistry;
-use Prometheus\Storage\Redis;
+use Prometheus\Storage\Redis as RedisAdapter;
+use Redis;
 
 /**
  * Class Metrics
@@ -40,14 +41,16 @@ final class Metrics
     /**
      * Returns a CollectorRegistry instance using the specified Redis connection.
      *
-     * @param mixed $redis The Redis connection instance.
+     * @param Redis $redis The Redis connection instance.
      *
      * @return CollectorRegistry The CollectorRegistry instance.
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function getCollectorRegistry(\Redis $redis): CollectorRegistry
+    public function getCollectorRegistry(Redis $redis): CollectorRegistry
     {
         return new CollectorRegistry(
-            Redis::fromExistingConnection($redis)
+            RedisAdapter::fromExistingConnection($redis)
         );
     }
 }

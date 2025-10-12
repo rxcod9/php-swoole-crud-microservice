@@ -42,7 +42,13 @@ use Swoole\Http\Server;
 final class RequestLogger
 {
     /**
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * Log the request data by dispatching a LogTask.
+     * @param string $level Log level (e.g., 'info', 'error')
+     * @param Server $server Swoole HTTP Server instance
+     * @param Request $request Swoole HTTP Request instance
+     * @param array<string, mixed> $data Data to be logged
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function log(string $level, Server $server, Request $request, array $data): void
     {

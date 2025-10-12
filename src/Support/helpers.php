@@ -26,8 +26,13 @@ use App\Exceptions\CreateFailedException;
 if (!\function_exists('logDebug')) {
     /**
      * Write a consistent log line using error_log().
-     *
      * Automatically prefixes coroutine ID and helper name.
+     *
+     * @param string $tag Tag or source of the log message
+     * @param string $message The log message
+     * @param array<string, mixed> $context Additional context data (optional)
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     function logDebug(string $tag, string $message, array $context = []): void
     {

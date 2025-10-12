@@ -61,8 +61,8 @@ final class WorkerStartHandler
      *
      * @throws CacheSetException
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings("PHPMD.StaticAccess")
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function __invoke(Server $server, int $workerId): void
     {
@@ -91,8 +91,8 @@ final class WorkerStartHandler
     }
 
     /**
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function startTimers(int $workerId, int $pid): void
     {
@@ -101,7 +101,7 @@ final class WorkerStartHandler
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function clearTimers(int $workerId): void
     {

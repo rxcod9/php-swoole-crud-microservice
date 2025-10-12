@@ -43,14 +43,14 @@ final class TaskFinishHandler
     public const TAG = 'TaskFinishHandler';
 
     /**
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function __invoke(Server $server, int $taskId, mixed $data): bool
     {
         $class = $data['class'] ?? 'unknown';
         $error = $data['error'] ?? null;
 
-        if ($error) {
+        if ($error !== null) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[Task Failed] %s -> %s%s', $class, $error, PHP_EOL));
             return false;
         }

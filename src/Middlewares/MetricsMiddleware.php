@@ -52,7 +52,7 @@ final class MetricsMiddleware implements MiddlewareInterface
     }
 
     /**
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function handle(Request $request, Response $response, callable $next): void
     {

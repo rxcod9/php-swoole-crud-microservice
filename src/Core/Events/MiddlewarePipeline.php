@@ -36,6 +36,9 @@ use Swoole\Http\Response;
  */
 final class MiddlewarePipeline
 {
+    /**
+     * Constructor.
+     */
     public function __construct(private readonly Container $container)
     {
         //
@@ -46,6 +49,8 @@ final class MiddlewarePipeline
 
     /**
      * Add a single middleware to the pipeline.
+     *
+     * @param callable|string $middleware Middleware instance or class name.
      */
     public function addMiddleware(callable|string $middleware): void
     {
@@ -54,6 +59,8 @@ final class MiddlewarePipeline
 
     /**
      * Add multiple middlewares at once.
+     *
+     * @param array<callable|string> $middlewares List of middlewares to add.
      */
     public function addMiddlewares(array $middlewares): void
     {
@@ -64,6 +71,9 @@ final class MiddlewarePipeline
 
     /**
      * Execute the pipeline.
+     * @param Request  $request      The incoming HTTP request.
+     * @param Response $response     The outgoing HTTP response.
+     * @param callable $finalHandler The final handler to call after all middleware.
      */
     public function handle(Request $request, Response $response, callable $finalHandler): void
     {
@@ -73,6 +83,9 @@ final class MiddlewarePipeline
 
     /**
      * Convert the middleware list into a single callable stack.
+     *
+     * @param callable $finalHandler The final handler to call after all middleware.
+     * @return callable The composed middleware stack.
      */
     private function buildStack(callable $finalHandler): callable
     {
@@ -85,6 +98,11 @@ final class MiddlewarePipeline
 
     /**
      * Invoke a middleware instance or callable without else expression.
+     *
+     * @param callable|string $middleware Middleware instance or class name.
+     * @param Request         $request    The incoming HTTP request.
+     * @param Response        $response   The outgoing HTTP response.
+     * @param callable        $next       The next middleware or final handler.
      */
     private function invokeMiddleware(callable|string $middleware, Request $request, Response $response, callable $next): void
     {
