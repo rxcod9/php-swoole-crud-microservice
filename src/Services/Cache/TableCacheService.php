@@ -40,6 +40,7 @@ use Carbon\Carbon;
 final readonly class TableCacheService
 {
     public const CACHE_TYPE = 'Table';
+
     public const TAG = 'TableCacheService';
 
     public function __construct(

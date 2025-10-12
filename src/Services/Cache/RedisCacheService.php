@@ -38,6 +38,7 @@ use App\Core\Pools\RedisPool;
 final readonly class RedisCacheService
 {
     public const CACHE_TYPE = 'REDIS';
+
     public const string TAG = 'RedisCacheService';
 
     public function __construct(

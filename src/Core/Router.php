@@ -156,9 +156,9 @@ final class Router
      * @param string $method HTTP method
      * @param string $uri    Request URI
      *
-     * @return array|null The route details (compiled, action, middlewares) if found
+     * @return mixed[] The route details (compiled, action, middlewares) if found
      */
-    public function getRouteByPath(string $method, string $uri): ?array
+    public function getRouteByPath(string $method, string $uri): array
     {
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
         foreach ($this->routes as $routeMethod => $routes) {
@@ -173,6 +173,6 @@ final class Router
             }
         }
 
-        return null;
+        return [null, null, []];
     }
 }

@@ -20,8 +20,11 @@ declare(strict_types=1);
 namespace App\Core\Servers;
 
 use App\Core\Messages;
-use App\Core\Metrics;
+use App\Core\Pools\RedisPool;
+use Prometheus\CollectorRegistry;
 use Prometheus\RenderTextFormat;
+use Prometheus\Storage\Redis;
+use ReflectionClass;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
@@ -59,8 +62,11 @@ final readonly class MetricsServer
      *
      * @param int $port The port to listen on (default: 9310).
      */
-    public function __construct(private int $port = 9310)
-    {
+    public function __construct(
+        private array $config,
+        private int $port = 9310
+    ) {
+        //
     }
 
     /**
@@ -83,19 +89,57 @@ final readonly class MetricsServer
          */
         $server->on('request', function (Request $request, Response $response): void {
             try {
+                $redisConf = $this->config['redis'];
+                $redisPool = new RedisPool($redisConf, $redisConf['pool']['min'], $redisConf['pool']['max'] ?? 200);
+
+                $redisPool->init(-1);
+                $redis             = $redisPool->get();
+                $collectorRegistry = new CollectorRegistry(
+                    Redis::fromExistingConnection($redis)
+                );
+
                 $renderTextFormat = new RenderTextFormat();
 
-                $metrics = $renderTextFormat->render(Metrics::reg()->getMetricFamilySamples());
+                $metrics = $renderTextFormat->render($collectorRegistry->getMetricFamilySamples());
 
                 $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
                 $response->end($metrics);
             } catch (Throwable $throwable) {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
                 $response->status(500);
-                $response->end(json_encode(['error' => Messages::ERROR_INTERNAL_ERROR]));
+                $response->end(json_encode(['error' => $this->getErrorMessage($throwable)]));
+            } finally {
+                if (isset($redisPool, $redis)) {
+                    $redisPool->put($redis);
+                }
             }
         });
 
         $server->start();
+    }
+
+    /**
+     * Centralized exception handler for all request failures.
+     */
+    private function getErrorMessage(Throwable $throwable): string
+    {
+        if ($this->isAppException($throwable)) {
+            return $throwable->getMessage();
+        }
+
+        return Messages::ERROR_INTERNAL_ERROR;
+    }
+
+    /**
+     * Determine if the given Throwable belongs to the App\Exception namespace.
+     *
+     */
+    public static function isAppException(Throwable $throwable): bool
+    {
+        $reflectionClass = new ReflectionClass($throwable);
+        $namespace       = $reflectionClass->getNamespaceName();
+
+        // You can tweak this prefix to match your actual project namespace
+        return str_starts_with($namespace, 'App\\Exceptions');
     }
 }

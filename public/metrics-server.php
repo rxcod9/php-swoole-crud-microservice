@@ -29,6 +29,8 @@ $dotenv->load();
 // Optional: validate required env variables
 $dotenv->required([
     'METRICS_PORT',
+    'REDIS_HOST',
+    'REDIS_PORT',
 ])->notEmpty();
 
 /**
@@ -37,6 +39,9 @@ $dotenv->required([
  * @var array $config Application configuration array.
  */
 $config = require_once __DIR__ . '/../config/config.php';
+
+// Set the default timezone for the application.
+date_default_timezone_set($config['app']['timezone'] ?? 'Asia/Kolkata');
 
 /**
  * Metrics server port.
@@ -61,7 +66,7 @@ if (!\defined('SWOOLE_EVENT_LOOP_STARTED')) {
      *
      * @var MetricsServer $metricsServer
      */
-    $metricsServer = new MetricsServer($port);
+    $metricsServer = new MetricsServer($config, $port);
     $metricsServer->start();
 } else {
     /**

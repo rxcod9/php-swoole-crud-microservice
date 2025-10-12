@@ -19,7 +19,8 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Metrics;
+use App\Core\Router;
+use Prometheus\CollectorRegistry;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -41,6 +42,13 @@ use Swoole\Http\Response;
  */
 final class MetricsMiddleware implements MiddlewareInterface
 {
+    public function __construct(
+        private readonly CollectorRegistry $collectorRegistry,
+        private readonly Router $router
+    ) {
+        //
+    }
+
     /**
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
@@ -51,14 +59,21 @@ final class MetricsMiddleware implements MiddlewareInterface
         $next($request, $response); // call next middleware
 
         $dur       = microtime(true) - $start;
-        $reg       = Metrics::reg();
+        $reg       = $this->collectorRegistry;
         $counter   = $reg->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
         $histogram = $reg->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
 
         $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = $response->status ?? 200;
 
-        $counter->inc([$request->server['request_method'], $path, (string)$status]);
-        $histogram->observe($dur, [$request->server['request_method'], $path]);
+        [$route] = $this->router->getRouteByPath(
+            $request->server['request_method'],
+            $path ?? '/'
+        );
+
+        if ($route && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
+            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+        }
     }
 }

@@ -21,8 +21,8 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Messages;
-use App\Core\Metrics;
 use OpenApi\Attributes as OA;
+use Prometheus\CollectorRegistry;
 use Prometheus\RenderTextFormat;
 use Throwable;
 
@@ -42,6 +42,14 @@ final class MetricsController extends Controller
 {
     public const TAG = 'MetricsController';
 
+    /**
+     * MetricsController constructor.
+     */
+    public function __construct(private readonly CollectorRegistry $collectorRegistry)
+    {
+        //
+    }
+
     #[OA\Get(
         path: '/metrics',
         summary: 'Metrics Check',
@@ -58,7 +66,7 @@ final class MetricsController extends Controller
     {
         try {
             $renderTextFormat = new RenderTextFormat();
-            $metrics          = $renderTextFormat->render(Metrics::reg()->getMetricFamilySamples());
+            $metrics          = $renderTextFormat->render($this->collectorRegistry->getMetricFamilySamples());
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
         } catch (Throwable $throwable) {

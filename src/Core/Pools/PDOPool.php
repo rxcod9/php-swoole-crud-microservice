@@ -15,7 +15,6 @@
  * @since     2025-10-02
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Pools/PDOPool.php
  */
-
 declare(strict_types=1);
 
 namespace App\Core\Pools;
@@ -236,7 +235,7 @@ final class PDOPool
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection returned to pool'));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'PDO connection returned to pool');
             return;
         }
 
@@ -400,7 +399,7 @@ final class PDOPool
                 }
 
                 $id = $onDuplicateCallback ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
-                if(!$id) {
+                if (!$id) {
                     throw $throwable;
                 }
             }

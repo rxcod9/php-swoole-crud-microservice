@@ -22,7 +22,6 @@ namespace App\Core\Events;
 use App\Core\Container;
 use App\Core\Dispatcher;
 use App\Core\Messages;
-use App\Core\Metrics;
 use App\Core\Router;
 use App\Middlewares\CompressionMiddleware;
 use App\Middlewares\CorsMiddleware;
@@ -30,6 +29,7 @@ use App\Middlewares\HideServerHeaderMiddleware;
 use App\Middlewares\LoggingMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\SecurityHeadersMiddleware;
+use Prometheus\CollectorRegistry;
 use ReflectionClass;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -95,7 +95,7 @@ final readonly class RequestHandler
                 fn () => $this->dispatchRouteMiddlewarePipeline($request, $reqId, $response, $start)
             );
         } catch (Throwable $throwable) {
-            $this->handleException($request, $response, $throwable);
+            $this->handleException($request, $response, $reqId, $start, $throwable);
         }
     }
 
@@ -116,8 +116,9 @@ final readonly class RequestHandler
     /**
      * Centralized exception handler for all request failures.
      */
-    private function handleException(Request $request, Response $response, Throwable $throwable): void
+    private function handleException(Request $request, Response $response, string $reqId, int $start, Throwable $throwable): void
     {
+        $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = is_int($throwable->getCode()) ? $throwable->getCode() : 500;
 
         $response->header('Content-Type', 'application/json');
@@ -131,19 +132,51 @@ final readonly class RequestHandler
             'line'       => $throwable->getLine(),
         ]));
 
-        $requestLogger = new RequestLogger();
-        $requestLogger->log(
-            'error',
-            $this->server,
-            $request,
-            [
-                'error' => $throwable->getMessage(),
-                'code'  => $status,
-                'trace' => $throwable->getTraceAsString(),
-                'file'  => $throwable->getFile(),
-                'line'  => $throwable->getLine(),
-            ]
-        );
+        // Metrics & Logging
+        $dur = microtime(true) - $start;
+
+        if (!in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            [$route] = $this->router->getRouteByPath(
+                $request->server['request_method'],
+                $path ?? '/'
+            );
+
+            // Metrics setup
+            $reg     = $this->container->get(CollectorRegistry::class);
+            $counter = $reg->getOrRegisterCounter(
+                'http_requests_total',
+                'Requests',
+                'Total HTTP requests',
+                ['method', 'path', 'status']
+            );
+            $histogram = $reg->getOrRegisterHistogram(
+                'http_request_seconds',
+                'Latency',
+                'HTTP request latency',
+                ['method', 'path']
+            );
+            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
+            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+
+            $requestLogger = new RequestLogger();
+            $requestLogger->log(
+                'error',
+                $this->server,
+                $request,
+                [
+                    'id'     => $reqId,
+                    'method' => $request->server['request_method'],
+                    'path'   => $path,
+                    'status' => $status,
+                    'dur_ms' => (int) round($dur * 1000),
+                    'error'  => $throwable->getMessage(),
+                    'code'   => $status,
+                    'trace'  => $throwable->getTraceAsString(),
+                    'file'   => $throwable->getFile(),
+                    'line'   => $throwable->getLine(),
+                ]
+            );
+        }
     }
 
     /**
@@ -224,7 +257,7 @@ final readonly class RequestHandler
         float $start
     ): void {
         // Metrics setup
-        $reg     = Metrics::reg();
+        $reg     = $this->container->get(CollectorRegistry::class);
         $counter = $reg->getOrRegisterCounter(
             'http_requests_total',
             'Requests',
@@ -274,20 +307,20 @@ final readonly class RequestHandler
             );
             $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
             $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
-        }
 
-        $requestLogger = new RequestLogger();
-        $requestLogger->log(
-            'debug',
-            $this->server,
-            $request,
-            [
-                'id'     => $reqId,
-                'method' => $request->server['request_method'],
-                'path'   => $path,
-                'status' => $status,
-                'dur_ms' => (int) round($dur * 1000),
-            ]
-        );
+            $requestLogger = new RequestLogger();
+            $requestLogger->log(
+                'debug',
+                $this->server,
+                $request,
+                [
+                    'id'     => $reqId,
+                    'method' => $request->server['request_method'],
+                    'path'   => $path,
+                    'status' => $status,
+                    'dur_ms' => (int) round($dur * 1000),
+                ]
+            );
+        }
     }
 }

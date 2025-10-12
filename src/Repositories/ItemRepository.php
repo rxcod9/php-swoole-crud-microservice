@@ -90,7 +90,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -106,7 +106,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE',
+                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -152,7 +152,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -168,7 +168,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FIND',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FIND',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -214,7 +214,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -230,7 +230,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -343,7 +343,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -359,7 +359,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'LIST',
+                    self::TAG . ':' . __LINE__ . '] [' . 'LIST',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -445,7 +445,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -461,7 +461,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
+                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -505,7 +505,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -521,7 +521,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT',
+                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -562,7 +562,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -578,7 +578,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
+                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,
@@ -615,7 +615,7 @@ final readonly class ItemRepository
             } catch (Throwable $throwable) {
                 // Log exception here
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
+                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
                         $pdoId,
@@ -631,7 +631,7 @@ final readonly class ItemRepository
 
                 // Log only if there was an error
                 logDebug(
-                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE',
+                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
                         $pdoId,

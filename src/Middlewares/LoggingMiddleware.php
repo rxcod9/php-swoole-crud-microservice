@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use App\Core\Constants;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -51,10 +50,10 @@ final class LoggingMiddleware implements MiddlewareInterface
 
         $dur = microtime(true) - $start;
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf(
-            "[%s] %s %s - %.2fms\n",
-            date(Constants::DATETIME_FORMAT),
+            "[%s] %s %s %d - %.2fms\n",
             $request->server['request_method'] ?? '-',
             $request->server['request_uri'] ?? '-',
+            $response->status ?? '-',
             $dur * 1000
         ));
     }

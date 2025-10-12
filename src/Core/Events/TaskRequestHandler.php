@@ -21,7 +21,7 @@ namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Core\Events\TaskRequestDispatcher as Dispatcher;
-use App\Core\Metrics;
+use Prometheus\CollectorRegistry;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
 use Throwable;
@@ -68,7 +68,7 @@ final readonly class TaskRequestHandler
             $start  = microtime(true);
 
             // Metrics collection
-            $reg     = Metrics::reg();
+            $reg     = $this->container->get(CollectorRegistry::class);
             $counter = $reg->getOrRegisterCounter(
                 'task_requests_total',
                 'Tasks',

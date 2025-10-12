@@ -88,10 +88,9 @@ if (!\function_exists('secondsReadable')) {
         }
 
         $result = implode(' ', $parts);
-        $final  = $negative ? '-' . $result : $result;
 
         // logDebug(__FUNCTION__, 'final result', ['result' => $final]);
-        return $final;
+        return $negative ? '-' . $result : $result;
     }
 }
 
@@ -116,10 +115,9 @@ if (!\function_exists('bytesReadable')) {
         }
 
         $result = round($bytes, $precision) . ' ' . $units[$i];
-        $final  = $negative ? '-' . $result : $result;
 
         // logDebug(__FUNCTION__, 'final result', ['result' => $final]);
-        return $final;
+        return $negative ? '-' . $result : $result;
     }
 }
 
@@ -280,12 +278,10 @@ if (!\function_exists('maybeDecodeJson')) {
             // logDebug(__FUNCTION__, 'json_decode attempted', ['error' => json_last_error_msg()]);
         }
 
-        $return = (json_last_error() === JSON_ERROR_NONE && $decoded !== null)
+        // logDebug(__FUNCTION__, 'returning', ['type' => gettype($return)]);
+        return (json_last_error() === JSON_ERROR_NONE && $decoded !== null)
             ? $decoded
             : $value;
-
-        // logDebug(__FUNCTION__, 'returning', ['type' => gettype($return)]);
-        return $return;
     }
 }
 
