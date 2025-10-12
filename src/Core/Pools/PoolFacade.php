@@ -36,6 +36,8 @@ use Throwable;
  */
 final class PoolFacade
 {
+    public const TAG = 'PoolFacade';
+
     public function __construct(
         private readonly PDOPool $pdoPool,
         private readonly RedisPool $redisPool,
@@ -65,13 +67,13 @@ final class PoolFacade
         try {
             $this->pdoPool->autoScale();
         } catch (Throwable $throwable) {
-            error_log(sprintf('[Worker %d] PDO autoScale error: %s', $workerId, $throwable->getMessage()));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('[Worker %d] PDO autoScale error: %s,  trace: %s', $workerId, $throwable->getMessage(), $throwable->getTraceAsString()));
         }
 
         try {
             $this->redisPool->autoScale();
         } catch (Throwable $throwable) {
-            error_log(sprintf('[Worker %d] Redis autoScale error: %s', $workerId, $throwable->getMessage()));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('[Worker %d] Redis autoScale error: %s,  trace: %s', $workerId, $throwable->getMessage(), $throwable->getTraceAsString()));
         }
     }
 

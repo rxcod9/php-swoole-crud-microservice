@@ -39,6 +39,8 @@ use OpenApi\Attributes as OA;
  */
 final class UserController extends Controller
 {
+    public const TAG = 'UserController';
+
     /**
      * Inject UserService for business logic operations.
      */
@@ -284,7 +286,7 @@ final class UserController extends Controller
     )]
     public function show(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id                    = (int)$params['id'];
         [$user, $cacheTagType] = $this->cacheService->getRecord('users', $id);
         if ($user) {
@@ -330,7 +332,7 @@ final class UserController extends Controller
     )]
     public function showByEmail(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['email']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['email']);
         $email                 = (string)$params['email'];
         [$user, $cacheTagType] = $this->cacheService->getRecordByColumn('users', 'email', $email);
         if ($user) {
@@ -376,7 +378,7 @@ final class UserController extends Controller
     )]
     public function update(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id      = (int)$params['id'];
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
 
@@ -417,7 +419,7 @@ final class UserController extends Controller
     )]
     public function destroy(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id = (int)$params['id'];
         $ok = $this->userService->delete($id);
         if ($ok) {

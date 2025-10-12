@@ -1,275 +1,1403 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "description": "Redis",
-  "editable": true,
-  "gnetId": null,
-  "graphTooltip": 1,
   "id": null,
-  "iteration": 1,
-  "links": [],
+  "uid": "redis",
+  "title": "Redis",
+  "tags": [
+    "redis",
+    "production",
+    "alerts"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
     {
       "type": "row",
       "title": "Overview",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "Total Memory Usage",
-      "type": "graph",
-      "datasource": "Prometheus",
-      "targets": [
-        { "expr": "redis_memory_used_bytes", "legendFormat": "Used Memory", "refId": "A" },
-        { "expr": "redis_memory_peak_bytes", "legendFormat": "Peak Memory", "refId": "B" }
-      ],
-      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 6 },
-      "thresholds": [{ "value": 80, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
-    },
-    {
-      "title": "Memory Fragmentation Ratio",
+      "id": 1,
+      "title": "redis_up",
       "type": "stat",
       "datasource": "Prometheus",
-      "targets": [{ "expr": "redis_memory_fragmentation_ratio", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 1, "w": 6, "h": 4 },
-      "thresholds": [{ "value": 1.5, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "targets": [
+        {
+          "expr": "redis_up",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "options": {}
     },
     {
-      "title": "Memory Peak vs Allocated",
-      "type": "bargauge",
+      "id": 2,
+      "title": "uptime_in_seconds",
+      "type": "stat",
       "datasource": "Prometheus",
       "targets": [
-        { "expr": "redis_memory_allocated_bytes", "refId": "A", "legendFormat": "Allocated" },
-        { "expr": "redis_memory_peak_bytes", "refId": "B", "legendFormat": "Peak" }
+        {
+          "expr": "redis_uptime_in_seconds",
+          "refId": "A"
+        }
       ],
-      "gridPos": { "x": 18, "y": 1, "w": 6, "h": 4 }
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "id": 3,
+      "title": "connected_clients",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_connected_clients",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 10000
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "instant_ops_per_sec",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_instantaneous_ops_per_sec",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "id": 5,
+      "title": "commands_processed_total (rate 1m)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_commands_processed_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 4
+      }
     },
     {
       "type": "row",
-      "title": "CPU & Processes",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "title": "Memory & Allocator",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "CPU System & User",
-      "type": "graph",
+      "id": 6,
+      "title": "memory_used_bytes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
       "targets": [
-        { "expr": "rate(redis_cpu_sys_seconds_total[1m])", "legendFormat": "CPU Sys", "refId": "A" },
-        { "expr": "rate(redis_cpu_user_seconds_total[1m])", "legendFormat": "CPU User", "refId": "B" }
+        {
+          "expr": "redis_memory_used_bytes",
+          "refId": "A"
+        }
       ],
-      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 6 },
-      "thresholds": [{ "value": 90, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 5
+      },
+      "alert": {
+        "name": "Redis Memory High",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                12000000
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting",
+        "notifications": []
+      }
     },
     {
-      "title": "Commands Processed Per Second",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_commands_processed_total[1m])", "legendFormat": "Cmd/s", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 6 },
-      "thresholds": [{ "value": 10000, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
-    },
-    {
-      "title": "Connected Clients",
+      "id": 7,
+      "title": "memory_used_peak_bytes",
       "type": "stat",
-      "targets": [{ "expr": "redis_connected_clients", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 14, "w": 6, "h": 4 },
-      "thresholds": [{ "value": 1000, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_memory_used_peak_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 6,
+        "h": 3
+      }
     },
     {
-      "title": "Blocked Clients",
+      "id": 8,
+      "title": "memory_used_dataset_bytes",
       "type": "stat",
-      "targets": [{ "expr": "redis_blocked_clients", "refId": "A" }],
-      "gridPos": { "x": 6, "y": 14, "w": 6, "h": 4 },
-      "thresholds": [{ "value": 5, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_memory_used_dataset_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 6,
+        "w": 6,
+        "h": 3
+      }
     },
     {
-      "title": "Slow Queries",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_slowlog_entries_total[5m])", "legendFormat": "Slow Queries/s", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 4 }
+      "id": 9,
+      "title": "allocator_allocated_bytes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_allocator_allocated_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 9,
+        "w": 6,
+        "h": 2
+      }
+    },
+    {
+      "id": 10,
+      "title": "allocator_active_bytes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_allocator_active_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 9,
+        "w": 6,
+        "h": 2
+      }
+    },
+    {
+      "id": 11,
+      "title": "allocator_resident_bytes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_allocator_resident_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 6,
+        "h": 2
+      }
+    },
+    {
+      "id": 12,
+      "title": "allocator_rss_bytes",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_allocator_rss_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 11,
+        "w": 6,
+        "h": 2
+      }
+    },
+    {
+      "id": 13,
+      "title": "memory_fragmentation_ratio",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_mem_fragmentation_ratio",
+          "refId": "A"
+        },
+        {
+          "expr": "redis_allocator_frag_ratio",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 2
+      },
+      "alert": {
+        "name": "Memory Fragmentation High",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "avg"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                2
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting",
+        "notifications": []
+      }
     },
     {
       "type": "row",
-      "title": "Keyspace",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "title": "CPU & Process",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "Keys per DB",
+      "id": 14,
+      "title": "cpu_user_seconds_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_cpu_user_seconds_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 8,
+        "h": 4
+      }
+    },
+    {
+      "id": 15,
+      "title": "cpu_sys_seconds_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_cpu_sys_seconds_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 14,
+        "w": 8,
+        "h": 4
+      }
+    },
+    {
+      "id": 16,
+      "title": "process_resident_memory_bytes",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 4
+      }
+    },
+    {
+      "id": 17,
+      "title": "process_open_fds",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_open_fds",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 6,
+        "h": 3
+      }
+    },
+    {
+      "id": 18,
+      "title": "process_max_fds",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_max_fds",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 18,
+        "w": 6,
+        "h": 3
+      }
+    },
+    {
+      "id": 19,
+      "title": "process_virtual_memory_bytes",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "process_virtual_memory_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 3
+      }
+    },
+    {
+      "type": "row",
+      "title": "Clients & Connections",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 20,
+      "title": "connected_clients (gauge)",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_connected_clients",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "alert": {
+        "name": "High Connected Clients",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "avg"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                500
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting",
+        "notifications": []
+      }
+    },
+    {
+      "id": 21,
+      "title": "blocked_clients",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_blocked_clients",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "alert": {
+        "name": "Blocked Clients",
+        "for": "1m",
+        "frequency": "30s",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                0
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting",
+        "notifications": []
+      }
+    },
+    {
+      "id": 22,
+      "title": "connected_slaves",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_connected_slaves",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 23,
+      "title": "connections_received_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_connections_received_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 24,
+      "title": "rejected_connections_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_rejected_connections_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 6,
+        "h": 3
+      },
+      "alert": {
+        "name": "Rejected Connections Spike",
+        "for": "3m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "avg"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                0
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting",
+        "notifications": []
+      }
+    },
+    {
+      "id": 25,
+      "title": "client_recent_max_input_buffer_bytes",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_client_recent_max_input_buffer_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 26,
+        "w": 6,
+        "h": 3
+      }
+    },
+    {
+      "id": 26,
+      "title": "client_recent_max_output_buffer_bytes",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_client_recent_max_output_buffer_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 6,
+        "h": 3
+      }
+    },
+    {
+      "type": "row",
+      "title": "Persistence (AOF / RDB)",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 27,
+      "title": "aof_enabled",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_aof_enabled",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      },
+      "alert": {
+        "name": "AOF Disabled",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "eq",
+              "params": [
+                0
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
+    },
+    {
+      "id": 28,
+      "title": "aof_rewrite_in_progress",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_aof_rewrite_in_progress",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 4,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 29,
+      "title": "aof_last_write_status",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_aof_last_write_status",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      },
+      "alert": {
+        "name": "AOF Write Failure",
+        "for": "2m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "eq",
+              "params": [
+                0
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
+    },
+    {
+      "id": 30,
+      "title": "rdb_bgsave_in_progress",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_rdb_bgsave_in_progress",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 31,
+      "title": "rdb_last_bgsave_status",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_rdb_last_bgsave_status",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      },
+      "alert": {
+        "name": "RDB Last Save Failure",
+        "for": "2m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "eq",
+              "params": [
+                0
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
+    },
+    {
+      "id": 32,
+      "title": "rdb_last_save_timestamp_seconds",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_rdb_last_save_timestamp_seconds",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 20,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "type": "row",
+      "title": "Keys & Expiry",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 33,
+      "title": "db_keys (per db)",
       "type": "table",
+      "datasource": "Prometheus",
       "targets": [
-        { "expr": "redis_db_keys", "legendFormat": "{{db}} keys", "refId": "A" },
-        { "expr": "redis_db_keys_expiring", "legendFormat": "{{db}} expiring", "refId": "B" }
+        {
+          "expr": "redis_db_keys",
+          "refId": "A"
+        }
       ],
-      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 }
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 8,
+        "h": 5
+      }
     },
     {
-      "title": "Expired Keys per Second",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_expired_keys_total[1m])", "legendFormat": "Expired Keys/s", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 4 },
-      "thresholds": [{ "value": 100, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "id": 34,
+      "title": "db_keys_expiring (per db)",
+      "type": "table",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_db_keys_expiring",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 34,
+        "w": 8,
+        "h": 5
+      }
     },
     {
-      "title": "Evicted Keys per Second",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_evicted_keys_total[1m])", "legendFormat": "Evicted Keys/s", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 4 },
-      "thresholds": [{ "value": 50, "colorMode": "critical", "fill": true, "line": true, "op": "gt" }]
+      "id": 35,
+      "title": "expired_keys_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_expired_keys_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 34,
+        "w": 8,
+        "h": 5
+      },
+      "alert": {
+        "name": "High Expiry Rate",
+        "for": "3m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "avg"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                100
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
+    },
+    {
+      "id": 36,
+      "title": "keyspace_hits_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_keyspace_hits_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 12,
+        "h": 4
+      }
+    },
+    {
+      "id": 37,
+      "title": "keyspace_misses_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_keyspace_misses_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 12,
+        "h": 4
+      }
+    },
+    {
+      "id": 38,
+      "title": "keyspace_hit_ratio (derived)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 6,
+        "h": 3
+      }
     },
     {
       "type": "row",
-      "title": "Persistence",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "title": "Eviction / Memory Pressure",
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "RDB Last Save Time",
+      "id": 39,
+      "title": "evicted_keys_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_evicted_keys_total[1m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 46,
+        "w": 6,
+        "h": 4
+      },
+      "alert": {
+        "name": "High Eviction Rate",
+        "for": "3m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "avg"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                50
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
+    },
+    {
+      "id": 40,
+      "title": "current_eviction_exceeded_time_ms",
       "type": "stat",
-      "targets": [{ "expr": "redis_last_save_time_seconds", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 29, "w": 6, "h": 4 }
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_current_eviction_exceeded_time_ms",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 6,
+        "h": 4
+      }
     },
     {
-      "title": "AOF Enabled",
+      "id": 41,
+      "title": "expired_stale_percentage",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_expired_stale_percentage",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 46,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 42,
+      "title": "memory_not_counted_for_eviction_bytes",
       "type": "stat",
-      "targets": [{ "expr": "redis_aof_enabled", "refId": "A" }],
-      "gridPos": { "x": 6, "y": 29, "w": 6, "h": 4 },
-      "thresholds": [{ "value": 1, "colorMode": "critical", "fill": true, "line": true, "op": "lt" }]
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_mem_not_counted_for_eviction_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 6,
+        "h": 3
+      }
     },
     {
-      "title": "AOF Current Size",
-      "type": "graph",
-      "targets": [{ "expr": "redis_aof_current_size_bytes", "legendFormat": "AOF Size", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 29, "w": 12, "h": 4 }
-    },
-    {
-      "title": "AOF Rewrite In Progress",
+      "id": 43,
+      "title": "memory_used_overhead_bytes",
       "type": "stat",
-      "targets": [{ "expr": "redis_aof_rewrite_in_progress", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 33, "w": 6, "h": 4 }
-    },
-    {
-      "title": "RDB Save In Progress",
-      "type": "stat",
-      "targets": [{ "expr": "redis_rdb_bgsave_in_progress", "refId": "A" }],
-      "gridPos": { "x": 6, "y": 33, "w": 6, "h": 4 }
-    },
-    {
-      "title": "AOF Pending Fsync",
-      "type": "graph",
-      "targets": [{ "expr": "redis_aof_pending_bio_fsync", "legendFormat": "Pending fsync", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 33, "w": 12, "h": 4 }
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_memory_used_overhead_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 49,
+        "w": 6,
+        "h": 3
+      }
     },
     {
       "type": "row",
-      "title": "Replication",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
+      "title": "Replication & Cluster",
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "Connected Slaves",
+      "id": 44,
+      "title": "master_repl_offset",
       "type": "stat",
-      "targets": [{ "expr": "redis_connected_slaves", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 38, "w": 6, "h": 4 }
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_master_repl_offset",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 6,
+        "h": 4
+      }
     },
     {
-      "title": "Master Link Status",
+      "id": 45,
+      "title": "replication_backlog_bytes",
       "type": "stat",
-      "targets": [{ "expr": "redis_master_link_status", "refId": "A" }],
-      "gridPos": { "x": 6, "y": 38, "w": 6, "h": 4 },
-      "thresholds": [{ "value": 1, "colorMode": "critical", "fill": true, "line": true, "op": "lt" }]
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_replication_backlog_bytes",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 53,
+        "w": 6,
+        "h": 4
+      }
     },
     {
-      "title": "Replication Lag",
-      "type": "graph",
-      "targets": [{ "expr": "redis_master_last_io_seconds", "legendFormat": "Master Lag", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 38, "w": 12, "h": 4 }
-    },
-    {
-      "title": "Replication Partial Syncs",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_partial_resync_total[1m])", "legendFormat": "Partial Syncs/s", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 42, "w": 12, "h": 4 }
-    },
-    {
-      "title": "Replication Full Syncs",
-      "type": "graph",
-      "targets": [{ "expr": "rate(redis_full_resync_total[1m])", "legendFormat": "Full Syncs/s", "refId": "A" }],
-      "gridPos": { "x": 12, "y": 42, "w": 12, "h": 4 }
+      "id": 46,
+      "title": "replica_resyncs_full_total (rate)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(redis_replica_resyncs_full[5m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 53,
+        "w": 12,
+        "h": 4
+      }
     },
     {
       "type": "row",
       "title": "Latency & Command Stats",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "title": "Command Latency Heatmap",
-      "type": "heatmap",
+      "id": 47,
+      "title": "commands_latency_avg_us (derived)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "rate(redis_commands_latencies_usec_sum[5m]) / rate(redis_commands_latencies_usec_count[5m])",
-          "legendFormat": "Avg Command Latency (us)",
+          "expr": "sum(rate(redis_commands_duration_seconds_total[1m])) by (cmd) * 1000000 / sum(rate(redis_commands_total[1m])) by (cmd)",
           "refId": "A"
         }
       ],
-      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 6 }
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 12,
+        "h": 6
+      },
+      "alert": {
+        "name": "High Command Latency",
+        "for": "2m",
+        "frequency": "1m",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                500
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
     },
     {
-      "title": "Instantaneous Ops/sec",
-      "type": "graph",
-      "targets": [{ "expr": "redis_instantaneous_ops_per_sec", "legendFormat": "Ops/sec", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 53, "w": 12, "h": 4 }
-    },
-    {
-      "title": "Network In/Out",
-      "type": "graph",
-      "targets": [
-        { "expr": "rate(redis_net_input_bytes_total[1m])", "legendFormat": "Input Bytes/s", "refId": "A" },
-        { "expr": "rate(redis_net_output_bytes_total[1m])", "legendFormat": "Output Bytes/s", "refId": "B" }
-      ],
-      "gridPos": { "x": 12, "y": 53, "w": 12, "h": 4 }
-    },
-    {
-      "title": "Eviction Policy",
-      "type": "stat",
-      "targets": [{ "expr": "redis_eviction_policy", "refId": "A" }],
-      "gridPos": { "x": 0, "y": 57, "w": 6, "h": 4 }
-    },
-    {
-      "title": "Keyspace Hits & Misses",
-      "type": "graph",
-      "targets": [
-        { "expr": "rate(redis_keyspace_hits_total[1m])", "legendFormat": "Hits/s", "refId": "A" },
-        { "expr": "rate(redis_keyspace_misses_total[1m])", "legendFormat": "Misses/s", "refId": "B" }
-      ],
-      "gridPos": { "x": 6, "y": 57, "w": 12, "h": 4 }
-    },
-    {
-      "title": "Connected Clients by Commands",
+      "id": 48,
+      "title": "commands_total (per cmd)",
       "type": "table",
-      "targets": [{ "expr": "redis_clients_by_command", "refId": "A" }],
-      "gridPos": { "x": 18, "y": 57, "w": 6, "h": 4 }
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_commands_total",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 58,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "id": 49,
+      "title": "commands_latencies_histogram (sample)",
+      "type": "heatmap",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_commands_latencies_usec_bucket",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 50,
+      "title": "last_slow_execution_duration_seconds",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_last_slow_execution_duration_seconds",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "alert": {
+        "name": "Slow Execution Detected",
+        "for": "1m",
+        "frequency": "30s",
+        "handler": 1,
+        "conditions": [
+          {
+            "type": "query",
+            "query": {
+              "params": [
+                "A"
+              ]
+            },
+            "reducer": {
+              "type": "last"
+            },
+            "evaluator": {
+              "type": "gt",
+              "params": [
+                0.1
+              ]
+            },
+            "operator": {
+              "type": "and"
+            }
+          }
+        ],
+        "noDataState": "no_data",
+        "executionErrorState": "alerting"
+      }
     }
   ],
-  "schemaVersion": 36,
   "style": "dark",
-  "tags": ["redis", "production"],
-  "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Redis",
-  "uid": "redis",
-  "version": 1
+  "timepicker": {}
 }

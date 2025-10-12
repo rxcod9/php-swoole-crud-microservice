@@ -42,6 +42,8 @@ use Throwable;
  */
 final readonly class UserRepository
 {
+    public const TAG = 'UserRepository';
+
     /**
      * Constructor
      *
@@ -63,7 +65,8 @@ final readonly class UserRepository
      */
     public function create(array $data): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): int {
+        return $this->pdoPool->withConnectionAndRetryForCreate(function (PDO $pdo, int $pdoId) use ($data): int {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating user with data: ' . var_export($data, true));
             try {
                 // Prepare INSERT statement with named parameters
                 $sql  = 'INSERT INTO users (name, email) VALUES (:name, :email)';
@@ -77,27 +80,22 @@ final readonly class UserRepository
 
                 // Return ID of the newly created user
                 $lastInsertId = $pdo->lastInsertId();
-                // ✅ Fallback if returned 0 or empty
-                if (!$lastInsertId || $lastInsertId === '0') {
-                    $result       = $pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
-                    $lastInsertId = $result ?: false;
-                }
 
-                error_log('Last Insert ID: ' . var_export($lastInsertId, true));
                 if ($lastInsertId === false || $lastInsertId === null || $lastInsertId === '' || $lastInsertId === '0') {
                     $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                     throw new CreateFailedException(Messages::CREATE_FAILED, 500);
                 }
 
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Last Insert ID: ' . var_export($lastInsertId, true));
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return (int)$lastInsertId;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -110,11 +108,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -135,7 +132,8 @@ final readonly class UserRepository
      */
     public function find(int $id): ?array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding user with ID: ' . var_export($id, true));
             try {
                 // Prepare SELECT query
                 $sql  = 'SELECT id, name, email, created_at, updated_at FROM users WHERE id=:id LIMIT 1';
@@ -159,11 +157,10 @@ final readonly class UserRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -176,11 +173,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -201,7 +197,8 @@ final readonly class UserRepository
      */
     public function findByEmail(string $email): ?array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($email) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($email) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL', 'pdoId: ' . $pdoId . ' Finding user with email: ' . var_export($email, true));
             try {
                 $sql  = 'SELECT id, name, email, created_at, updated_at FROM users WHERE email=:email LIMIT 1';
                 $stmt = $pdo->prepare($sql);
@@ -223,11 +220,10 @@ final readonly class UserRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -240,11 +236,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -274,7 +269,7 @@ final readonly class UserRepository
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        return $this->pdoPool->withConnection(function (
+        return $this->pdoPool->withConnectionAndRetry(function (
             PDO $pdo,
             int $pdoId
         ) use (
@@ -284,6 +279,7 @@ final readonly class UserRepository
             $sortBy,
             $sortDir
         ) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'LIST', 'pdoId: ' . $pdoId . ' Listing users with limit: ' . var_export($limit, true) . ', offset: ' . var_export($offset, true) . ', filters: ' . var_export($filters, true) . ', sortBy: ' . var_export($sortBy, true) . ', sortDir: ' . var_export($sortDir, true));
             try {
                 // Validate pagination values
                 $limit  = max(1, min($limit, 100));
@@ -356,11 +352,10 @@ final readonly class UserRepository
                 return $results;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -373,11 +368,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'LIST',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -398,7 +392,8 @@ final readonly class UserRepository
      */
     public function filteredCount(array $filters = []): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($filters): int {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($filters): int {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT', 'pdoId: ' . $pdoId . ' Counting users with filters: ' . var_export($filters, true));
             try {
                 $sql    = 'SELECT count(*) as filtered FROM users';
                 $where  = [];
@@ -461,11 +456,10 @@ final readonly class UserRepository
                 return (int) ($result['filtered'] ?? 0);
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -478,11 +472,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -501,7 +494,8 @@ final readonly class UserRepository
      */
     public function count(): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId): int {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId): int {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT', 'pdoId: ' . $pdoId . ' Counting all users');
             try {
                 $sql  = 'SELECT count(*) as total FROM users';
                 $stmt = $pdo->prepare($sql);
@@ -523,11 +517,10 @@ final readonly class UserRepository
                 return (int) ($result['total'] ?? 0);
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -540,11 +533,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -567,6 +559,7 @@ final readonly class UserRepository
     public function update(int $id, array $data): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): bool {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'UPDATE', 'pdoId: ' . $pdoId . ' Updating user with ID: ' . var_export($id, true) . ' and data: ' . var_export($data, true));
             try {
                 $sql  = 'UPDATE users SET name=:name, email=:email WHERE id=:id';
                 $stmt = $pdo->prepare($sql);
@@ -581,11 +574,10 @@ final readonly class UserRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -598,11 +590,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -624,6 +615,7 @@ final readonly class UserRepository
     public function delete(int $id): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id): bool {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting user with ID: ' . var_export($id, true));
             try {
                 $sql  = 'DELETE FROM users WHERE id=:id';
                 $stmt = $pdo->prepare($sql);
@@ -636,11 +628,10 @@ final readonly class UserRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -653,11 +644,10 @@ final readonly class UserRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'

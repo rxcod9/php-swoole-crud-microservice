@@ -39,7 +39,8 @@ use Carbon\Carbon;
  */
 final readonly class TableCacheService
 {
-    public const string TAG = 'TABLE';
+    public const CACHE_TYPE = 'Table';
+    public const TAG = 'TableCacheService';
 
     public function __construct(
         private TableWithLRUAndGC $tableWithLRUAndGC,
@@ -237,7 +238,7 @@ final readonly class TableCacheService
 
         // Set row back to table, but avoid logging flood
         if (!$this->tableWithLRUAndGC->set($key, $row)) {
-            error_log('Failed to touch key: ' . $key);
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Failed to touch key: ' . $key);
         }
 
         return $row;

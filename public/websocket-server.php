@@ -65,5 +65,5 @@ if (!\defined('SWOOLE_EVENT_LOOP_STARTED')) {
     /**
      * Log a message if the Swoole event loop is already started.
      */
-    error_log('Swoole event loop already started. WebSocketServer not started again.');
+    logDebug(__FILE__ , 'Swoole event loop already started. WebSocketServer not started again.');
 }

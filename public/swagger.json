@@ -168,25 +168,65 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "properties": {
-                                            "id": {
-                                                "type": "integer"
-                                            },
-                                            "sku": {
-                                                "type": "string"
-                                            },
-                                            "title": {
-                                                "type": "string"
-                                            },
-                                            "price": {
-                                                "type": "number",
-                                                "format": "float"
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "sku": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "price": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-09-21 09:28:37"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-09-21 09:28:37"
+                                                    }
+                                                },
+                                                "type": "object"
                                             }
                                         },
-                                        "type": "object"
-                                    }
+                                        "pagination": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "count": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                },
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "total_pages": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -256,7 +296,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Item found",
+                        "description": "Found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -281,7 +321,7 @@
                         }
                     },
                     "404": {
-                        "description": "Item not found"
+                        "description": "Resource %s not found."
                     }
                 }
             },
@@ -329,7 +369,7 @@
                         "description": "Item updated"
                     },
                     "404": {
-                        "description": "Item not found"
+                        "description": "Resource %s not found."
                     }
                 }
             },
@@ -355,7 +395,7 @@
                         "description": "Item deleted"
                     },
                     "404": {
-                        "description": "Item not found"
+                        "description": "Resource %s not found."
                     }
                 }
             }
@@ -380,7 +420,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Item found",
+                        "description": "Found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -405,7 +445,7 @@
                         }
                     },
                     "404": {
-                        "description": "Item not found"
+                        "description": "Resource %s not found."
                     }
                 }
             }
@@ -636,7 +676,7 @@
                     "Users"
                 ],
                 "summary": "Get user by ID",
-                "description": "Show a single user by ID.\nURL param: id",
+                "description": "Show a single user by ID.",
                 "operationId": "3e1085012615dfc5eb5cd0f2e49afc5f",
                 "parameters": [
                     {
@@ -650,7 +690,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "User found",
+                        "description": "Found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -671,7 +711,7 @@
                         }
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "Resource %s not found."
                     }
                 }
             },
@@ -680,7 +720,7 @@
                     "Users"
                 ],
                 "summary": "Update user",
-                "description": "Update a user by ID.\nURL param: id\nExpects JSON body with updated user data.",
+                "description": "Update a user by ID.",
                 "operationId": "e14711e3727e4a4f04dfc70a7545196f",
                 "parameters": [
                     {
@@ -715,7 +755,7 @@
                         "description": "User updated"
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "Resource %s not found."
                     }
                 }
             },
@@ -724,7 +764,7 @@
                     "Users"
                 ],
                 "summary": "Delete user",
-                "description": "Delete a user by ID.\nURL param: id",
+                "description": "Delete a user by ID.",
                 "operationId": "3bd648dde20da95dfe15b3113dd7546b",
                 "parameters": [
                     {
@@ -741,7 +781,7 @@
                         "description": "User deleted"
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "Resource %s not found."
                     }
                 }
             }
@@ -752,7 +792,7 @@
                     "Users"
                 ],
                 "summary": "Get user by Email",
-                "description": "Show a single user by Email.\nURL param: id",
+                "description": "Show a single user by Email.",
                 "operationId": "1df924e56cb85c4b082c644be659b203",
                 "parameters": [
                     {
@@ -766,7 +806,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "User found",
+                        "description": "Found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -787,7 +827,7 @@
                         }
                     },
                     "404": {
-                        "description": "User not found"
+                        "description": "Resource %s not found."
                     }
                 }
             }

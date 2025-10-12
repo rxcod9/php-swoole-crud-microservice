@@ -43,6 +43,8 @@ use Swoole\Timer;
  */
 final class WorkerStartHandler
 {
+    public const TAG = 'WorkerStartHandler';
+
     /** @var array<int, array<int>> Keeps track of timers per worker */
     private array $workerTimers = [];
 
@@ -65,12 +67,12 @@ final class WorkerStartHandler
     public function __invoke(Server $server, int $workerId): void
     {
         $pid = posix_getpid();
-        error_log(sprintf('Worker %d started with %d%s', $workerId, $pid, PHP_EOL));
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Worker %d started with %d%s', $workerId, $pid, PHP_EOL));
 
         $this->initializeWorkerRow($workerId, $pid);
         AppContext::setWorkerReady(true);
 
-        error_log("Worker {$workerId} with PID {$pid} ready\n");
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, "Worker {$workerId} with PID {$pid} ready\n");
 
         $this->startTimers($workerId, $pid);
     }
@@ -116,7 +118,7 @@ final class WorkerStartHandler
 
     private function handleTick(mixed $timerId, int $workerId, int $pid): void
     {
-        error_log("Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, "Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
 
         $this->updateWorkerStats($workerId, $pid, $timerId);
         $this->poolFacade->autoScale($workerId);

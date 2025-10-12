@@ -1,51 +1,43 @@
 <?php
 
 /**
- * src/Core/Messages.php
+ * src/Exceptions/RetryFailedException.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
  *
- * @category  Core
- * @package   App\Core
+ * @category  Exceptions
+ * @package   App\Exceptions
  * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
- * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Messages.php
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Exceptions/RetryFailedException.php
  */
 declare(strict_types=1);
 
-namespace App\Core;
+namespace App\Exceptions;
+
+use RuntimeException;
 
 /**
- * Class Messages
+ * Class RetryFailedException
  * Handles all user-related operations such as creation, update,
  * deletion, and retrieval. Integrates with external services and
  * logs critical operations.
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  *
- * @category  Core
- * @package   App\Core
+ * @category  Exceptions
+ * @package   App\Exceptions
  * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
  */
-class Messages
+final class RetryFailedException extends RuntimeException
 {
-    public const ERROR_INTERNAL_ERROR = 'An internal error occurred. Please try again later.';
-
-    public const ROUTE_NOT_FOUND = 'Route not found.';
-
-    public const RESOURCE_NOT_FOUND = 'Resource %s not found.';
-
-    public const PDO_EXCEPTION_MESSAGE = '[ERROR] pdoId #%s - Code: %s | PDOException: %s';
-
-    public const PDO_EXCEPTION_FINALLY_MESSAGE = '[FINALLY] pdoId #%s - Code: %s | Info: %s';
-
-    public const CREATE_FAILED = 'Unable to create. Please try again later.';
+    //
 }

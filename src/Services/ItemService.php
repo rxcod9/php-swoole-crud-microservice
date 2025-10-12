@@ -24,7 +24,9 @@ namespace App\Services;
 
 use App\Core\Pools\PDOPool;
 use App\Repositories\ItemRepository;
+use App\Traits\Retryable;
 use BadMethodCallException;
+use PDO;
 
 /**
  * Class ItemService
@@ -47,6 +49,10 @@ use BadMethodCallException;
  */
 final readonly class ItemService
 {
+    use Retryable;
+
+    public const TAG = 'ItemService';
+
     /**
      * ItemService constructor.
      *
@@ -67,10 +73,10 @@ final readonly class ItemService
      */
     public function create(array $data): ?array
     {
-        return $this->pdoPool->withConnection(function () use ($data): ?array {
+        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): ?array {
             $id = $this->itemRepository->create($data);
-            error_log('Created item with ID: ' . var_export($id, true));
-            return $this->pdoPool->retry(function () use ($id): ?array {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'pdoId: #' . $pdoId . 'Created item with ID: ' . var_export($id, true));
+            return $this->pdoPool->forceRetryConnection($pdoId, function () use ($id): ?array {
                 return $this->itemRepository->find($id);
             });
         });
@@ -94,7 +100,10 @@ final readonly class ItemService
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        return $this->pdoPool->withConnection(function () use (
+        return $this->pdoPool->withConnection(function (
+            PDO $pdo,
+            int $pdoId
+        ) use (
             $limit,
             $offset,
             $filters,
@@ -165,11 +174,9 @@ final readonly class ItemService
      */
     public function update(int $id, array $data): ?array
     {
-        return $this->pdoPool->withConnection(function () use ($id, $data): ?array {
+        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): ?array {
             $this->itemRepository->update($id, $data);
-            return $this->pdoPool->retry(function () use ($id): ?array {
-                return $this->itemRepository->find($id);
-            });
+            return $this->itemRepository->find($id);
         });
     }
 
@@ -182,7 +189,7 @@ final readonly class ItemService
             throw new BadMethodCallException(sprintf('Method %s does not exist in ItemRepository', $name));
         }
 
-        return $this->pdoPool->withConnection(function () use ($name, $arguments): mixed {
+        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($name, $arguments): mixed {
             return $this->itemRepository->$name(...$arguments);
         });
     }

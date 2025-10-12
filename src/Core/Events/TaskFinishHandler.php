@@ -40,6 +40,8 @@ use Swoole\Http\Server;
  */
 final class TaskFinishHandler
 {
+    public const TAG = 'TaskFinishHandler';
+
     /**
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
@@ -49,11 +51,11 @@ final class TaskFinishHandler
         $error = $data['error'] ?? null;
 
         if ($error) {
-            error_log(sprintf('[Task Failed] %s -> %s%s', $class, $error, PHP_EOL));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[Task Failed] %s -> %s%s', $class, $error, PHP_EOL));
             return false;
         }
 
-        error_log(sprintf('Task %d finished:  %s -> {', $taskId, $class) . json_encode($data) . '}' . PHP_EOL);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Task %d finished:  %s -> {', $taskId, $class) . json_encode($data) . '}' . PHP_EOL);
 
         // @TODO call TaskListener for chaining
         return true;
