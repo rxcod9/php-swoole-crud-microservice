@@ -216,8 +216,11 @@ final class RedisPool
         // Pool full, let garbage collector close the Redis object
         $redis->close();
         $this->created = max(0, $this->created - 1);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection created. Total connections: %d', $this->created));
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
+        if ($this->channel->isFull()) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
+        } else {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis dead connection closed. Total connections: %d', $this->created));
+        }
     }
 
     /**

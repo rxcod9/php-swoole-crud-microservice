@@ -25,7 +25,6 @@ use App\Core\Messages;
 use App\Core\Metrics;
 use App\Core\Pools\RedisPool;
 use App\Core\Router;
-use App\Middlewares\CompressionMiddleware;
 use App\Middlewares\CorsMiddleware;
 use App\Middlewares\HideServerHeaderMiddleware;
 use App\Middlewares\LoggingMiddleware;
@@ -107,7 +106,6 @@ final readonly class RequestHandler
     {
         // $middlewarePipeline->addMiddleware(MetricsMiddleware::class);
         $middlewarePipeline->addMiddleware(LoggingMiddleware::class);
-        $middlewarePipeline->addMiddleware(CompressionMiddleware::class);
         $middlewarePipeline->addMiddleware(HideServerHeaderMiddleware::class);
         $middlewarePipeline->addMiddleware(SecurityHeadersMiddleware::class);
         $middlewarePipeline->addMiddleware(CorsMiddleware::class);

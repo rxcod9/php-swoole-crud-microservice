@@ -402,6 +402,8 @@ final class PDOPool
                 if (!$id) {
                     throw $throwable;
                 }
+
+                return $id;
             }
 
             // Retry only if "Connection refused" (MySQL error 2002)
