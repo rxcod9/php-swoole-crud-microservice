@@ -193,7 +193,7 @@ class TableWithLRUAndGC implements Iterator, Countable
     /* -------------------------
      * Property access
      * ------------------------- */
-    public function __get(string $name)
+    public function __get(string $name): mixed
     {
         if (property_exists($this->table, $name)) {
             return $this->table->$name;
@@ -202,7 +202,7 @@ class TableWithLRUAndGC implements Iterator, Countable
         throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
     }
 
-    public function __set(string $name, $value): void
+    public function __set(string $name, mixed $value): void
     {
         if (property_exists($this->table, $name)) {
             $this->table->$name = $value;
