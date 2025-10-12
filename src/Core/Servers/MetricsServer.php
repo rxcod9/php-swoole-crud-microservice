@@ -52,6 +52,8 @@ if (!defined('SWOOLE_BASE')) {
  */
 final readonly class MetricsServer
 {
+    public const TAG = 'MetricsServer';
+
     /**
      * MetricsServer constructor.
      *
@@ -88,7 +90,7 @@ final readonly class MetricsServer
                 $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
                 $response->end($metrics);
             } catch (Throwable $throwable) {
-                error_log('Exception: ' . $throwable->getMessage()); // logged internally
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
                 $response->status(500);
                 $response->end(json_encode(['error' => Messages::ERROR_INTERNAL_ERROR]));
             }

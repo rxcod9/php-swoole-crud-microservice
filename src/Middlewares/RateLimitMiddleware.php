@@ -43,6 +43,8 @@ use Swoole\Http\Response;
  */
 final class RateLimitMiddleware implements MiddlewareInterface
 {
+    public const TAG = 'RateLimitMiddleware';
+
     public $table;
 
     // exclude paths
@@ -82,7 +84,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
             return;
         }
 
-        error_log('IP: ' . $ip);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'IP: ' . $ip);
 
         [$row]     = $this->cacheService->getRecordByColumn('rateLimit', 'ip', $ip) ?? [];
         $nowSec    = Carbon::now()->getTimestamp();

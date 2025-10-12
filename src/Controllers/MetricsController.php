@@ -40,6 +40,8 @@ use Throwable;
  */
 final class MetricsController extends Controller
 {
+    public const TAG = 'MetricsController';
+
     #[OA\Get(
         path: '/metrics',
         summary: 'Metrics Check',
@@ -60,7 +62,7 @@ final class MetricsController extends Controller
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
             return $this->text(Messages::ERROR_INTERNAL_ERROR, 500, RenderTextFormat::MIME_TYPE);
         }
     }

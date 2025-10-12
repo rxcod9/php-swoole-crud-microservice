@@ -46,6 +46,8 @@ use Throwable;
  */
 final class RedisPool
 {
+    public const TAG = 'RedisPool';
+
     /**
      * @var Channel The coroutine channel used for managing Redis connections.
      *              Acts as a queue to hold available connections.
@@ -85,7 +87,7 @@ final class RedisPool
         for ($i = 0; $i < $this->min; ++$i) {
             $conn = $this->make(0, $maxRetry);
 
-            error_log(sprintf('Pre-created Redis connection #%d', $i + 1));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Pre-created Redis connection #%d', $i + 1));
             $success = $this->channel->push($conn);
             if ($success === false) {
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
@@ -93,20 +95,20 @@ final class RedisPool
         }
 
         $this->initialized = true;
-        error_log(sprintf('RedisPool initialized with min=%d, max=%d', $this->min, $this->max));
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('RedisPool initialized with min=%d, max=%d', $this->min, $this->max));
     }
 
     /**
      * Create a new Redis connection.
      * Uses exponential backoff for retry on failure.
      *
-     * @param int $retry Current retry attempt count.
+     * @param int $attempt Current retry attempt count.
      *
      * @throws RuntimeException If connection fails after retries.
      *
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    private function make(int $retry = 0, int $maxRetry = 5): Redis
+    private function make(int $attempt = 0, int $maxRetry = 5): Redis
     {
         try {
             $redis = new Redis();
@@ -129,23 +131,22 @@ final class RedisPool
             }
 
             ++$this->created;
-            error_log(sprintf('Redis connection created. Total connections: %d', $this->created));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection created. Total connections: %d', $this->created));
             return $redis;
         } catch (Throwable $throwable) {
             // Retry only if "Connection refused" (Redis error 2002)
-            if (shouldRedisRetry($throwable)) {
-                // Retry with exponential backoff
-                ++$retry;
-                if ($retry <= $maxRetry || $maxRetry === -1) {
-                    $backoff = (1 << $retry) * 100000; // microseconds
-                    error_log(sprintf('[RETRY] Retrying Redis connection in %.2f seconds...', $backoff / 1000000));
-                    Coroutine::sleep($backoff / 1000000);
-                    return $this->make($retry, $maxRetry);
-                }
+            // Retry with exponential backoff
+            if (shouldRedisRetry($throwable) && ($attempt <= $maxRetry || $maxRetry === -1)) {
+                $backoff = (1 << $attempt) * 100000;
+                // microseconds
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Retrying Redis connection in %.2f seconds...', $backoff / 1000000));
+                Coroutine::sleep($backoff / 1000000);
+                ++$attempt;
+                return $this->make($attempt, $maxRetry);
             }
 
             // If all retries fail, throw exception
-            error_log(sprintf('EXCEPTION Redis connection error: %s | Pool created: %d', $throwable->getMessage(), $this->created));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('Redis connection error: %s | Pool created: %d', $throwable->getMessage(), $this->created));
             throw new RedisConnectionException(
                 sprintf('Redis connection error: %s | Pool created: %d', $throwable->getMessage(), $this->created),
                 $throwable->getCode(),
@@ -174,20 +175,20 @@ final class RedisPool
         // Auto-scale up
         if (($available <= 1) && $this->created < $this->max) {
             $toCreate = 1;
-            error_log(sprintf('[SCALE-UP MySQL] Creating %d new connections (used: %d, available: %d)', $toCreate, $used, $available));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SCALE-UP MySQL] Creating %d new connections (used: %d, available: %d)', $toCreate, $used, $available));
             return $this->make();
         }
 
         // Pop a connection from the channel (waits up to $timeout seconds)
         $conn = $this->channel->pop($timeout);
         if (!$conn) {
-            error_log(sprintf('[ERROR] Redis pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', $timeout, $available, $used, $this->created));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[ERROR] Redis pool exhausted (timeout=%.2f, available=%d, used=%d, created=%d)', $timeout, $available, $used, $this->created));
             throw new RedisPoolExhaustedException('Redis pool exhausted', 503);
         }
 
         if (!$conn->isConnected()) {
             $this->created = max(0, $this->created - 1);
-            error_log(sprintf('Redis connection destroyed. Total connections: %d', $this->created));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection destroyed. Total connections: %d', $this->created));
             // create a fresh connection synchronously (preserve previous semantics)
             return $this->make();
         }
@@ -208,15 +209,15 @@ final class RedisPool
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
             }
 
-            error_log('[PUT] Redis connection returned to pool');
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, '[PUT] Redis connection returned to pool');
             return;
         }
 
         // Pool full, let garbage collector close the Redis object
         $redis->close();
         $this->created = max(0, $this->created - 1);
-        error_log(sprintf('Redis connection created. Total connections: %d', $this->created));
-        error_log(sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection created. Total connections: %d', $this->created));
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[PUT] Pool full, Redis connection discarded. Total connections: %d', $this->created));
     }
 
     /**
@@ -288,7 +289,7 @@ final class RedisPool
                 }
             }
 
-            error_log(sprintf('[SCALE-UP Redis] Created %d connections', $toCreate));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SCALE-UP Redis] Created %d connections', $toCreate));
         }
 
         // ----------- Scale DOWN -----------
@@ -300,11 +301,11 @@ final class RedisPool
                 if ($conn) {
                     $conn->close();
                     $this->created = max(0, $this->created - 1);
-                    error_log(sprintf('Redis connection created. Total connections: %d', $this->created));
+                    logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Redis connection created. Total connections: %d', $this->created));
                 }
             }
 
-            error_log(sprintf('[SCALE-DOWN Redis] Closed %d idle connections', $toClose));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SCALE-DOWN Redis] Closed %d idle connections', $toClose));
         }
     }
 }

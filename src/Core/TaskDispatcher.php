@@ -40,6 +40,8 @@ use Throwable;
  */
 final readonly class TaskDispatcher
 {
+    public const TAG = 'TaskDispatcher';
+
     /**
      * TaskDispatcher constructor.
      *
@@ -103,7 +105,7 @@ final readonly class TaskDispatcher
                 return true;
             }
 
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
 
             $task->finish([
                 'class'     => $class,

@@ -67,5 +67,5 @@ if (!\defined('SWOOLE_EVENT_LOOP_STARTED')) {
     /**
      * Log a warning if the Swoole event loop is already started.
      */
-    error_log('Swoole event loop already started. MetricsServer not started again.');
+    logDebug(__FILE__ , 'Swoole event loop already started. MetricsServer not started again.');
 }

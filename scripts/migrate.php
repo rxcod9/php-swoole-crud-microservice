@@ -45,7 +45,7 @@ $dotenv->required([
  */
 function logMsg(string $msg): void
 {
-    error_log('[' . date(Constants::DATETIME_FORMAT) . "] $msg" . PHP_EOL);
+    logDebug(__FILE__ . " " . date(Constants::DATETIME_FORMAT), $msg . PHP_EOL);
 }
 
 /**
@@ -86,7 +86,7 @@ function runMigrations(): void
             ]
         );
     } catch (PDOException $e) {
-        logMsg('PDO connection error: ' . $e->getMessage());
+        logMsg('[Exception] PDO connection error: ' . $e->getMessage());
         exit(1);
     }
     logMsg('Connected to MySQL via PDO.');
@@ -111,7 +111,7 @@ function runMigrations(): void
             try {
                 $pdo->exec($sql);
             } catch (PDOException $e) {
-                logMsg("Error running $file: " . $e->getMessage());
+                logMsg("[Exception] Error running $file: " . $e->getMessage());
                 exit(1);
             }
 

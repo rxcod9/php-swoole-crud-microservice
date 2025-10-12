@@ -38,6 +38,8 @@ use OpenApi\Attributes as OA;
  */
 final class ItemController extends Controller
 {
+    public const TAG = 'ItemController';
+
     /**
      * Inject ItemService for business logic operations.
      */
@@ -255,7 +257,7 @@ final class ItemController extends Controller
     )]
     public function show(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
         $data = $this->itemService->find($id);
 
@@ -296,7 +298,7 @@ final class ItemController extends Controller
     )]
     public function showBySku(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['sku']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['sku']);
         $sku  = urldecode((string)$params['sku']);
         $data = $this->itemService->findBySku($sku);
 
@@ -337,7 +339,7 @@ final class ItemController extends Controller
     )]
     public function update(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id      = (int)$params['id'];
         $payload = json_decode($this->request->rawContent() ?: '[]', true);
         // Calling find to validate if entiry exists
@@ -370,7 +372,7 @@ final class ItemController extends Controller
     )]
     public function destroy(array $params): array
     {
-        error_log('[' . self::class . ':' . __LINE__ . '] ' . __FUNCTION__ . ' #' . $params['id']);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id = (int)$params['id'];
         $ok = $this->itemService->delete($id);
         return $this->json(['deleted' => $ok], $ok ? 204 : 404);

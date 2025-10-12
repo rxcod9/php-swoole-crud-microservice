@@ -44,9 +44,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    depends_on:
-      app:
-        condition: service_healthy
 
   # MySQL database service
   mysql:
@@ -88,9 +85,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    depends_on:
-      mysql:
-        condition: service_healthy
 
 
   # Redis exporter for Prometheus
@@ -103,9 +97,6 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "9121:9121"
-    depends_on:
-      redis:
-        condition: service_healthy
 
   # Prometheus monitoring service
   prometheus:
@@ -120,15 +111,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    depends_on:
-      mysqld-exporter:
-        condition: service_healthy
-      # redis-exporter:
-      #   condition: service_healthy
-      metrics:
-        condition: service_healthy
-      app:
-        condition: service_healthy
 
   # Grafana dashboard service
   grafana:
@@ -148,9 +130,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    depends_on:
-      prometheus:
-        condition: service_healthy
 
   # Redis in-memory data store
   redis:
@@ -174,9 +153,6 @@ services:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       # - caddy_data:
       # - caddy_config:
-    depends_on:
-      app:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "https://localhost/health"]
       interval: 30s
@@ -193,9 +169,6 @@ services:
       - ./public/swagger.json:/app/swagger.json:ro
     ports:
       - "8080:8080"
-    depends_on:
-      app:
-        condition: service_healthy
 
 volumes:
   grafana-data:

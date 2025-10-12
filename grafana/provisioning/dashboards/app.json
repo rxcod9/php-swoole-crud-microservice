@@ -1,467 +1,1409 @@
 {
     "title": "PHP Swoole CRUD Microservice",
     "uid": "php-swoole-crud-microservice",
-    "timezone": "browser",
-    "refresh": "5s",
+    "description": "PHP Swoole CRUD Microservice",
     "schemaVersion": 36,
     "version": 1,
-    "panels": [
-        {
-            "type": "timeseries",
-            "title": "Total Requests/sec",
-            "gridPos": {
-                "x": 0,
-                "y": 0,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "rate(http_requests_total_Requests[1m])",
-                    "legendFormat": "Requests/sec"
-                }
-            ]
-        },
-        {
-            "type": "timeseries",
-            "title": "Requests Errors (5xx)",
-            "gridPos": {
-                "x": 12,
-                "y": 0,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "sum(rate(http_requests_total_Requests{status=~\"5..\"}[1m]))",
-                    "legendFormat": "5xx Errors"
-                }
-            ],
-            "alert": {
-                "alertRuleTags": {},
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                10
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg",
-                            "params": []
-                        },
-                        "type": "query"
-                    }
-                ],
-                "executionErrorState": "alerting",
-                "for": "1m",
-                "name": "High 5xx Errors",
-                "noDataState": "no_data",
-                "notifications": []
-            }
-        },
-        {
-            "type": "timeseries",
-            "title": "Requests 4xx",
-            "gridPos": {
-                "x": 0,
-                "y": 6,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "sum(rate(http_requests_total_Requests{status=~\"4..\"}[1m]))",
-                    "legendFormat": "4xx Errors"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                20
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg",
-                            "params": []
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "5m",
-                "name": "High 4xx Errors",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "bargauge",
-            "title": "Request Count per Endpoint",
-            "gridPos": {
-                "x": 12,
-                "y": 6,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "sum by(path)(rate(http_requests_total_Requests[1m]))",
-                    "legendFormat": "{{path}}"
-                }
-            ]
-        },
-        {
-            "type": "timeseries",
-            "title": "Avg HTTP Latency",
-            "gridPos": {
-                "x": 0,
-                "y": 12,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "rate(http_request_seconds_Latency_sum[1m]) / rate(http_request_seconds_Latency_count[1m])",
-                    "legendFormat": "Avg Latency"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                0.5
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg",
-                            "params": []
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "1m",
-                "name": "High Avg Latency",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "heatmap",
-            "title": "HTTP Request Latency Heatmap",
-            "gridPos": {
-                "x": 12,
-                "y": 12,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "sum by(le)(rate(http_request_seconds_Latency_bucket[1m]))",
-                    "format": "heatmap",
-                    "legendFormat": "≤{{le}}s"
-                }
-            ],
-            "color": {
-                "mode": "spectrum"
-            }
-        },
-        {
-            "type": "timeseries",
-            "title": "Latency P95",
-            "gridPos": {
-                "x": 0,
-                "y": 18,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "histogram_quantile(0.95, sum by(le)(rate(http_request_seconds_Latency_bucket[1m])))",
-                    "legendFormat": "P95"
-                }
-            ]
-        },
-        {
-            "type": "timeseries",
-            "title": "Latency P99",
-            "gridPos": {
-                "x": 12,
-                "y": 18,
-                "w": 12,
-                "h": 6
-            },
-            "targets": [
-                {
-                    "expr": "histogram_quantile(0.99, sum by(le)(rate(http_request_seconds_Latency_bucket[1m])))",
-                    "legendFormat": "P99"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                1
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg",
-                            "params": []
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "1m",
-                "name": "High P99 Latency",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "stat",
-            "title": "PHP Memory Usage",
-            "gridPos": {
-                "x": 0,
-                "y": 24,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "php_memory_usage_bytes",
-                    "legendFormat": "Memory"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                1e9
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg"
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "1m",
-                "name": "High PHP Memory Usage",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "timeseries",
-            "title": "PHP CPU Usage",
-            "gridPos": {
-                "x": 6,
-                "y": 24,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "rate(php_cpu_seconds_total[1m])",
-                    "legendFormat": "CPU"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                80
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg"
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "30s",
-                "name": "High PHP CPU Usage",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "stat",
-            "title": "Swoole Active Connections",
-            "gridPos": {
-                "x": 12,
-                "y": 24,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "swoole_connections_active",
-                    "legendFormat": "Active"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                1000
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg"
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "1m",
-                "name": "High Active Connections",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "timeseries",
-            "title": "Swoole Total Connections",
-            "gridPos": {
-                "x": 18,
-                "y": 24,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "increase(swoole_connections_total[1m])",
-                    "legendFormat": "Total"
-                }
-            ]
-        },
-        {
-            "type": "stat",
-            "title": "Swoole Task Waiting",
-            "gridPos": {
-                "x": 0,
-                "y": 28,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "swoole_task_waiting",
-                    "legendFormat": "Waiting"
-                }
-            ],
-            "alert": {
-                "conditions": [
-                    {
-                        "evaluator": {
-                            "params": [
-                                50
-                            ],
-                            "type": "gt"
-                        },
-                        "operator": {
-                            "type": "and"
-                        },
-                        "query": {
-                            "params": [
-                                "A"
-                            ]
-                        },
-                        "reducer": {
-                            "type": "avg"
-                        },
-                        "type": "query"
-                    }
-                ],
-                "for": "1m",
-                "name": "High Swoole Task Waiting",
-                "noDataState": "no_data"
-            }
-        },
-        {
-            "type": "bargauge",
-            "title": "Requests > 500ms",
-            "gridPos": {
-                "x": 6,
-                "y": 28,
-                "w": 6,
-                "h": 4
-            },
-            "targets": [
-                {
-                    "expr": "(sum(rate(http_request_seconds_Latency_count[1m])) - sum(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[1m])))",
-                    "legendFormat": "Slow Requests"
-                }
-            ]
-        }
-    ],
+    "timezone": "browser",
+    "refresh": "5s",
     "time": {
         "from": "now-1h",
         "to": "now"
     },
+    "templating": {
+        "list": []
+    },
+    "annotations": {
+        "list": []
+    },
+    "panels": [
+        {
+            "type": "row",
+            "title": "Traffic & Throughput",
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 1,
+            "type": "timeseries",
+            "title": "Total Requests/sec",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total_Requests[1m]))",
+                    "legendFormat": "req/s",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 1,
+                "w": 12,
+                "h": 6
+            }
+        },
+        {
+            "id": 2,
+            "type": "timeseries",
+            "title": "Requests/sec (by path)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(path)(rate(http_requests_total_Requests[1m]))",
+                    "legendFormat": "{{path}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 1,
+                "w": 12,
+                "h": 6
+            }
+        },
+        {
+            "id": 3,
+            "type": "bargauge",
+            "title": "Requests/sec (by method)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(method)(rate(http_requests_total_Requests[1m]))",
+                    "legendFormat": "{{method}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 7,
+                "w": 6,
+                "h": 5
+            }
+        },
+        {
+            "id": 4,
+            "type": "timeseries",
+            "title": "Total Requests (counter)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(http_requests_total_Requests)",
+                    "legendFormat": "total req",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 7,
+                "w": 6,
+                "h": 5
+            }
+        },
+        {
+            "id": 5,
+            "type": "table",
+            "title": "Requests by Status Code",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(status)(http_requests_total_Requests)",
+                    "legendFormat": "{{status}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 7,
+                "w": 6,
+                "h": 5
+            }
+        },
+        {
+            "id": 6,
+            "type": "stat",
+            "title": "HTTP 5xx Errors/sec",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total_Requests{status=~\"5..\"}[1m]))",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 7,
+                "w": 6,
+                "h": 5
+            },
+            "alert": {
+                "name": "High 5xx Errors",
+                "for": "1m",
+                "frequency": "1m",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                5
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "type": "row",
+            "title": "Latency / Histograms",
+            "gridPos": {
+                "x": 0,
+                "y": 13,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 7,
+            "type": "timeseries",
+            "title": "Avg HTTP Latency (1m)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_seconds_Latency_sum[1m]) / rate(http_request_seconds_Latency_count[1m])",
+                    "legendFormat": "avg(s)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 14,
+                "w": 8,
+                "h": 6
+            },
+            "alert": {
+                "name": "High Avg HTTP Latency",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                0.5
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Latency P50 (histogram_quantile)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.50, sum by(le, method, path)(rate(http_request_seconds_Latency_bucket[1m])))",
+                    "legendFormat": "P50",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 8,
+                "y": 14,
+                "w": 8,
+                "h": 6
+            }
+        },
+        {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Latency P95 (histogram_quantile)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum by(le, method, path)(rate(http_request_seconds_Latency_bucket[5m])))",
+                    "legendFormat": "P95",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 16,
+                "y": 14,
+                "w": 8,
+                "h": 6
+            },
+            "alert": {
+                "name": "High P95 Latency",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                1
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Latency P99 (histogram_quantile)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.99, sum by(le, method, path)(rate(http_request_seconds_Latency_bucket[5m])))",
+                    "legendFormat": "P99",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 21,
+                "w": 8,
+                "h": 6
+            },
+            "alert": {
+                "name": "High P99 Latency",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                2
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 11,
+            "type": "heatmap",
+            "title": "HTTP Request Latency Heatmap (all endpoints)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(le, method, path)(rate(http_request_seconds_Latency_bucket[1m]))",
+                    "format": "heatmap",
+                    "legendFormat": "{{method}} {{path}} ≤{{le}}s",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "heatmap": {
+                    "colorScale": "linear",
+                    "reverseYBuckets": false
+                }
+            },
+            "gridPos": {
+                "x": 8,
+                "y": 21,
+                "w": 16,
+                "h": 12
+            }
+        },
+        {
+            "id": 12,
+            "type": "table",
+            "title": "Latency by Endpoint (P95)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum by(le, path)(rate(http_request_seconds_Latency_bucket[5m])))",
+                    "legendFormat": "{{path}} p95",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 27,
+                "w": 8,
+                "h": 6
+            }
+        },
+        {
+            "type": "row",
+            "title": "Errors & Slow Requests",
+            "gridPos": {
+                "x": 0,
+                "y": 33,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 13,
+            "type": "timeseries",
+            "title": "4xx Errors/sec",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total_Requests{status=~\"4..\"}[1m]))",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 34,
+                "w": 6,
+                "h": 5
+            },
+            "alert": {
+                "name": "High 4xx Errors",
+                "for": "5m",
+                "frequency": "1m",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                20
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 14,
+            "type": "timeseries",
+            "title": "Slow Requests (>500ms) rate",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_seconds_Latency_bucket{le=\"+Inf\"}[1m])) - sum(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[1m]))",
+                    "legendFormat": "slow/s",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 34,
+                "w": 6,
+                "h": 5
+            },
+            "alert": {
+                "name": "High Slow Requests Rate",
+                "for": "2m",
+                "frequency": "1m",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                10
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 15,
+            "type": "bargauge",
+            "title": "Slow Requests Count by Path",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(path)(rate(http_request_seconds_Latency_bucket{le=\"+Inf\"}[5m])) - sum by(path)(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[5m]))",
+                    "legendFormat": "{{path}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 34,
+                "w": 6,
+                "h": 5
+            }
+        },
+        {
+            "id": 16,
+            "type": "stat",
+            "title": "Error Ratio (5xx/total)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total_Requests{status=~\"5..\"}[5m])) / sum(rate(http_requests_total_Requests[5m]))",
+                    "legendFormat": "err ratio",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 34,
+                "w": 6,
+                "h": 5
+            }
+        },
+        {
+            "type": "row",
+            "title": "Swoole Runtime",
+            "gridPos": {
+                "x": 0,
+                "y": 39,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 17,
+            "type": "stat",
+            "title": "Swoole Active Connections",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "swoole_connections_active",
+                    "legendFormat": "active",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "alert": {
+                "name": "High Active Connections",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                1000
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 18,
+            "type": "timeseries",
+            "title": "Swoole Total Connections (increase 1m)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "increase(swoole_connections_total[1m])",
+                    "legendFormat": "new conn/s",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 19,
+            "type": "stat",
+            "title": "Swoole Task Waiting",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "swoole_task_waiting",
+                    "legendFormat": "waiting",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            },
+            "alert": {
+                "name": "High Swoole Task Waiting",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                50
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 20,
+            "type": "stat",
+            "title": "Swoole Worker Busy",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "swoole_worker_busy",
+                    "legendFormat": "busy",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 40,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "type": "row",
+            "title": "PHP Runtime",
+            "gridPos": {
+                "x": 0,
+                "y": 44,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 21,
+            "type": "stat",
+            "title": "PHP Memory Usage",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "php_memory_usage_bytes",
+                    "legendFormat": "php mem",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 45,
+                "w": 6,
+                "h": 4
+            },
+            "alert": {
+                "name": "High PHP Memory",
+                "for": "1m",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                1e9
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 22,
+            "type": "timeseries",
+            "title": "PHP CPU (rate)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(php_cpu_seconds_total[1m])",
+                    "legendFormat": "php cpu",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 45,
+                "w": 6,
+                "h": 4
+            },
+            "alert": {
+                "name": "High PHP CPU",
+                "for": "30s",
+                "frequency": "30s",
+                "handler": 1,
+                "conditions": [
+                    {
+                        "type": "query",
+                        "query": {
+                            "params": [
+                                "A"
+                            ]
+                        },
+                        "reducer": {
+                            "type": "avg"
+                        },
+                        "evaluator": {
+                            "type": "gt",
+                            "params": [
+                                0.8
+                            ]
+                        },
+                        "operator": {
+                            "type": "and"
+                        }
+                    }
+                ],
+                "noDataState": "no_data",
+                "executionErrorState": "alerting",
+                "notifications": []
+            }
+        },
+        {
+            "id": 23,
+            "type": "stat",
+            "title": "PHP Version",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "php_info",
+                    "legendFormat": "{{version}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 45,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 24,
+            "type": "table",
+            "title": "Requests Count by Endpoint (total)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(path)(http_requests_total_Requests)",
+                    "legendFormat": "{{path}}",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 45,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "type": "row",
+            "title": "Endpoint-level Details",
+            "gridPos": {
+                "x": 0,
+                "y": 49,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 25,
+            "type": "timeseries",
+            "title": "GET /items - Avg Latency",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_seconds_Latency_sum{method=\"GET\",path=\"/items\"}[1m]) / rate(http_request_seconds_Latency_count{method=\"GET\",path=\"/items\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 50,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "id": 26,
+            "type": "timeseries",
+            "title": "GET /items - Requests/sec",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_requests_total_Requests{method=\"GET\",path=\"/items\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 8,
+                "y": 50,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "id": 27,
+            "type": "timeseries",
+            "title": "GET /items/{id} - Avg Latency",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_seconds_Latency_sum{method=\"GET\",path=\"/items/{id}\"}[1m]) / rate(http_request_seconds_Latency_count{method=\"GET\",path=\"/items/{id}\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 16,
+                "y": 50,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "id": 28,
+            "type": "timeseries",
+            "title": "GET /users - Avg Latency",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_seconds_Latency_sum{method=\"GET\",path=\"/users\"}[1m]) / rate(http_request_seconds_Latency_count{method=\"GET\",path=\"/users\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 55,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "id": 29,
+            "type": "timeseries",
+            "title": "GET /users/{id} - Avg Latency",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_seconds_Latency_sum{method=\"GET\",path=\"/users/{id}\"}[1m]) / rate(http_request_seconds_Latency_count{method=\"GET\",path=\"/users/{id}\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 8,
+                "y": 55,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "id": 30,
+            "type": "table",
+            "title": "Endpoint Requests & Latency (summary)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(path)(rate(http_requests_total_Requests[5m]))",
+                    "legendFormat": "{{path}} RPS",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.95, sum by(le, path)(rate(http_request_seconds_Latency_bucket[5m])))",
+                    "legendFormat": "{{path}} P95",
+                    "refId": "B"
+                }
+            ],
+            "gridPos": {
+                "x": 16,
+                "y": 55,
+                "w": 8,
+                "h": 5
+            }
+        },
+        {
+            "type": "row",
+            "title": "System / OS / Process",
+            "gridPos": {
+                "x": 0,
+                "y": 60,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 31,
+            "type": "stat",
+            "title": "Process Resident Memory",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "process_resident_memory_bytes",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 61,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 32,
+            "type": "stat",
+            "title": "Process Virtual Memory",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "process_virtual_memory_bytes",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 61,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 33,
+            "type": "stat",
+            "title": "Open File Descriptors",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "process_open_fds",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 61,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 34,
+            "type": "stat",
+            "title": "Max File Descriptors",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "process_max_fds",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 61,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 35,
+            "type": "timeseries",
+            "title": "Network Receive Bytes/s",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(process_network_receive_bytes_total[1m])",
+                    "legendFormat": "recv B/s",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 65,
+                "w": 12,
+                "h": 5
+            }
+        },
+        {
+            "id": 36,
+            "type": "timeseries",
+            "title": "Network Transmit Bytes/s",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(process_network_transmit_bytes_total[1m])",
+                    "legendFormat": "send B/s",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 65,
+                "w": 12,
+                "h": 5
+            }
+        },
+        {
+            "type": "row",
+            "title": "Diagnostics / Misc",
+            "gridPos": {
+                "x": 0,
+                "y": 70,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 37,
+            "type": "stat",
+            "title": "HTTP Requests - total unique labels (count)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "count(http_requests_total_Requests)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 71,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 38,
+            "type": "table",
+            "title": "All HTTP Request Series (labels)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "topk(200, http_requests_total_Requests)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 71,
+                "w": 12,
+                "h": 4
+            }
+        },
+        {
+            "id": 39,
+            "type": "stat",
+            "title": "Total HTTP Series Scraped",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "count(http_request_seconds_Latency_bucket)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 71,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "type": "row",
+            "title": "Alerts Summary & Derived Metrics",
+            "gridPos": {
+                "x": 0,
+                "y": 75,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 40,
+            "type": "stat",
+            "title": "Slow Requests (≥500ms) - last 5m",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_seconds_Latency_bucket{le=\"+Inf\"}[5m])) - sum(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[5m]))",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 76,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 41,
+            "type": "stat",
+            "title": "Requests/sec (5m avg)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "avg_over_time(sum(rate(http_requests_total_Requests[1m]))[5m:1m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 76,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 42,
+            "type": "stat",
+            "title": "Average Request Size (derived) - (if available)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(http_request_bytes_sum[5m]) / rate(http_requests_total_Requests[5m])",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 76,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 43,
+            "type": "table",
+            "title": "Top 10 Slow Endpoints (by count)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "topk(10, (sum by(path)(rate(http_request_seconds_Latency_bucket{le=\"+Inf\"}[5m])) - sum by(path)(rate(http_request_seconds_Latency_bucket{le=\"0.5\"}[5m]))))",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 18,
+                "y": 76,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "type": "row",
+            "title": "Utility / Debug / Exports",
+            "gridPos": {
+                "x": 0,
+                "y": 80,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 44,
+            "type": "timeseries",
+            "title": "Histogram buckets sample - /items path",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(le)(rate(http_request_seconds_Latency_bucket{path=\"/items\"}[1m]))",
+                    "format": "heatmap",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 81,
+                "w": 12,
+                "h": 6
+            }
+        },
+        {
+            "id": 45,
+            "type": "timeseries",
+            "title": "Histogram buckets sample - /users path",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by(le)(rate(http_request_seconds_Latency_bucket{path=\"/users\"}[1m]))",
+                    "format": "heatmap",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 81,
+                "w": 12,
+                "h": 6
+            }
+        },
+        {
+            "id": 46,
+            "type": "stat",
+            "title": "Histogram Total Count (all paths)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(http_request_seconds_Latency_count)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 87,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 47,
+            "type": "stat",
+            "title": "Histogram Total Sum (all paths)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(http_request_seconds_Latency_sum)",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 6,
+                "y": 87,
+                "w": 6,
+                "h": 4
+            }
+        },
+        {
+            "id": 48,
+            "type": "table",
+            "title": "Raw Histogram - sample /items (count & sum)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "http_request_seconds_Latency_count{path=\"/items\",method=\"GET\"}",
+                    "refId": "A"
+                },
+                {
+                    "expr": "http_request_seconds_Latency_sum{path=\"/items\",method=\"GET\"}",
+                    "refId": "B"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 87,
+                "w": 12,
+                "h": 4
+            }
+        },
+        {
+            "type": "row",
+            "title": "Final Panels & Alerts",
+            "gridPos": {
+                "x": 0,
+                "y": 92,
+                "w": 24,
+                "h": 1
+            },
+            "collapsed": false
+        },
+        {
+            "id": 49,
+            "type": "stat",
+            "title": "Uptime (process_start_time_seconds)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "time() - process_start_time_seconds",
+                    "legendFormat": "uptime_sec",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 93,
+                "w": 8,
+                "h": 4
+            }
+        },
+        {
+            "id": 50,
+            "type": "stat",
+            "title": "Dashboard: Alerts Quick Summary (placeholder)",
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "0",
+                    "refId": "A"
+                }
+            ],
+            "gridPos": {
+                "x": 8,
+                "y": 93,
+                "w": 16,
+                "h": 4
+            }
+        }
+    ],
     "timepicker": {
         "refresh_intervals": [
             "5s",

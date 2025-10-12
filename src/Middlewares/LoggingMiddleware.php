@@ -41,6 +41,8 @@ use Swoole\Http\Response;
  */
 final class LoggingMiddleware implements MiddlewareInterface
 {
+    public const TAG = 'LoggingMiddleware';
+
     public function handle(Request $request, Response $response, callable $next): void
     {
         $start = microtime(true);
@@ -48,7 +50,7 @@ final class LoggingMiddleware implements MiddlewareInterface
         $next($request, $response); // call next middleware first
 
         $dur = microtime(true) - $start;
-        error_log(sprintf(
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf(
             "[%s] %s %s - %.2fms\n",
             date(Constants::DATETIME_FORMAT),
             $request->server['request_method'] ?? '-',

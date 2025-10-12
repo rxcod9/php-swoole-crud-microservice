@@ -40,6 +40,8 @@ use App\Exceptions\WorkerNotReadyException;
  */
 final class WorkerReadyChecker
 {
+    public const TAG = 'WorkerReadyChecker';
+
     /**
      * @SuppressWarnings(PHPMD.StaticAccess)
      */
@@ -47,7 +49,7 @@ final class WorkerReadyChecker
     {
         $waited = 0;
         while (!AppContext::isWorkerReady() && $waited < $timeoutMs) {
-            error_log('Waiting for worker to be ready...' . PHP_EOL);
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Waiting for worker to be ready...' . PHP_EOL);
             usleep(10000);
             $waited += 10;
         }

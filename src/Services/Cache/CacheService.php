@@ -36,6 +36,8 @@ use Throwable;
  */
 final readonly class CacheService
 {
+    public const TAG = 'CacheService';
+
     public function __construct(
         private TableCacheService $tableCacheService,
         private RedisCacheService $redisCacheService
@@ -57,7 +59,7 @@ final readonly class CacheService
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
         if ($value !== null) {
-            return [$value, TableCacheService::TAG];
+            return [$value, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
@@ -67,10 +69,10 @@ final readonly class CacheService
             try {
                 $this->tableCacheService->set($key, $value, 120);
             } catch (Throwable $e) {
-                error_log('Exception: ' . $e->getMessage()); // logged internally
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }
 
-            return [$value, RedisCacheService::TAG];
+            return [$value, RedisCacheService::CACHE_TYPE];
         }
 
         return [null, $value];
@@ -82,7 +84,7 @@ final readonly class CacheService
         try {
             $this->tableCacheService->set($key, $data, $localTtl);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         $this->redisCacheService->set($key, $data, $localTtl);
@@ -95,7 +97,7 @@ final readonly class CacheService
         try {
             $tableCount = $this->tableCacheService->incr($key, $column, $increment);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         $redisCount = $this->redisCacheService->incrBy($key, $increment, $localTtl);
@@ -117,7 +119,7 @@ final readonly class CacheService
         // 1. Check local table cache first
         $data = $this->tableCacheService->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
-            return [$data, TableCacheService::TAG];
+            return [$data, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
@@ -127,10 +129,10 @@ final readonly class CacheService
             try {
                 $this->tableCacheService->setRecordByColumn($entity, $column, $value, $data);
             } catch (Throwable $e) {
-                error_log('Exception: ' . $e->getMessage()); // logged internally
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }
 
-            return [$data, RedisCacheService::TAG];
+            return [$data, RedisCacheService::CACHE_TYPE];
         }
 
         return [$data, null];
@@ -142,7 +144,7 @@ final readonly class CacheService
         try {
             $this->tableCacheService->setRecordByColumn($entity, $column, $value, $data, $localTtl);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         $this->redisCacheService->setRecordByColumn($entity, $column, $value, $data, $localTtl);
@@ -153,7 +155,7 @@ final readonly class CacheService
         try {
             $this->tableCacheService->invalidateRecordByColumn($entity, $column, $value);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         $this->redisCacheService->invalidateRecordByColumn($entity, $column, $value);
@@ -183,7 +185,7 @@ final readonly class CacheService
     {
         $value = $this->tableCacheService->getList($entity, $query);
         if ($value !== null) {
-            return [$value, TableCacheService::TAG];
+            return [$value, TableCacheService::CACHE_TYPE];
         }
 
         $value = $this->redisCacheService->getList($entity, $query);
@@ -191,10 +193,10 @@ final readonly class CacheService
             try {
                 $this->tableCacheService->setList($entity, $query, $value);
             } catch (Throwable $e) {
-                error_log('Exception: ' . $e->getMessage()); // logged internally
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }
 
-            return [$value, RedisCacheService::TAG];
+            return [$value, RedisCacheService::CACHE_TYPE];
         }
 
         return [null, $value];
@@ -205,7 +207,7 @@ final readonly class CacheService
         try {
             $this->tableCacheService->setList($entity, $query, $data, $localTtl);
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         $this->redisCacheService->setList($entity, $query, $data, $localTtl);

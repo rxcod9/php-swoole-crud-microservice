@@ -45,6 +45,8 @@ use Throwable;
  */
 final readonly class TaskRequestHandler
 {
+    public const TAG = 'TaskRequestHandler';
+
     public function __construct(
         private Container $container
     ) {
@@ -92,7 +94,7 @@ final readonly class TaskRequestHandler
 
             return $status;
         } catch (Throwable $throwable) {
-            error_log('Exception: ' . $throwable->getMessage()); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
         return false;

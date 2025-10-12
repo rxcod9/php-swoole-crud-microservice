@@ -41,6 +41,8 @@ use Throwable;
  */
 final readonly class ItemRepository
 {
+    public const TAG = 'ItemRepository';
+
     /**
      * Constructor to initialize the repository with a database context.
      *
@@ -62,8 +64,9 @@ final readonly class ItemRepository
      */
     public function create(array $data): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): int {
+        return $this->pdoPool->withConnectionAndRetryForCreate(function (PDO $pdo, int $pdoId) use ($data): int {
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating item with data: ' . var_export($data, true));
                 // Prepare INSERT statement with named parameters
                 $stmt = $pdo->prepare('INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)');
 
@@ -74,27 +77,22 @@ final readonly class ItemRepository
                 $stmt->execute();
 
                 $lastInsertId = $pdo->lastInsertId();
-                // ✅ Fallback if returned 0 or empty
-                if (!$lastInsertId || $lastInsertId === '0') {
-                    $result       = $pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
-                    $lastInsertId = $result ?: false;
-                }
 
-                error_log('Last Insert ID: ' . var_export($lastInsertId, true));
                 if ($lastInsertId === false || $lastInsertId === null || $lastInsertId === '' || $lastInsertId === '0') {
                     $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                     throw new CreateFailedException(Messages::CREATE_FAILED, 500);
                 }
 
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Last Insert ID: ' . var_export($lastInsertId, true));
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return (int)$lastInsertId;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -107,11 +105,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'CREATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -132,8 +129,9 @@ final readonly class ItemRepository
      */
     public function find(int $id): ?array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding item with ID: ' . var_export($id, true));
                 $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1');
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
@@ -153,11 +151,10 @@ final readonly class ItemRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -170,11 +167,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -195,8 +191,9 @@ final readonly class ItemRepository
      */
     public function findBySku(string $sku): ?array
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($sku) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($sku) {
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU', 'pdoId: ' . $pdoId . ' Finding item with SKU: ' . var_export($sku, true));
                 $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1');
 
                 $stmt->bindValue(':sku', $sku, PDO::PARAM_STR);
@@ -216,11 +213,10 @@ final readonly class ItemRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -233,11 +229,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -267,7 +262,7 @@ final readonly class ItemRepository
         string $sortBy = 'id',
         string $sortDir = 'DESC'
     ): array {
-        return $this->pdoPool->withConnection(function (
+        return $this->pdoPool->withConnectionAndRetry(function (
             PDO $pdo,
             int $pdoId
         ) use (
@@ -277,6 +272,7 @@ final readonly class ItemRepository
             $sortBy,
             $sortDir
         ) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'LIST', 'pdoId: ' . $pdoId . ' Listing items with limit: ' . var_export($limit, true) . ', offset: ' . var_export($offset, true) . ', filters: ' . var_export($filters, true) . ', sortBy: ' . var_export($sortBy, true) . ', sortDir: ' . var_export($sortDir, true));
             try {
                 $limit  = max(1, min($limit, 100));
                 $offset = max(0, $offset);
@@ -346,11 +342,10 @@ final readonly class ItemRepository
                 return $results;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -363,11 +358,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'LIST',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -388,7 +382,8 @@ final readonly class ItemRepository
      */
     public function filteredCount(array $filters = []): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($filters): int {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($filters): int {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT', 'pdoId: ' . $pdoId . ' Counting items with filters: ' . var_export($filters, true));
             try {
                 $sql    = 'SELECT count(*) as filtered FROM items';
                 $where  = [];
@@ -449,11 +444,10 @@ final readonly class ItemRepository
                 return (int) ($result['filtered'] ?? 0);
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -466,11 +460,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -489,7 +482,8 @@ final readonly class ItemRepository
      */
     public function count(): int
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId): int {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId): int {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT', 'pdoId: ' . $pdoId . ' Counting all items');
             try {
                 $stmt = $pdo->prepare('SELECT count(*) as total FROM items');
 
@@ -510,11 +504,10 @@ final readonly class ItemRepository
                 return (int) ($result['total'] ?? 0);
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -527,11 +520,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'COUNT',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -554,6 +546,7 @@ final readonly class ItemRepository
     public function update(int $id, array $data): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): bool {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'UPDATE', 'pdoId: ' . $pdoId . ' Updating item with ID: ' . var_export($id, true) . ' and data: ' . var_export($data, true));
             try {
                 $stmt = $pdo->prepare('UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id');
 
@@ -568,11 +561,10 @@ final readonly class ItemRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -585,11 +577,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
@@ -611,6 +602,7 @@ final readonly class ItemRepository
     public function delete(int $id): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id): bool {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting item with ID: ' . var_export($id, true));
             try {
                 $stmt = $pdo->prepare('DELETE FROM items WHERE id=:id');
 
@@ -622,11 +614,10 @@ final readonly class ItemRepository
                 return $result;
             } catch (Throwable $throwable) {
                 // Log exception here
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
                     sprintf(
                         Messages::PDO_EXCEPTION_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $throwable->getCode(),
                         $throwable->getMessage()
@@ -639,11 +630,10 @@ final readonly class ItemRepository
                 $errorInfo = $stmt?->errorInfo(); // optional: [SQLSTATE, driverCode, message]
 
                 // Log only if there was an error
-                error_log(
+                logDebug(
+                    static::TAG . ':' . __LINE__ . '] [' . 'DELETE',
                     sprintf(
                         Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                        self::class,
-                        __LINE__,
                         $pdoId,
                         $errorCode ?? 'N/A',
                         $errorInfo ? implode(', ', $errorInfo) : 'N/A'
