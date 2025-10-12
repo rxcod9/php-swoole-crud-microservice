@@ -75,7 +75,7 @@ final readonly class UserService
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): ?array {
             $id = $this->userRepository->create($data);
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'pdoId: #' . $pdoId . 'Created user with ID: ' . var_export($id, true));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'pdoId: #' . $pdoId . ' Created user with ID: ' . var_export($id, true));
             return $this->pdoPool->forceRetryConnection($pdoId, function () use ($id): ?array {
                 return $this->userRepository->find($id);
             });

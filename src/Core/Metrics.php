@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use Prometheus\CollectorRegistry;
-use Prometheus\Storage\InMemory;
+use Prometheus\Storage\Redis;
 
 /**
  * Class Metrics
@@ -38,33 +38,16 @@ use Prometheus\Storage\InMemory;
 final class Metrics
 {
     /**
-     * Singleton instance of CollectorRegistry.
-     */
-    private static ?CollectorRegistry $collectorRegistry = null;
-
-    /**
-     * Returns a singleton CollectorRegistry instance.
+     * Returns a CollectorRegistry instance using the specified Redis connection.
      *
-     * Uses Redis adapter for shared metrics storage between workers.
-     * To use in-memory storage (not shared), uncomment the InMemory adapter.
+     * @param mixed $redis The Redis connection instance.
+     *
+     * @return CollectorRegistry The CollectorRegistry instance.
      */
-    public static function reg(): CollectorRegistry
+    public function getCollectorRegistry(\Redis $redis): CollectorRegistry
     {
-        // Uncomment below to use in-memory adapter (not shared between workers)
-        $inMemory = new InMemory();
-
-        // Redis adapter → shared between workers
-        // $adapter = new Redis([
-        //     'host' => 'redis',
-        //     'port' => 6379,
-        //     'timeout' => 0.1,
-        //     'read_timeout' => 10,
-        // ]);
-
-        if (!self::$collectorRegistry instanceof \Prometheus\CollectorRegistry) {
-            self::$collectorRegistry = new CollectorRegistry($inMemory);
-        }
-
-        return self::$collectorRegistry;
+        return new CollectorRegistry(
+            Redis::fromExistingConnection($redis)
+        );
     }
 }

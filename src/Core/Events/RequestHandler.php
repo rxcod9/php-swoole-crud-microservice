@@ -22,6 +22,8 @@ namespace App\Core\Events;
 use App\Core\Container;
 use App\Core\Dispatcher;
 use App\Core\Messages;
+use App\Core\Metrics;
+use App\Core\Pools\RedisPool;
 use App\Core\Router;
 use App\Middlewares\CompressionMiddleware;
 use App\Middlewares\CorsMiddleware;
@@ -29,7 +31,6 @@ use App\Middlewares\HideServerHeaderMiddleware;
 use App\Middlewares\LoggingMiddleware;
 use App\Middlewares\RateLimitMiddleware;
 use App\Middlewares\SecurityHeadersMiddleware;
-use Prometheus\CollectorRegistry;
 use ReflectionClass;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -142,7 +143,13 @@ final readonly class RequestHandler
             );
 
             // Metrics setup
-            $reg     = $this->container->get(CollectorRegistry::class);
+            $redisPool = $this->container->get(RedisPool::class);
+            $redis     = $redisPool->get();
+            defer(fn () => $redisPool->put($redis));
+
+            $metrics = $this->container->get(Metrics::class);
+            $reg     = $metrics->getCollectorRegistry($redis);
+
             $counter = $reg->getOrRegisterCounter(
                 'http_requests_total',
                 'Requests',
@@ -257,7 +264,12 @@ final readonly class RequestHandler
         float $start
     ): void {
         // Metrics setup
-        $reg     = $this->container->get(CollectorRegistry::class);
+        $redisPool = $this->container->get(RedisPool::class);
+        $redis     = $redisPool->get();
+        defer(fn () => $redisPool->put($redis));
+
+        $metrics = $this->container->get(Metrics::class);
+        $reg     = $metrics->getCollectorRegistry($redis);
         $counter = $reg->getOrRegisterCounter(
             'http_requests_total',
             'Requests',

@@ -21,7 +21,8 @@ namespace App\Core\Events;
 
 use App\Core\Container;
 use App\Core\Events\TaskRequestDispatcher as Dispatcher;
-use Prometheus\CollectorRegistry;
+use App\Core\Metrics;
+use App\Core\Pools\RedisPool;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
 use Throwable;
@@ -67,8 +68,13 @@ final readonly class TaskRequestHandler
             $taskId = bin2hex(random_bytes(8));
             $start  = microtime(true);
 
-            // Metrics collection
-            $reg     = $this->container->get(CollectorRegistry::class);
+            // Metrics setup
+            $redisPool = $this->container->get(RedisPool::class);
+            $redis     = $redisPool->get();
+            defer(fn () => $redisPool->put($redis));
+
+            $metrics = $this->container->get(Metrics::class);
+            $reg     = $metrics->getCollectorRegistry($redis);
             $counter = $reg->getOrRegisterCounter(
                 'task_requests_total',
                 'Tasks',

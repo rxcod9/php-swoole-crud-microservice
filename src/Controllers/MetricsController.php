@@ -21,8 +21,9 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Messages;
+use App\Core\Metrics;
+use App\Core\Pools\RedisPool;
 use OpenApi\Attributes as OA;
-use Prometheus\CollectorRegistry;
 use Prometheus\RenderTextFormat;
 use Throwable;
 
@@ -45,8 +46,10 @@ final class MetricsController extends Controller
     /**
      * MetricsController constructor.
      */
-    public function __construct(private readonly CollectorRegistry $collectorRegistry)
-    {
+    public function __construct(
+        private readonly RedisPool $redisPool,
+        private readonly Metrics $metrics
+    ) {
         //
     }
 
@@ -65,8 +68,14 @@ final class MetricsController extends Controller
     public function check(): array
     {
         try {
+            $redis = $this->redisPool->get();
+            defer(fn () => $this->redisPool->put($redis));
             $renderTextFormat = new RenderTextFormat();
-            $metrics          = $renderTextFormat->render($this->collectorRegistry->getMetricFamilySamples());
+            $metrics          = $renderTextFormat->render(
+                $this->metrics
+                    ->getCollectorRegistry($redis)
+                    ->getMetricFamilySamples()
+            );
 
             return $this->text($metrics, 200, RenderTextFormat::MIME_TYPE);
         } catch (Throwable $throwable) {

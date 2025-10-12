@@ -33,8 +33,6 @@ use App\Core\Pools\RedisPool;
 use App\Core\Router;
 use App\Services\Cache\CacheService;
 use App\Tables\TableWithLRUAndGC;
-use Prometheus\CollectorRegistry;
-use Prometheus\Storage\Redis;
 use Swoole\Http\Server;
 use Swoole\Table;
 
@@ -166,14 +164,6 @@ final class HttpServer
 
         $cacheService = $container->get(CacheService::class);
         $container->bind(CacheService::class, fn (): mixed => $cacheService);
-
-        // $adapter = new InMemory();
-        $container->singleton(
-            CollectorRegistry::class,
-            fn (): CollectorRegistry => new CollectorRegistry(
-                Redis::fromExistingConnection($redisPool->get())
-            )
-        );
 
         $poolFacade = new PoolFacade($pdoPool, $redisPool, $cacheService);
 

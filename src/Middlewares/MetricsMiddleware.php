@@ -19,8 +19,9 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
+use App\Core\Metrics;
+use App\Core\Pools\RedisPool;
 use App\Core\Router;
-use Prometheus\CollectorRegistry;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -43,7 +44,8 @@ use Swoole\Http\Response;
 final class MetricsMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private readonly CollectorRegistry $collectorRegistry,
+        private readonly RedisPool $redisPool,
+        private readonly Metrics $metrics,
         private readonly Router $router
     ) {
         //
@@ -58,10 +60,14 @@ final class MetricsMiddleware implements MiddlewareInterface
 
         $next($request, $response); // call next middleware
 
-        $dur       = microtime(true) - $start;
-        $reg       = $this->collectorRegistry;
-        $counter   = $reg->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-        $histogram = $reg->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
+        $dur   = microtime(true) - $start;
+        $redis = $this->redisPool->get();
+        defer(fn () => $this->redisPool->put($redis));
+
+        $collectorRegistry = $this->metrics
+            ->getCollectorRegistry($redis);
+        $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
+        $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
 
         $path   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
         $status = $response->status ?? 200;
