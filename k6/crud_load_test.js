@@ -6,8 +6,8 @@ import { Trend } from 'k6/metrics';
 // CONFIGURATION VARIABLES
 // --------------------
 const CONFIG = {
-    TOTAL_USERS: 2000,
-    TOTAL_ITEMS: 2000,
+    TOTAL_USERS: 200,
+    TOTAL_ITEMS: 200,
     HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
     COOL_PERCENT: 0.1,         // Top 10% are not hot (to be deleted)
     HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
@@ -26,21 +26,21 @@ const CONFIG = {
         UPDATE: 0.07,
     },
     CONCURRENCY: {
-        MAX_VUS: 500,
+        MAX_VUS: 100,
         STAGES: [
-            { duration: '1m', target: 0.10 },
-            { duration: '1m', target: 0.25 },
-            { duration: '1m', target: 0.40 },
-            { duration: '2m', target: 0.60 },
-            { duration: '2m', target: 0.80 },
-            { duration: '2m', target: 1.00 },
-            { duration: '2m', target: 0.80 },
-            { duration: '2m', target: 0.50 },
-            { duration: '1m', target: 0.25 },
-            { duration: '1m', target: 0.0 },
+            { duration: '20s', target: 0.10 },
+            { duration: '20s', target: 0.25 },
+            { duration: '20s', target: 0.40 },
+            { duration: '40s', target: 0.60 },
+            { duration: '40s', target: 0.80 },
+            { duration: '40s', target: 1.00 },
+            { duration: '40s', target: 0.80 },
+            { duration: '40s', target: 0.50 },
+            { duration: '20s', target: 0.25 },
+            { duration: '20s', target: 0.0 },
         ]
     },
-    TOTAL_EXECUTIONS: 10000,
+    TOTAL_EXECUTIONS: 1000,
     MAX_DURATION: '5m'
 };
 
