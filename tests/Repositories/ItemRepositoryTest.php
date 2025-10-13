@@ -22,8 +22,6 @@ namespace Tests\Repositories;
 use App\Exceptions\ResourceNotFoundException;
 use App\Repositories\ItemRepository;
 use PDO;
-use RuntimeException;
-use Swoole\Coroutine;
 use Tests\TestCase;
 
 /**
@@ -163,9 +161,9 @@ final class ItemRepositoryTest extends TestCase
     {
         $this->runCoroutine(function (): void {
             $deleted = $this->itemRepository->delete(1);
-            
+
             $this->assertTrue($deleted, 'Expected delete() to return true');
-            
+
             $this->expectException(ResourceNotFoundException::class);
             $this->itemRepository->find(1);
         });

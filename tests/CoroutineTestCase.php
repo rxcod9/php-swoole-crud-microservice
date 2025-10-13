@@ -19,8 +19,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Core\Pools\PDOPool;
-use PDO;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Swoole\Coroutine;
 

@@ -153,9 +153,9 @@ final class UserRepositoryTest extends TestCase
     {
         $this->runCoroutine(function (): void {
             $deleted = $this->userRepository->delete(1);
-            
+
             $this->assertTrue($deleted, 'Expected delete() to return true');
-            
+
             $this->expectException(ResourceNotFoundException::class);
             $this->userRepository->find(1);
         });

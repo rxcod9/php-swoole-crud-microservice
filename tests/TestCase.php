@@ -75,9 +75,9 @@ abstract class TestCase extends CoroutineTestCase
             'user'     => $user,
             'password' => $pass,
             'options'  => [
-                PDO::ATTR_ERRMODE                  => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE       => PDO::FETCH_ASSOC,
-                PDO::ATTR_PERSISTENT               => false, // we manage pool manually
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_PERSISTENT         => false, // we manage pool manually
             ],
             'size' => 10,
         ]);
