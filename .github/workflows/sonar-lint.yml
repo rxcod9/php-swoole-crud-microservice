@@ -1,19 +1,99 @@
-name: Build
+name: SonarQube
+
 on:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+  schedule:
+    - cron: "0 0 * * *"
+
 jobs:
-  sonarqube:
+  run-tests-and-sonar:
     name: SonarQube
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [8.4]
+
     steps:
-      - uses: actions/checkout@v5
+      # --------------------------
+      # Checkout code
+      # --------------------------
+      - name: Checkout code
+        uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
+      # --------------------------
+      # Setup PHP
+      # --------------------------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: >
+            swoole, dom, curl, libxml, mbstring, zip, pcntl, pdo,
+            sqlite, pdo_sqlite, pdo_mysql, bcmath, soap, intl, gd, exif,
+            iconv, imagick, sockets, opcache, redis, xdebug
+          coverage: xdebug
+          tools: composer, cs2pr
+
+      # --------------------------
+      # Install system dependencies
+      # --------------------------
+      - name: Install system libraries
+        run: |
+          sudo apt-get update --fix-missing
+          sudo apt-get install -y git unzip libzip-dev libssl-dev libcurl4-openssl-dev \
+          libnghttp2-dev libsqlite3-dev libpq-dev libbrotli-dev libc-ares-dev supervisor \
+          autoconf build-essential pkg-config \
+          && sudo rm -rf /var/lib/apt/lists/*
+
+      # --------------------------
+      # Cache Composer dependencies
+      # --------------------------
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+
+      # --------------------------
+      # Install PHP dependencies
+      # --------------------------
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --prefer-dist
+
+      # --------------------------
+      # Prepare SQLite database
+      # --------------------------
+      - name: Prepare SQLite
+        run: |
+          mkdir -p database
+          chmod 777 database
+          touch database/testing.sqlite
+          chmod 666 database/testing.sqlite
+
+      # --------------------------
+      # Run PHPUnit with coverage
+      # --------------------------
+      - name: Run PHPUnit with coverage
+        run: |
+          vendor/bin/phpunit \
+            --configuration phpunit.xml \
+            --coverage-clover=coverage.xml \
+            --log-junit junit.xml
+
+      # --------------------------
+      # SonarQube analysis
+      # --------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.php.coverage.reportPaths=coverage.xml
