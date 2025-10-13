@@ -3,7 +3,7 @@
 /**
  * src/Support/helpers.php
  * Project: rxcod9/php-swoole-crud-microservice
- * Description: PHP Swoole CRUD Microservice Helpers with Detailed Step Logging
+ * Description: PHP Swoole CRUD Microservice Helpers with Detailed Logging and Cleaner Functions
  * PHP version 8.4
  *
  * @category  General
@@ -11,48 +11,41 @@
  * @author    Ramakant Gangwar
  * @copyright Copyright (c) 2025
  * @license   MIT
- * @version   1.1.0
+ * @version   1.2.0
  * @since     2025-10-12
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Support/helpers.php
  */
 declare(strict_types=1);
 
 use App\Core\Constants;
+use App\Support\LogHelper;
 
 // -----------------------------------------------------------------------------
-// Log
+// LOGGING
 // -----------------------------------------------------------------------------
-if (!\function_exists('logDebug')) {
+
+if (!function_exists('logDebug')) {
     /**
-     * Write a consistent log line using error_log().
-     * Automatically prefixes coroutine ID and helper name.
+     * Centralized debug logger
      *
-     * @param string $tag Tag or source of the log message
-     * @param string $message The log message
-     * @param array<string, mixed> $context Additional context data (optional)
+     * @param array<string, mixed> $context
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
     function logDebug(string $tag, string $message, array $context = []): void
     {
-        $cid = \class_exists(\Swoole\Coroutine::class)
-            ? \Swoole\Coroutine::getCid()
-            : 'N/A';
-
-        $line = sprintf('[%s][cid:%s] %s', $tag, $cid, $message);
-
-        if ($context !== []) {
-            $line .= ' ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
-        }
-
-        error_log($line);
+        LogHelper::debug($tag, $message, $context);
     }
 }
 
 // -----------------------------------------------------------------------------
-// env()
+// ENV HELPER
 // -----------------------------------------------------------------------------
-if (!\function_exists('env')) {
+
+if (!function_exists('env')) {
+    /**
+     * Retrieve environment variable with fallback
+     */
     function env(string $key, mixed $default = null): mixed
     {
         logDebug(__FUNCTION__, 'called', ['key' => $key, 'default' => $default]);
@@ -65,25 +58,22 @@ if (!\function_exists('env')) {
 }
 
 // -----------------------------------------------------------------------------
-// secondsReadable()
+// TIME AND SIZE FORMATTING
 // -----------------------------------------------------------------------------
-if (!\function_exists('secondsReadable')) {
+
+if (!function_exists('secondsReadable')) {
     function secondsReadable(int $seconds): string
     {
-        // logDebug(__FUNCTION__, 'called', ['seconds' => $seconds]);
-
         $negative = $seconds < 0;
         $seconds  = abs($seconds);
-
-        $units = ['h' => 3600, 'm' => 60, 's' => 1];
-        $parts = [];
+        $units    = ['h' => 3600, 'm' => 60, 's' => 1];
+        $parts    = [];
 
         foreach ($units as $label => $divisor) {
-            if ($seconds >= $divisor) {
-                $quot = intdiv($seconds, $divisor);
-                $seconds %= $divisor;
+            $quot = intdiv($seconds, $divisor);
+            if ($quot > 0) {
                 $parts[] = $quot . $label;
-                // logDebug(__FUNCTION__, 'unit processed', ['unit' => $label, 'quot' => $quot, 'remaining' => $seconds]);
+                $seconds %= $divisor;
             }
         }
 
@@ -92,136 +82,124 @@ if (!\function_exists('secondsReadable')) {
         }
 
         $result = implode(' ', $parts);
-
-        // logDebug(__FUNCTION__, 'final result', ['result' => $final]);
         return $negative ? '-' . $result : $result;
     }
 }
 
-// -----------------------------------------------------------------------------
-// bytesReadable()
-// -----------------------------------------------------------------------------
-if (!\function_exists('bytesReadable')) {
+if (!function_exists('bytesReadable')) {
     function bytesReadable(int|float $bytes, int $precision = 2): string
     {
-        // logDebug(__FUNCTION__, 'called', ['bytes' => $bytes, 'precision' => $precision]);
-
         $negative = $bytes < 0;
         $bytes    = abs($bytes);
+        $units    = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+        $i        = 0;
 
-        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
-        $i     = 0;
-
-        while ($bytes >= 1024 && $i < \count($units) - 1) {
+        while ($bytes >= 1024 && $i < count($units) - 1) {
             $bytes /= 1024;
             ++$i;
-            // logDebug(__FUNCTION__, 'scaled', ['bytes' => $bytes, 'unit' => $units[$i]]);
         }
 
         $result = round($bytes, $precision) . ' ' . $units[$i];
-
-        // logDebug(__FUNCTION__, 'final result', ['result' => $final]);
         return $negative ? '-' . $result : $result;
     }
 }
 
 // -----------------------------------------------------------------------------
-// shouldPDORetry()
+// PDO RETRY LOGIC
 // -----------------------------------------------------------------------------
-if (!\function_exists('shouldPDORetry')) {
+
+if (!function_exists('shouldPDORetry')) {
     function shouldPDORetry(PDOException $pdoException): bool
     {
-        $errorInfo  = $pdoException->errorInfo ?? [];
-        $sqlState   = $errorInfo[0] ?? null;
-        $driverCode = $errorInfo[1] ?? null;
-        $driverMsg  = $errorInfo[2] ?? null;
-
-        logDebug(__FUNCTION__, 'called', ['sqlState' => $sqlState, 'driverCode' => $driverCode, 'driverMsg' => $driverMsg]);
-
-        $match = (
-            ($sqlState === Constants::PDO_GENERAL_ERROR_SQL_STATE &&
-                $driverCode === Constants::PDO_CONNECTION_REFUSED_ERROR_CODE &&
-                (
-                    str_contains($driverMsg, Constants::PDO_CONNECTION_REFUSED_MESSAGE) ||
-                    str_contains($driverMsg, Constants::PDO_CONNECTION_TIMED_OUT_IN) ||
-                    str_contains($driverMsg, Constants::PDO_DNS_LOOKUP_RESOLVE_FAILED)
-                )) ||
-            ($sqlState === Constants::PDO_GENERAL_ERROR_SQL_STATE &&
-                $driverCode === Constants::PDO_SERVER_GONE_AWAY_ERROR_CODE &&
-                str_contains($driverMsg, Constants::PDO_SERVER_GONE_AWAY_MESSAGE))
-        );
-
-        logDebug(__FUNCTION__, 'retry decision', ['retryable' => $match]);
-        return $match;
+        logDebug(__FUNCTION__, 'called', ['message' => $pdoException->getMessage()]);
+        return isConnectionRefused($pdoException) || isServerGoneAway($pdoException);
     }
 }
 
+function isConnectionRefused(PDOException $pdoException): bool
+{
+    $info       = $pdoException->errorInfo ?? [];
+    $sqlState   = $info[0] ?? null;
+    $driverCode = $info[1] ?? null;
+    $driverMsg  = $info[2] ?? '';
+
+    return $sqlState === Constants::PDO_GENERAL_ERROR_SQL_STATE
+        && $driverCode === Constants::PDO_CONNECTION_REFUSED_ERROR_CODE
+        && (str_contains($driverMsg, Constants::PDO_CONNECTION_REFUSED_MESSAGE)
+            || str_contains($driverMsg, Constants::PDO_CONNECTION_TIMED_OUT_IN)
+            || str_contains($driverMsg, Constants::PDO_DNS_LOOKUP_RESOLVE_FAILED));
+}
+
+function isServerGoneAway(PDOException $pdoException): bool
+{
+    $info       = $pdoException->errorInfo ?? [];
+    $sqlState   = $info[0] ?? null;
+    $driverCode = $info[1] ?? null;
+    $driverMsg  = $info[2] ?? '';
+
+    return $sqlState === Constants::PDO_GENERAL_ERROR_SQL_STATE
+        && $driverCode === Constants::PDO_SERVER_GONE_AWAY_ERROR_CODE
+        && str_contains($driverMsg, Constants::PDO_SERVER_GONE_AWAY_MESSAGE);
+}
+
 // -----------------------------------------------------------------------------
-// shouldRetry()
+// GENERAL RETRY LOGIC
 // -----------------------------------------------------------------------------
-if (!\function_exists('shouldRetry')) {
-    /**
-     * Determine if an exception should trigger a retry.
-     */
+
+if (!function_exists('shouldRetry')) {
     function shouldRetry(Throwable $throwable): bool
     {
-        logDebug(__FUNCTION__, 'called', [
-            'class' => $throwable::class,
-            'msg'   => $throwable->getMessage(),
-        ]);
+        logDebug(__FUNCTION__, 'called', ['class' => get_class($throwable), 'msg' => $throwable->getMessage()]);
 
         if ($throwable instanceof PDOException) {
-            $pdoRetry = shouldPDORetry($throwable);
-            logDebug(__FUNCTION__, 'pdo exception check', ['pdoRetry' => $pdoRetry]);
-            return $pdoRetry;
+            return shouldPDORetry($throwable);
         }
 
-        $retryableExceptions = [
-            \App\Exceptions\CreateFailedException::class,
-        ];
-
-        foreach ($retryableExceptions as $retryableException) {
-            if ($throwable instanceof $retryableException) {
-                logDebug(__FUNCTION__, 'matched retryable class', ['class' => $retryableException]);
-                return true;
-            }
+        if ($throwable instanceof \App\Exceptions\CreateFailedException) {
+            logDebug(__FUNCTION__, 'matched retryable class');
+            return true;
         }
 
-        $patterns = [
-            '/deadlock/i',
-            '/timeout/i',
-            '/connection.*refused/i',
-            '/temporarily.*unavailable/i',
-            '/lost.*connection/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $throwable->getMessage())) {
-                logDebug(__FUNCTION__, 'matched retryable message', ['pattern' => $pattern]);
-                return true;
-            }
-        }
-
-        logDebug(__FUNCTION__, 'not retryable');
-        return false;
+        return matchesRetryPattern($throwable->getMessage());
     }
 }
 
+function matchesRetryPattern(string $msg): bool
+{
+    $patterns = [
+        '/deadlock/i',
+        '/timeout/i',
+        '/connection.*refused/i',
+        '/temporarily.*unavailable/i',
+        '/lost.*connection/i',
+    ];
+
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $msg)) {
+            logDebug(__FUNCTION__, 'matched retryable message', ['pattern' => $pattern]);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // -----------------------------------------------------------------------------
-// shouldRedisRetry()
+// REDIS RETRY LOGIC
 // -----------------------------------------------------------------------------
-if (!\function_exists('shouldRedisRetry')) {
+
+if (!function_exists('shouldRedisRetry')) {
     function shouldRedisRetry(Throwable $throwable): bool
     {
-        $message = strtolower($throwable->getMessage());
-        logDebug(__FUNCTION__, 'called', ['message' => $message]);
+        $msg = strtolower($throwable->getMessage());
+        logDebug(__FUNCTION__, 'called', ['message' => $msg]);
 
-        $retryable = str_contains($message, 'connection refused') ||
-            str_contains($message, 'connection lost') ||
-            str_contains($message, 'went away') ||
-            str_contains($message, 'read error on connection') ||
-            str_contains($message, 'failed to connect') ||
-            str_contains($message, 'connection timed out in');
+        $retryable = str_contains($msg, 'connection refused')
+            || str_contains($msg, 'connection lost')
+            || str_contains($msg, 'went away')
+            || str_contains($msg, 'read error on connection')
+            || str_contains($msg, 'failed to connect')
+            || str_contains($msg, 'connection timed out in');
 
         logDebug(__FUNCTION__, 'result', ['retryable' => $retryable]);
         return $retryable;
@@ -229,9 +207,10 @@ if (!\function_exists('shouldRedisRetry')) {
 }
 
 // -----------------------------------------------------------------------------
-// isDuplicateException()
+// DUPLICATE EXCEPTION CHECK
 // -----------------------------------------------------------------------------
-if (!\function_exists('isDuplicateException')) {
+
+if (!function_exists('isDuplicateException')) {
     function isDuplicateException(Throwable $throwable): bool
     {
         if (!($throwable instanceof PDOException)) {
@@ -239,80 +218,68 @@ if (!\function_exists('isDuplicateException')) {
             return false;
         }
 
-        $errorInfo  = $throwable->errorInfo ?? [];
-        $sqlState   = $errorInfo[0] ?? null;
-        $driverCode = $errorInfo[1] ?? null;
-        $driverMsg  = $errorInfo[2] ?? '';
+        $info       = $throwable->errorInfo ?? [];
+        $sqlState   = $info[0] ?? null;
+        $driverCode = $info[1] ?? null;
+        $driverMsg  = $info[2] ?? '';
 
-        logDebug(__FUNCTION__, 'called', ['sqlState' => $sqlState, 'driverCode' => $driverCode, 'driverMsg' => $driverMsg]);
-
-        $mysqlCodes = [1062, 1022];
-        $sqliteMsgs = ['UNIQUE constraint failed', 'column is not unique'];
-        $sqlsrvMsgs = ['Cannot insert duplicate key', 'duplicate key row'];
-
-        $duplicate = ($sqlState === '23000' && in_array($driverCode, $mysqlCodes, true)) ||
-            $sqlState === '23505' ||
-            array_reduce($sqliteMsgs, fn ($carry, $pattern): bool => $carry || stripos($driverMsg, $pattern) !== false, false) ||
-            array_reduce($sqlsrvMsgs, fn ($carry, $pattern): bool => $carry || stripos($driverMsg, $pattern) !== false, false);
-
-        logDebug(__FUNCTION__, 'result', ['duplicate' => $duplicate]);
-        return $duplicate;
+        return isMySqlDuplicate($sqlState, $driverCode)
+            || isPostgresDuplicate($sqlState)
+            || isSqliteDuplicate($driverMsg)
+            || isSqlServerDuplicate($driverMsg);
     }
 }
 
+function isMySqlDuplicate(?string $sqlState, ?int $code): bool
+{
+    return $sqlState === '23000' && in_array($code, [1062, 1022], true);
+}
+
+function isPostgresDuplicate(?string $sqlState): bool
+{
+    return $sqlState === '23505';
+}
+
+function isSqliteDuplicate(string $msg): bool
+{
+    $patterns = ['UNIQUE constraint failed', 'column is not unique'];
+    return array_any($patterns, fn ($pattern): bool => stripos($msg, $pattern) !== false);
+}
+
+function isSqlServerDuplicate(string $msg): bool
+{
+    $patterns = ['Cannot insert duplicate key', 'duplicate key row'];
+    return array_any($patterns, fn ($pattern): bool => stripos($msg, $pattern) !== false);
+}
+
 // -----------------------------------------------------------------------------
-// maybeDecodeJson()
+// JSON HELPERS
 // -----------------------------------------------------------------------------
-if (!\function_exists('maybeDecodeJson')) {
+
+if (!function_exists('maybeDecodeJson')) {
     function maybeDecodeJson(mixed $value): mixed
     {
-        // logDebug(__FUNCTION__, 'called', ['type' => gettype($value)]);
-
-        if (!is_string($value)) {
-            // logDebug(__FUNCTION__, 'non-string, returning as-is');
+        if (!is_string($value) || trim($value) === '') {
             return $value;
         }
 
-        $value = trim($value);
-        if ($value === '') {
-            // logDebug(__FUNCTION__, 'empty string, returning null');
-            return null;
-        }
+        $trimmed = trim($value);
+        $decoded = (str_starts_with($trimmed, '{') || str_starts_with($trimmed, '['))
+            ? json_decode($trimmed, true)
+            : null;
 
-        $decoded   = null;
-        $firstChar = $value[0];
-        if ($firstChar === '{' || $firstChar === '[') {
-            $decoded = json_decode($value, true);
-            // logDebug(__FUNCTION__, 'json_decode attempted', ['error' => json_last_error_msg()]);
-        }
-
-        // logDebug(__FUNCTION__, 'returning', ['type' => gettype($return)]);
-        return (json_last_error() === JSON_ERROR_NONE && $decoded !== null)
-            ? $decoded
-            : $value;
+        return (json_last_error() === JSON_ERROR_NONE && $decoded !== null) ? $decoded : $value;
     }
 }
 
-// -----------------------------------------------------------------------------
-// maybeEncodeJson()
-// -----------------------------------------------------------------------------
-if (!\function_exists('maybeEncodeJson')) {
+if (!function_exists('maybeEncodeJson')) {
     function maybeEncodeJson(mixed $value, int $flags = 0, int $depth = 512): mixed
     {
-        // logDebug(__FUNCTION__, 'called', ['type' => gettype($value)]);
-
         if (is_array($value) || is_object($value)) {
             $encoded = json_encode($value, $flags, $depth);
-            $ok      = json_last_error() === JSON_ERROR_NONE;
-            // logDebug(__FUNCTION__, 'json_encode attempted', ['success' => $ok, 'error' => json_last_error_msg()]);
-
-            if ($ok) {
-                // logDebug(__FUNCTION__, 'encoded successfully');
-                return $encoded;
-            }
+            return (json_last_error() === JSON_ERROR_NONE) ? $encoded : $value;
         }
 
-        // logDebug(__FUNCTION__, 'not encodable, returning raw');
         return $value;
     }
 }

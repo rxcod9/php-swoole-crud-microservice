@@ -1,7 +1,6 @@
 <?php
 
 /**
- * Retryable.php
  * src/Traits/Retryable.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
@@ -13,7 +12,7 @@
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-13
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Traits/Retryable.php
  */
 declare(strict_types=1);
@@ -25,6 +24,7 @@ use Throwable;
 
 /**
  * Trait Retryable
+ * Handles retry logic with exponential backoff for coroutine-safe operations.
  *
  * @category  Traits
  * @package   App\Traits
@@ -32,7 +32,7 @@ use Throwable;
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-13
  */
 trait Retryable
 {
@@ -41,65 +41,88 @@ trait Retryable
      *
      * @param callable(): mixed $callback
      * @param int $attempt Number of attempts
-     * @param int $maxRetry Max Number of attempts
+     * @param int $maxRetry Max Number of attempts (-1 for infinite)
      * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
-     * @see shouldRetry()
-     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function retry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
     {
         try {
             return $callback();
         } catch (Throwable $throwable) {
-            // Retry only if "Connection refused" (MySQL error 2002)
-            if (shouldRetry($throwable) && ($attempt <= $maxRetry || $maxRetry === -1)) {
-                $backoff = (1 << $attempt) * $delayMs * 1000;
-                // microseconds
-                logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[RETRY] Retrying #%d in %.2f seconds...', $backoff / 1000000, $attempt + 1));
-                Coroutine::sleep($backoff / 1000000);
-                ++$attempt;
-                $result = $this->retry($callback, $attempt, $maxRetry, $delayMs);
-                logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[RETRY] Retry #%d succeeded', $attempt));
-                return $result;
+            if (!$this->canRetry($throwable, $attempt, $maxRetry)) {
+                $this->logRetryFailure($throwable, $attempt);
+                throw $throwable;
             }
 
-            logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[EXCEPTION] Retry #%d failed error: %s', $attempt, $throwable->getMessage()));
-            throw $throwable;
+            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__);
+            return $this->retry($callback, ++$attempt, $maxRetry, $delayMs);
         }
     }
 
     /**
-     * Retry a callback a few times with optional delay.
+     * Retry unconditionally (ignores shouldRetry()).
      *
      * @param callable(): mixed $callback
-     * @param int $attempt Number of attempts
-     * @param int $maxRetry Max Number of attempts
-     * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
-     *
-     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function forceRetry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
     {
         try {
             return $callback();
         } catch (Throwable $throwable) {
-            // Retry only if "Connection refused" (MySQL error 2002)
-            if ($attempt <= $maxRetry || $maxRetry === -1) {
-                $backoff = (1 << $attempt) * $delayMs * 1000; // microseconds
-                logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[RETRY] Force Retrying #%d in %.2f seconds...', $backoff / 1000000, $attempt + 1));
-                Coroutine::sleep($backoff / 1000000);
-                ++$attempt;
-                $result = $this->forceRetry($callback, $attempt, $maxRetry, $delayMs);
-                logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[RETRY] Force Retry #%d succeeded', $attempt));
-                return $result;
+            if (!$this->withinRetryLimit($attempt, $maxRetry)) {
+                $this->logRetryFailure($throwable, $attempt, true);
+                throw $throwable;
             }
 
-            logDebug((defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class) . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('Force Retry #%d failed error: %s', $attempt, $throwable->getMessage()));
-            throw $throwable;
+            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__, true);
+            return $this->forceRetry($callback, ++$attempt, $maxRetry, $delayMs);
         }
+    }
+
+    /**
+     * Check if retry is allowed.
+     */
+    private function canRetry(Throwable $throwable, int $attempt, int $maxRetry): bool
+    {
+        return (function_exists('shouldRetry') && shouldRetry($throwable))
+            && $this->withinRetryLimit($attempt, $maxRetry);
+    }
+
+    /**
+     * Check retry limit.
+     */
+    private function withinRetryLimit(int $attempt, int $maxRetry): bool
+    {
+        return ($attempt <= $maxRetry || $maxRetry === -1);
+    }
+
+    /**
+     * Handle coroutine backoff sleep.
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
+     */
+    private function sleepWithBackoff(int $attempt, int $delayMs, string $method, bool $force = false): void
+    {
+        $backoffUs = (1 << $attempt) * $delayMs * 1000;
+        $label     = $force ? 'Force Retry' : 'Retry';
+        $tag       = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
+
+        logDebug($tag . ':' . __LINE__ . ('][' . $method), sprintf('[%s] #%d in %.2f seconds...', $label, $attempt + 1, $backoffUs / 1_000_000));
+        Coroutine::sleep($backoffUs / 1_000_000);
+    }
+
+    /**
+     * Log final failure before throwing.
+     */
+    private function logRetryFailure(Throwable $throwable, int $attempt, bool $force = false): void
+    {
+        $label = $force ? 'Force Retry' : 'Retry';
+        $tag   = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
+
+        logDebug($tag . ':' . __LINE__ . '][__FUNCTION__', sprintf('[%s] #%d failed error: %s', $label, $attempt, $throwable->getMessage()));
     }
 }
