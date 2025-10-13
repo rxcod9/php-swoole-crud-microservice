@@ -19,8 +19,11 @@ declare(strict_types=1);
 
 namespace Tests\Repositories;
 
+use App\Exceptions\ResourceNotFoundException;
 use App\Repositories\ItemRepository;
 use PDO;
+use RuntimeException;
+use Swoole\Coroutine;
 use Tests\TestCase;
 
 /**
@@ -50,7 +53,7 @@ final class ItemRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             // Setup schema for SQLite
             [$pdo, $pdoId] = $this->pool->get();
 
@@ -92,7 +95,7 @@ final class ItemRepositoryTest extends TestCase
      */
     public function testListItems(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $this->assertTrue(true);
         });
     }
@@ -102,7 +105,7 @@ final class ItemRepositoryTest extends TestCase
      */
     public function testGetItemById(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $item = $this->itemRepository->find(1);
 
             $this->assertNotNull($item, 'Item with ID 1 should exist');
@@ -116,7 +119,7 @@ final class ItemRepositoryTest extends TestCase
      */
     public function testCreateItem(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $newId = $this->itemRepository->create([
                 'title' => 'Item 101',
                 'sku'   => 'item-101',
@@ -137,7 +140,7 @@ final class ItemRepositoryTest extends TestCase
      */
     public function testUpdateItem(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $updated = $this->itemRepository->update(1, [
                 'title' => 'Item 001 Updated',
                 'sku'   => 'item-101-updated',
@@ -158,13 +161,13 @@ final class ItemRepositoryTest extends TestCase
      */
     public function testDeleteItem(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $deleted = $this->itemRepository->delete(1);
-
+            
             $this->assertTrue($deleted, 'Expected delete() to return true');
-
-            $item = $this->itemRepository->find(1);
-            $this->assertNull($item, 'Deleted item should not be found');
+            
+            $this->expectException(ResourceNotFoundException::class);
+            $this->itemRepository->find(1);
         });
     }
 }

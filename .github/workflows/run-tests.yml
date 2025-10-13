@@ -93,8 +93,9 @@ jobs:
             # --------------------------
             - name: Prepare SQLite
               run: |
-                touch database.sqlite
-                chmod 666 database.sqlite
+                mkdir -p database
+                touch database/testing.sqlite
+                chmod 666 database/testing.sqlite
 
             # --------------------------
             # Execute PHPUnit tests

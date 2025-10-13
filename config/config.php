@@ -256,7 +256,13 @@ return [
             'db'      => env('DB_DATABASE', 'app'),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'timeout' => (int)(env('DB_TIMEOUT', 2)),
-            'options' => [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+            'options' => [
+                PDO::ATTR_ERRMODE                  => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE       => PDO::FETCH_ASSOC,
+                PDO::ATTR_PERSISTENT               => false, // we manage pool manually
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+                PDO::ATTR_EMULATE_PREPARES         => true,
+            ],
             'pool'    => [
                 'min' => (int)(env('DB_POOL_MIN', 5)),
                 'max' => (int)(env('DB_POOL_MAX', 200)),
@@ -269,11 +275,15 @@ return [
          * @var array
          */
         'sqlite' => [
-            'dsn'     => 'sqlite:database.sqlite',
+            'dsn'     => 'sqlite:/app/database/testing.db',
             'user'    => null,
             'pass'    => null,
             'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'options' => [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+            'options' => [
+                PDO::ATTR_ERRMODE                  => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE       => PDO::FETCH_ASSOC,
+                PDO::ATTR_PERSISTENT               => false, // we manage pool manually
+            ],
             'pool'    => [
                 'min' => (int)(env('DB_POOL_MIN', 5)),
                 'max' => (int)(env('DB_POOL_MAX', 200)),

@@ -124,15 +124,20 @@ final class PDOPool
                 $dsn,
                 $this->conf['user'] ?? 'root',
                 $this->conf['pass'] ?? '',
-                [
-                    PDO::ATTR_ERRMODE                  => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE       => PDO::FETCH_ASSOC,
-                    PDO::ATTR_PERSISTENT               => false, // we manage pool manually
-                    PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+                $this->conf['options'] ?? [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_PERSISTENT         => false, // we manage pool manually
                 ]
             );
-            $pdoIdStmt    = $pdo->query('SELECT CONNECTION_ID() AS id');
-            $connectionId = (int) $pdoIdStmt->fetchColumn();
+
+            if (str_starts_with($dsn, 'sqlite:')) {
+                $connectionId = spl_object_id($pdo); // $this->created + 1;
+            } else {
+                $pdoIdStmt    = $pdo->query('SELECT CONNECTION_ID() AS id');
+                $connectionId = (int) $pdoIdStmt->fetchColumn();
+            }
+
             ++$this->created;
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection created. Total connections: %d', $this->created));
             return [$pdo, $connectionId];

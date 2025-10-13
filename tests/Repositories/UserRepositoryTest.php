@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace Tests\Repositories;
 
+use App\Exceptions\ResourceNotFoundException;
 use App\Repositories\UserRepository;
 use PDO;
 use Tests\TestCase;
@@ -50,7 +51,7 @@ final class UserRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             // Setup schema for SQLite
             [$pdo, $pdoId] = $this->pool->get();
 
@@ -89,7 +90,7 @@ final class UserRepositoryTest extends TestCase
      */
     public function testListUsers(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $this->assertTrue(true);
         });
     }
@@ -99,7 +100,7 @@ final class UserRepositoryTest extends TestCase
      */
     public function testGetUserById(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $user = $this->userRepository->find(1);
 
             $this->assertNotNull($user, 'User with ID 1 should exist');
@@ -113,7 +114,7 @@ final class UserRepositoryTest extends TestCase
      */
     public function testCreateUser(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $newId = $this->userRepository->create([
                 'name'  => 'Charlie',
                 'email' => 'charlie@example.com',
@@ -132,7 +133,7 @@ final class UserRepositoryTest extends TestCase
      */
     public function testUpdateUser(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $updated = $this->userRepository->update(1, [
                 'name'  => 'Alice Updated',
                 'email' => 'alice-updated@example.com',
@@ -148,15 +149,15 @@ final class UserRepositoryTest extends TestCase
     /**
      * Test deleting a user.
      */
-    public function testDeleteUser(): void
+    public function testDeleteItem(): void
     {
-        $this->runInCoroutine(function (): void {
+        $this->runCoroutine(function (): void {
             $deleted = $this->userRepository->delete(1);
-
+            
             $this->assertTrue($deleted, 'Expected delete() to return true');
-
-            $user = $this->userRepository->find(1);
-            $this->assertNull($user, 'Deleted user should not be found');
+            
+            $this->expectException(ResourceNotFoundException::class);
+            $this->userRepository->find(1);
         });
     }
 }
