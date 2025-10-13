@@ -94,6 +94,7 @@ jobs:
             - name: Prepare SQLite
               run: |
                 mkdir -p database
+                chmod 777 database
                 touch database/testing.sqlite
                 chmod 666 database/testing.sqlite
 

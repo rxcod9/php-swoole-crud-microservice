@@ -8,7 +8,7 @@
     <!-- Environment variables for tests -->
     <php>
         <env name="DB_DRIVER" value="sqlite"/>
-        <env name="DB_DSN" value="sqlite:/app/database/testing.db"/>
+        <env name="DB_DSN" value="sqlite:database/testing.db"/>
         <env name="DB_USER" value=""/>
         <env name="DB_PASS" value=""/>
         <env name="DB_HOST" value=""/>

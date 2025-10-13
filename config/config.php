@@ -275,7 +275,7 @@ return [
          * @var array
          */
         'sqlite' => [
-            'dsn'     => 'sqlite:/app/database/testing.db',
+            'dsn'     => 'sqlite:database/testing.db',
             'user'    => null,
             'pass'    => null,
             'charset' => env('DB_CHARSET', 'utf8mb4'),

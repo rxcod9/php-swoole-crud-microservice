@@ -66,7 +66,7 @@ abstract class TestCase extends CoroutineTestCase
      */
     protected function createPool(): PDOPool
     {
-        $dsn  = getenv('DB_DSN') ?: 'sqlite:/app/database/testing.db';
+        $dsn  = getenv('DB_DSN') ?: 'sqlite:database/testing.db';
         $user = getenv('DB_USER') ?: null;
         $pass = getenv('DB_PASS') ?: null;
 
@@ -97,7 +97,7 @@ abstract class TestCase extends CoroutineTestCase
         parent::tearDown();
 
         // only handle SQLite
-        $dsn = getenv('DB_DSN') ?: 'sqlite:/app/database/testing.db';
+        $dsn = getenv('DB_DSN') ?: 'sqlite:database/testing.db';
         if (isset($dsn) && str_starts_with($dsn, 'sqlite:')) {
             $dbFile = substr($dsn, 7); // remove "sqlite:"
 
