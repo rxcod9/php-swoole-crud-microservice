@@ -82,10 +82,8 @@ jobs:
       # --------------------------
       - name: Run PHPUnit with coverage
         run: |
-          vendor/bin/phpunit \
-            --configuration phpunit.xml \
-            --coverage-clover=coverage.xml \
-            --log-junit junit.xml
+          XDEBUG_MODE=coverage vendor/bin/phpunit \
+            --configuration phpunit.xml
 
       # --------------------------
       # SonarQube analysis
@@ -96,4 +94,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.php.coverage.reportPaths=coverage.xml
+            -Dsonar.php.coverage.reportPaths=tests/coverage/clover.xml

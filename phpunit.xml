@@ -1,12 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" bootstrap="tests/bootstrap.php" colors="true" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" cacheDirectory=".phpunit.cache">
-    <!-- Logging configuration -->
+<phpunit 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+    bootstrap="tests/bootstrap.php"
+    colors="true"
+    cacheDirectory=".phpunit.cache"
+    executionOrder="depends,defects"
+    stopOnFailure="false"
+    failOnRisky="true"
+    failOnWarning="true"
+    beStrictAboutTestsThatDoNotTestAnything="true"
+    beStrictAboutOutputDuringTests="true"
+>
+    <!-- ✅ Code Coverage Reports -->
+    <coverage>
+        <report>
+            <!-- Clover for SonarQube or Codecov -->
+            <clover outputFile="tests/coverage/clover.xml"/>
+            <!-- HTML report for humans -->
+            <html outputDirectory="tests/coverage/html"/>
+            <!-- Text summary for CI logs -->
+            <text outputFile="tests/coverage/coverage.txt" showUncoveredFiles="false"/>
+            <!-- Cobertura XML for Jenkins -->
+            <cobertura outputFile="tests/coverage/cobertura.xml"/>
+        </report>
+    </coverage>
+
+    <!-- ✅ Logging -->
     <logging>
         <junit outputFile="tests/logs/junit.xml"/>
         <testdoxText outputFile="tests/logs/testdox.txt"/>
+        <!-- Optional: for debugging slow tests -->
+        <teamcity outputFile="tests/logs/teamcity.log"/>
     </logging>
-    <!-- Environment variables for tests -->
+
+    <!-- ✅ Environment variables -->
     <php>
+        <!-- Test Environment -->
+        <env name="APP_ENV" value="testing"/>
+        <env name="LOG_CHANNEL" value="null"/>
+        <env name="DEBUG" value="false"/>
+
+        <!-- Database -->
         <env name="DB_DRIVER" value="sqlite"/>
         <env name="DB_DSN" value="sqlite:database/testing.db"/>
         <env name="DB_USER" value=""/>
@@ -17,12 +52,28 @@
         <env name="DB_CHARSET" value=""/>
         <env name="DB_POOL_MIN" value="1"/>
         <env name="DB_POOL_MAX" value="1"/>
+
+        <!-- Logging behavior during tests -->
+        <ini name="display_errors" value="0"/>
+        <ini name="error_reporting" value="E_ALL"/>
+        <ini name="error_log" value="tests/logs/error.log"/>
+        <ini name="log_errors" value="1"/>
+
+        <!-- Ensure deterministic random seed -->
+        <env name="PHPUNIT_RANDOM_ORDER_SEED" value="1234"/>
     </php>
-    <!-- Testsuites -->
+
+    <!-- ✅ Testsuites -->
     <testsuites>
         <testsuite name="unit">
-            <directory suffix="Test.php">tests</directory>
+            <directory suffix="Test.php">tests/Unit</directory>
         </testsuite>
     </testsuites>
-    <source/>
+
+    <!-- ✅ Source Directories for Coverage -->
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
 </phpunit>

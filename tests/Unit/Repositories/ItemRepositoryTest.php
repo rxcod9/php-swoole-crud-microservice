@@ -17,7 +17,7 @@
  */
 declare(strict_types=1);
 
-namespace Tests\Repositories;
+namespace Tests\Unit\Repositories;
 
 use App\Exceptions\ResourceNotFoundException;
 use App\Repositories\ItemRepository;

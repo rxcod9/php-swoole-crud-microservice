@@ -48,11 +48,11 @@ if (!function_exists('env')) {
      */
     function env(string $key, mixed $default = null): mixed
     {
-        logDebug(__FUNCTION__, 'called', ['key' => $key, 'default' => $default]);
+        // logDebug(__FUNCTION__, 'called', ['key' => $key, 'default' => $default]);
 
         $value = $_ENV[$key] ?? $_SERVER[$key] ?? (getenv($key) !== false ? getenv($key) : $default);
 
-        logDebug(__FUNCTION__, 'resolved', ['key' => $key, 'value' => $value]);
+        // logDebug(__FUNCTION__, 'resolved', ['key' => $key, 'value' => $value]);
         return $value;
     }
 }

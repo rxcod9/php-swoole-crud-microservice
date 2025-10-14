@@ -14,6 +14,7 @@ phpmd.csv
 .phpunit.cache
 database.sqlite
 tests/logs/
+tests/coverage/
 .php-cs-fixer.cache
 
 # Node / Frontend artifacts

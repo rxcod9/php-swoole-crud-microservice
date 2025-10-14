@@ -56,6 +56,11 @@ class LogHelper
      */
     public static function debug(string $tag, string $message, array $context = []): void
     {
+        if (env('APP_ENV') === 'testing') {
+            // redirect to /dev/null in tests
+            return;
+        }
+
         $cid = self::getCoroutineId();
 
         $line = sprintf('[%s][cid:%s] %s', $tag, $cid, $message);
