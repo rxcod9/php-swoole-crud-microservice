@@ -1,11 +1,10 @@
 name: Docker Build & Push
 
 on:
-  workflow_run:
-    workflows: ["run-tests"]
-    types:
-      - completed
-  workflow_dispatch: # manual trigger
+  push:
+    tags:
+      - 'v*'   # Only trigger for version tags like v1.0.0, v2.1.3
+  workflow_dispatch:
 
 jobs:
   docker:
@@ -16,43 +15,58 @@ jobs:
       packages: write
 
     steps:
+      # --------------------------
       # Checkout repo
+      # --------------------------
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Setup QEMU (for multi-arch builds, e.g. amd64 + arm64)
+      # --------------------------
+      # Setup QEMU (for multi-arch)
+      # --------------------------
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # Setup Buildx (required for caching & multi-platform)
+      # --------------------------
+      # Setup Buildx (for caching)
+      # --------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Login to registry (Docker Hub or GHCR)
-      - name: Log in to Docker registry
+      # --------------------------
+      # Docker Hub Login
+      # --------------------------
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          # for GHCR use:
-          # username: ${{ github.actor }}
-          # password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata for tags/labels
+      # --------------------------
+      # Extract Docker metadata
+      # This automatically generates tags & labels
+      # --------------------------
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             rxcod9/php-swoole-crud-microservice
-            # ghcr.io/${{ github.repository_owner }}/php-swoole-crud-microservice
           tags: |
-            type=ref,event=branch
-            type=sha
+            # Full semver tag from Git tag (v1.2.3)
             type=semver,pattern={{version}}
+            # Major version only (v1)
+            type=semver,pattern={{major}}
+            # Major.minor version (v1.2)
+            type=semver,pattern={{major}}.{{minor}}
+            # Stable alias for major version (maps to v1.x.x)
+            type=semver,pattern=stable,enable={{is_default_branch}}
+            # Always tag latest (for newest release)
             latest
 
-      # Build & Push Docker image
+      # --------------------------
+      # Build and Push multi-arch Docker image
+      # --------------------------
       - name: Build and Push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -64,3 +78,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # --------------------------
+      # Show resulting image tags (debugging)
+      # --------------------------
+      - name: Show image tags
+        run: echo "${{ steps.meta.outputs.tags }}"
