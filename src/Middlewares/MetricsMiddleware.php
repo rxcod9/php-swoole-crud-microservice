@@ -48,7 +48,7 @@ final class MetricsMiddleware implements MiddlewareInterface
         private readonly Metrics $metrics,
         private readonly Router $router
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

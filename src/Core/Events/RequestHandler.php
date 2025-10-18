@@ -66,7 +66,7 @@ final readonly class RequestHandler
         private Server $server,
         private Container $container
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -200,7 +200,6 @@ final readonly class RequestHandler
 
     /**
      * Determine if the given Throwable belongs to the App\Exception namespace.
-     *
      */
     private function isAppException(Throwable $throwable): bool
     {
@@ -260,28 +259,7 @@ final readonly class RequestHandler
         string $reqId,
         Response $response,
         float $start
-    ): void {
-        // Metrics setup
-        $redisPool = $this->container->get(RedisPool::class);
-        $redis     = $redisPool->get();
-        defer(fn () => $redisPool->put($redis));
-
-        $metrics = $this->container->get(Metrics::class);
-        $reg     = $metrics->getCollectorRegistry($redis);
-        $counter = $reg->getOrRegisterCounter(
-            'http_requests_total',
-            'Requests',
-            'Total HTTP requests',
-            ['method', 'path', 'status']
-        );
-        $histogram = $reg->getOrRegisterHistogram(
-            'http_request_seconds',
-            'Latency',
-            'HTTP request latency',
-            ['method', 'path']
-        );
-
-        // Execute controller/handler
+    ): void { // Execute controller/handler
         $dispatcher = new Dispatcher($this->container);
         $payload    = $dispatcher->dispatch($action, $params, $request);
 
@@ -316,8 +294,8 @@ final readonly class RequestHandler
                 $request->server['request_method'],
                 $path ?? '/'
             );
-            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+
+            $this->logMetrics($request, $route, $status, $dur);
 
             $requestLogger = new RequestLogger();
             $requestLogger->log(
@@ -332,6 +310,45 @@ final readonly class RequestHandler
                     'dur_ms' => (int) round($dur * 1000),
                 ]
             );
+        }
+    }
+
+    /**
+     * Log metrics for the request.
+     *
+     * @param Request $request The incoming HTTP request
+     * @param array   $route   The matched route information
+     * @param int     $status  The HTTP response status code
+     * @param float   $dur     The duration of the request handling in seconds
+     */
+    private function logMetrics(Request $request, array $route, $status, $dur): void
+    {
+        try {
+            // Metrics setup
+            $redisPool = $this->container->get(RedisPool::class);
+            $redis     = $redisPool->get();
+            defer(fn () => $redisPool->put($redis));
+
+            $metrics = $this->container->get(Metrics::class);
+            $reg     = $metrics->getCollectorRegistry($redis);
+            $counter = $reg->getOrRegisterCounter(
+                'http_requests_total',
+                'Requests',
+                'Total HTTP requests',
+                ['method', 'path', 'status']
+            );
+            $histogram = $reg->getOrRegisterHistogram(
+                'http_request_seconds',
+                'Latency',
+                'HTTP request latency',
+                ['method', 'path']
+            );
+
+            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
+            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+        } catch (Throwable $throwable) {
+            // Log metrics logging errors
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Metrics logging failed : ' . $throwable->getMessage());
         }
     }
 }

@@ -69,7 +69,17 @@ use Swoole\Table;
 final class HttpServer
 {
     /** @var Server Swoole HTTP server instance */
-    private readonly Server $server;
+    private Server $server;
+
+    private Table $healthTable;
+
+    /** @var TableWithLRUAndGC<string, array<string, mixed>> LRU cache table with garbage collection */
+    private TableWithLRUAndGC $lruTable;
+
+    /** @var TableWithLRUAndGC<string, array<string, mixed>> Rate limiter table */
+    private TableWithLRUAndGC $rateLimitTable;
+
+    private Container $container;
 
     /**
      * HttpServer constructor.
@@ -82,174 +92,186 @@ final class HttpServer
      *
      * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
+    /**
+     * HttpServer constructor.
+     *
+     * @param array<string, mixed> $config  Server configuration array
+     * @param Router               $router  Router instance for request routing
+     */
     public function __construct(
         private array $config,
-        Router $router
+        private readonly Router $router
     ) {
-        // Shared memory table for worker health
-        $table = new Table(64);
-        $table->column('pid', Table::TYPE_INT, 8);
-        $table->column('timer_id', Table::TYPE_INT, 8);
-        $table->column('first_heartbeat', Table::TYPE_INT, 10);
-        $table->column('last_heartbeat', Table::TYPE_INT, 10);
-        $table->column('mysql_capacity', Table::TYPE_INT, 3);
-        $table->column('mysql_available', Table::TYPE_INT, 3);
-        $table->column('mysql_created', Table::TYPE_INT, 3);
-        $table->column('mysql_in_use', Table::TYPE_INT, 3);
-        $table->column('redis_capacity', Table::TYPE_INT, 3);
-        $table->column('redis_available', Table::TYPE_INT, 3);
-        $table->column('redis_created', Table::TYPE_INT, 3);
-        $table->column('redis_in_use', Table::TYPE_INT, 3);
-        $table->create();
+        $this->initTables();
+        $this->initServer();
+        $this->initContainer();
+        $this->initPools();
+        $this->initEventHandlers();
+    }
 
-        // Shared memory table for worker health
-        $tableWithLRUAndGC = new TableWithLRUAndGC(8192, 600);
-        $tableWithLRUAndGC->create();
+    /**
+     * Initializes shared memory tables used across workers.
+     */
+    private function initTables(): void
+    {
+        // Worker health table
+        $this->healthTable = new Table(64);
+        $this->healthTable->column('pid', Table::TYPE_INT, 8);
+        $this->healthTable->column('timer_id', Table::TYPE_INT, 8);
+        $this->healthTable->column('first_heartbeat', Table::TYPE_INT, 10);
+        $this->healthTable->column('last_heartbeat', Table::TYPE_INT, 10);
+        $this->healthTable->column('mysql_capacity', Table::TYPE_INT, 3);
+        $this->healthTable->column('mysql_available', Table::TYPE_INT, 3);
+        $this->healthTable->column('mysql_created', Table::TYPE_INT, 3);
+        $this->healthTable->column('mysql_in_use', Table::TYPE_INT, 3);
+        $this->healthTable->column('redis_capacity', Table::TYPE_INT, 3);
+        $this->healthTable->column('redis_available', Table::TYPE_INT, 3);
+        $this->healthTable->column('redis_created', Table::TYPE_INT, 3);
+        $this->healthTable->column('redis_in_use', Table::TYPE_INT, 3);
+        $this->healthTable->create();
 
-        // Shared memory table for worker health
-        $rateLimitTable = new TableWithLRUAndGC(60);
-        $rateLimitTable->create();
+        // LRU cache table with garbage collection
+        $this->lruTable = new TableWithLRUAndGC(8192, 600);
+        $this->lruTable->create();
 
-        $host = $this->config['server']['host'];
-        $port = $this->config['server']['http_port'];
+        // Rate limiter shared table
+        $this->rateLimitTable = new TableWithLRUAndGC(60);
+        $this->rateLimitTable->create();
+    }
+
+    /**
+     * Initializes and configures the Swoole HTTP server.
+     */
+    private function initServer(): void
+    {
+        $host       = $this->config['server']['host'];
+        $port       = $this->config['server']['http_port'];
+        $sslEnabled = (bool) $this->config['server']['ssl']['enable'];
 
         $this->server = new Server(
             $host,
             $port,
             SWOOLE_PROCESS,
-            SWOOLE_SOCK_TCP | ((($this->config['server']['ssl']['enable'] ?? false) === true) ? SWOOLE_SSL : 0)
+            SWOOLE_SOCK_TCP | ($sslEnabled ? SWOOLE_SSL : 0)
         );
 
-        // Optional TLS/HTTP2 support
-        if (($this->config['server']['ssl']['enable'] ?? false) === true) {
+        if ($sslEnabled) {
             $this->server->set([
                 'ssl_cert_file'       => $this->config['server']['ssl']['cert_file'],
                 'ssl_key_file'        => $this->config['server']['ssl']['key_file'],
-                'open_http2_protocol' => true, // optional
+                'open_http2_protocol' => true,
             ]);
         }
 
         $this->server->set($this->config['server']['settings'] ?? []);
 
         // Server start event
-        $this->server->on(
-            'Start',
-            fn () => print sprintf('HTTP listening on %s:%s%s', $host, $port, PHP_EOL)
-        );
+        $this->server->on('Start', function () use ($host, $port): void {
+            echo sprintf('HTTP listening on %s:%s%s', $host, $port, PHP_EOL);
+        });
+    }
 
-        $container = new Container();
-        $container->bind(Server::class, fn (): \Swoole\Http\Server => $this->server);
-        $container->bind(Table::class, fn (): \Swoole\Table => $table);
-        $container->bind(TableWithLRUAndGC::class, fn (): \App\Tables\TableWithLRUAndGC => $tableWithLRUAndGC);
-        $container->bind(Config::class, fn (): Config => new Config($config));
-        $container->bind(Container::class, fn (): Container => $container);
+    /**
+     * Initializes dependency injection container and base bindings.
+     */
+    private function initContainer(): void
+    {
+        $this->container = new Container();
 
         // Initialize pools per worker
+        $this->container->bind(Server::class, fn (): Server => $this->server);
+        $this->container->bind(Table::class, fn (): Table => $this->healthTable);
+        $this->container->bind(TableWithLRUAndGC::class, fn (): TableWithLRUAndGC => $this->lruTable);
+        $this->container->bind(Config::class, fn (): Config => new Config($this->config));
+        $this->container->bind(Container::class, fn (): Container => $this->container);
+    }
+
+    /**
+     * Initializes connection pools for MySQL and Redis, then binds them to container.
+     */
+    private function initPools(): void
+    {
         $dbConf  = $this->config['db'][$this->config['db']['driver'] ?? 'mysql'];
         $pdoPool = new PDOPool($dbConf, $dbConf['pool']['min'] ?? 5, $dbConf['pool']['max'] ?? 200);
 
-        \Swoole\Coroutine\run(function () use ($pdoPool): void {
-            $pdoPool->init(-1);
-        });
+        \Swoole\Coroutine\run(fn () => $pdoPool->init(-1));
 
         $redisConf = $this->config['redis'];
         $redisPool = new RedisPool($redisConf, $redisConf['pool']['min'], $redisConf['pool']['max'] ?? 200);
 
-        \Swoole\Coroutine\run(function () use ($redisPool): void {
-            $redisPool->init(-1);
-        });
+        \Swoole\Coroutine\run(fn () => $redisPool->init(-1));
 
         $poolBinder = new PoolBinder($pdoPool, $redisPool);
-        $poolBinder->bind($container);
+        $poolBinder->bind($this->container);
 
-        $cacheService = $container->get(CacheService::class);
-        $container->bind(CacheService::class, fn (): mixed => $cacheService);
+        $cacheService = $this->container->get(CacheService::class);
+        $this->container->bind(CacheService::class, fn (): CacheService => $cacheService);
+    }
 
-        $poolFacade = new PoolFacade($pdoPool, $redisPool, $cacheService);
-
-        $workerStartHandler = new WorkerStartHandler($table, $poolFacade);
-
-        // Worker start event
-        $this->server->on(
-            'WorkerStart',
-            $workerStartHandler
+    /**
+     * Registers all Swoole server lifecycle event handlers.
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     */
+    private function initEventHandlers(): void
+    {
+        $poolFacade = new PoolFacade(
+            $this->container->get(PDOPool::class),
+            $this->container->get(RedisPool::class),
+            $this->container->get(CacheService::class)
         );
 
         // Worker stop event (graceful)
+        $workerStartHandler = new WorkerStartHandler($this->healthTable, $poolFacade);
+
+        // Worker lifecycle events
+        $this->server->on('WorkerStart', $workerStartHandler);
         $this->server->on(
             'WorkerStop',
-            function (
-                Server $server,
-                int $workerId
-            ) use (
-                $table,
-                $workerStartHandler
-            ): void {
-                echo "[WorkerStop] Worker #{$workerId} stopped\n";
-                $workerStartHandler->clearTimers($workerId);
-                $this->disableWorker($workerId, $table);
-            }
+            fn (Server $server, int $workerId) => $this->handleWorkerStop($workerId, $workerStartHandler)
         );
-
         // Worker exit event (after WorkerStop)
         $this->server->on(
             'WorkerExit',
-            function (
-                Server $server,
-                int $workerId
-            ) use (
-                $table,
-                $workerStartHandler
-            ): void {
-                echo "[WorkerExit] Worker #{$workerId} exited\n";
-                $workerStartHandler->clearTimers($workerId);
-                $this->disableWorker($workerId, $table);
-            }
+            fn (Server $server, int $workerId) => $this->handleWorkerStop($workerId, $workerStartHandler)
         );
-
         // Worker error event (crash/fatal error)
-        /**
-         * @SuppressWarnings("PHPMD.UnusedFormalParameter")
-         */
         $this->server->on(
             'WorkerError',
-            function (
-                Server $server,
-                int $workerId,
-                int $workerPid,
-                int $exitCode,
-                int $signal
-            ) use (
-                $table,
-                $workerStartHandler
-            ): void {
-                echo sprintf('[WorkerError] Worker #%d (PID: %d) crashed. Exit code: %d, Signal: %d%s', $workerId, $workerPid, $exitCode, $signal, PHP_EOL);
-                $workerStartHandler->clearTimers($workerId);
-                $this->disableWorker($workerId, $table);
-            }
+            fn (Server $server, int $workerId, int $workerPid, int $exitCode, int $signal) => $this->handleWorkerError($workerId, $workerPid, $exitCode, $signal, $workerStartHandler)
         );
 
         // HTTP request event
-        $this->server->on(
-            'request',
-            new RequestHandler(
-                $router,
-                $this->server,
-                $container
-            )
-        );
-
-        // Task event handler for async jobs (e.g., logging)
-        $this->server->on(
-            'task',
-            new TaskRequestHandler(
-                $container
-            )
-            // new TaskHandler()
-        );
-
-        // Task finish event (no-op)
+        // HTTP + Task handling
+        $this->server->on('request', new RequestHandler($this->router, $this->server, $this->container));
+        $this->server->on('task', new TaskRequestHandler($this->container));
         $this->server->on('finish', new TaskFinishHandler());
+    }
+
+    // Task event handler for async jobs (e.g., logging)
+    /**
+     * Handles worker stop/exit logic.
+     */
+    private function handleWorkerStop(int $workerId, WorkerStartHandler $workerStartHandler): void
+    {
+        echo "[WorkerStop] Worker #{$workerId} stopped\n";
+        $workerStartHandler->clearTimers($workerId);
+        $this->disableWorker($workerId, $this->healthTable);
+    }
+
+    /**
+     * Handles worker crash/error logic.
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
+     */
+    private function handleWorkerError(
+        int $workerId,
+        int $workerPid,
+        int $exitCode,
+        int $signal,
+        WorkerStartHandler $workerStartHandler
+    ): void {
+        echo sprintf('[WorkerError] Worker #%d (PID: %d) crashed. Exit code: %d, Signal: %d%s', $workerId, $workerPid, $exitCode, $signal, PHP_EOL);
+        $workerStartHandler->clearTimers($workerId);
+        $this->disableWorker($workerId, $this->healthTable);
     }
 
     /**
@@ -274,6 +296,8 @@ final class HttpServer
         Table $table
     ): void {
         AppContext::setWorkerReady(false);
-        $table->del((string)$workerId);
+        if ($table->exist((string) $workerId)) {
+            $table->del((string) $workerId);
+        }
     }
 }

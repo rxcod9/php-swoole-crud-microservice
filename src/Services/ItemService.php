@@ -24,6 +24,7 @@ namespace App\Services;
 
 use App\Core\Pools\PDOPool;
 use App\Repositories\ItemRepository;
+use App\Repositories\Repository;
 use App\Traits\Retryable;
 use BadMethodCallException;
 use PDO;
@@ -50,6 +51,7 @@ use PDO;
 final readonly class ItemService
 {
     use Retryable;
+    use PaginationTrait;
 
     public const TAG = 'ItemService';
 
@@ -62,6 +64,16 @@ final readonly class ItemService
         private PDOPool $pdoPool,
         private ItemRepository $itemRepository
     ) {
+    }
+
+    /**
+     * Get the repository instance.
+     *
+     * @return ItemRepository The repository instance.
+     */
+    protected function getRepository(): ItemRepository
+    {
+        return $this->itemRepository;
     }
 
     /**
@@ -87,79 +99,18 @@ final readonly class ItemService
     /**
      * List records with optional filters, sorting, and pagination.
      *
-     * @param int               $limit   Max rows (default 100, max 1000)
-     * @param int               $offset  Offset for pagination
-     * @param array<string, mixed> $filters Associative array of filters
-     * @param string            $sortBy  Column to sort by
-     * @param string            $sortDir Sort direction ('ASC' or 'DESC')
+     * @param array<string, mixed> $params PaginateParams
      *
      * @return array<int, mixed> Array of records
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function pagination(
-        int $limit = 20,
-        int $offset = 0,
-        array $filters = [],
-        string $sortBy = 'id',
-        string $sortDir = 'DESC'
-    ): array {
+    public function pagination(array $params): array
+    {
         return $this->pdoPool->withConnection(function () use (
-            $limit,
-            $offset,
-            $filters,
-            $sortBy,
-            $sortDir
+            $params
         ): array {
-            // Get total count for pagination metadata
-            $total = $this->itemRepository->count();
-            $pages = ceil($total / $limit);
-
-            if ($total === 0) {
-                return [
-                    [],
-                    [
-                        'count'          => 0,
-                        'current_page'   => floor($offset / $limit) + 1,
-                        'filtered_total' => 0,
-                        'per_page'       => $limit,
-                        'total_pages'    => $pages,
-                        'total'          => $total,
-                    ],
-                ];
-            }
-
-            $filteredTotal = $this->itemRepository->filteredCount($filters);
-            if ($filteredTotal === 0) {
-                return [
-                    [],
-                    [
-                        'count'          => 0,
-                        'current_page'   => floor($offset / $limit) + 1,
-                        'filtered_total' => 0,
-                        'per_page'       => $limit,
-                        'total_pages'    => $pages,
-                        'total'          => $total,
-                    ],
-                ];
-            }
-
-            $records = $this->itemRepository->list(
-                limit: $limit,
-                offset: $offset,
-                filters: $filters,
-                sortBy: $sortBy,
-                sortDir: $sortDir,
-            );
-
-            $pagination = [
-                'count'          => count($records),
-                'current_page'   => floor($offset / $limit) + 1,
-                'filtered_total' => $filteredTotal,
-                'per_page'       => $limit,
-                'total_pages'    => $pages,
-                'total'          => $total,
-            ];
-
-            return [$records, $pagination];
+            $paginationParams = PaginationParams::fromArray($params);
+            return $this->paginate($paginationParams);
         });
     }
 

@@ -210,13 +210,7 @@ final class ItemController extends Controller
         $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
 
         // Fetch from service if not cached
-        [$records, $pagination] = $this->itemService->pagination(
-            $limit,
-            $offset,
-            $filters,
-            $sortBy,
-            $sortDirection
-        );
+        [$records, $pagination] = $this->itemService->pagination(['limit' => $limit, 'offset' => $offset, 'filters' => $filters, 'sortBy' => $sortBy, 'sortDir' => $sortDirection]);
 
         $data = [
             'data'       => $records,

@@ -59,7 +59,7 @@ final readonly class RedisCacheService
         private int $recordTtl = 300,
         private int $listTtl = 120
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -139,22 +139,18 @@ final readonly class RedisCacheService
         $key  = $this->recordKeyByColumn($entity, $column, $value);
         $data = $this->get($key);
 
-        return $data === null ? null : json_decode($data, true);
+        return ($data === null || $data === false) ? null : json_decode($data, true);
     }
 
     /**
      * Set an individual record in the cache by entity, column, and value.
      *
-     * @param string     $entity   The entity name (e.g., 'users', 'items')
-     * @param string     $column   The column name (e.g., 'id', 'email')
-     * @param int|string $value    The value to look up
-     * @param mixed      $data     The record data to cache
-     * @param int|null   $localTtl Optional TTL for this specific record (in seconds)
+     * @param CacheRecordParams $cacheRecordParams The cache record parameters
      */
-    public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data, ?int $localTtl = null): void
+    public function setRecordByColumn(CacheRecordParams $cacheRecordParams): void
     {
-        $key = $this->recordKeyByColumn($entity, $column, $value);
-        $this->set($key, json_encode($data), $localTtl ?? $this->recordTtl);
+        $key = $this->recordKeyByColumn($cacheRecordParams->entity, $cacheRecordParams->column, $cacheRecordParams->value);
+        $this->set($key, json_encode($cacheRecordParams->data), $cacheRecordParams->ttl ?? $this->recordTtl);
     }
 
     /**
@@ -205,10 +201,18 @@ final readonly class RedisCacheService
      * @param int|string $id       The record ID
      * @param mixed      $data     The record data to cache
      * @param int|null   $localTtl Optional TTL for this specific record (in seconds)
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function setRecord(string $entity, int|string $id, mixed $data, ?int $localTtl = null): void
     {
-        $this->setRecordByColumn($entity, 'id', $id, $data, $localTtl);
+        $this->setRecordByColumn(CacheRecordParams::fromArray([
+            'entity' => $entity,
+            'column' => 'id',
+            'value'  => $id,
+            'data'   => $data,
+            'ttl'    => $localTtl,
+        ]));
     }
 
     /**
@@ -238,8 +242,15 @@ final readonly class RedisCacheService
         $version = $this->getListVersion($entity);
         $key     = $this->listKey($entity, $query, $version);
 
-        $data = $redis->get($key);
-        return $data === null ? null : json_decode($data, true);
+        try {
+            $data = $redis->get($key);
+        } catch (\Throwable $throwable) {
+            // Log error but do not throw, as cache failure should not break functionality
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Redis getList error: ' . $throwable->getMessage());
+            return null;
+        }
+
+        return ($data === null || $data === false) ? null : json_decode($data, true);
     }
 
     /**
@@ -270,10 +281,13 @@ final readonly class RedisCacheService
      */
     public function invalidateLists(string $entity): void
     {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Invalidating lists for entity: ' . $entity);
         $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
         defer(fn () => $this->redisPool->put($redis));
 
-        $redis->incr($entity . ':version');
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for entity: ' . $entity);
+        $result = $redis->incr($entity . ':version');
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for entity: ' . $entity . ' result:' . var_export($result, true));
     }
 
     /**
@@ -392,7 +406,6 @@ final readonly class RedisCacheService
 
     /**
      * Extract the version number from a Redis list key.
-     *
      */
     private function extractVersionFromKey(string $key): int
     {

@@ -113,38 +113,56 @@ class TableWithLRUAndGC implements Iterator, Countable
      * @param string $key The key to set.
      * @param array<string, mixed> $row The row data to set.
      * @param int $localTtl Optional TTL for this specific entry (overrides default ttl).
-     * @return bool True on success, false on failure.
-     * @throws CacheSetException If unable to set the cache.
+     * @throws CacheSetException
      */
     public function set(string $key, array $row, int $localTtl = 0): bool
     {
-        $key    = strlen($key) > 56 ? substr($key, 0, 56) : $key;
-        $exists = $this->table->exist($key);
-        if (
-            !$exists &&
-            count($this->table) >= ($this->maxSize - $this->bufferSize)
-        ) {
-            $this->evict();
-        }
+        $key = $this->normalizeKey($key);
 
-        // auto-update last_access
-        // if (!isset($row['last_access'])) {
-        //     $row['last_access'] = time();
-        // }
-        if (!isset($row['expires_at'])) {
-            $row['expires_at'] = Carbon::now()->getTimestamp() + (($localTtl > 0 ? $localTtl : $this->ttl) * 1000);
-        }
+        $this->ensureCapacity();
 
-        if (!isset($row['created_at'])) {
-            $row['created_at'] = Carbon::now()->getTimestamp();
-        }
+        $row = $this->applyTimestamps($row, $localTtl);
 
         $success = $this->table->set($key, $row);
         if (!$success) {
             throw new CacheSetException('Unable to set Cache');
         }
 
-        return $success;
+        return true;
+    }
+
+    /**
+     * Normalize key length to max 56 chars.
+     */
+    private function normalizeKey(string $key): string
+    {
+        return strlen($key) > 56 ? substr($key, 0, 56) : $key;
+    }
+
+    /**
+     * Enforces LRU eviction if table is near capacity.
+     */
+    private function ensureCapacity(): void
+    {
+        if (count($this->table) >= ($this->maxSize - $this->bufferSize)) {
+            $this->evict();
+        }
+    }
+
+    /**
+     * Apply expiration and creation timestamps.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function applyTimestamps(array $row, int $localTtl): array
+    {
+        $now = Carbon::now()->getTimestamp();
+
+        $row['expires_at'] ??= $now + (($localTtl > 0 ? $localTtl : $this->ttl) * 1000);
+        $row['created_at'] ??= $now;
+
+        return $row;
     }
 
     /**

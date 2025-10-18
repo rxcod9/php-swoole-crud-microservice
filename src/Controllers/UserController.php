@@ -21,6 +21,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Messages;
+use App\Services\Cache\CacheRecordParams;
 use App\Services\Cache\CacheService;
 use App\Services\UserService;
 use OpenApi\Attributes as OA;
@@ -48,7 +49,7 @@ final class UserController extends Controller
         private readonly UserService $userService,
         private readonly CacheService $cacheService
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -170,7 +171,7 @@ final class UserController extends Controller
         // Check cache
         // --------------------
         $cachedResult = $this->getCachedUserList($query);
-        if ($cachedResult !== null) {
+        if ($cachedResult !== null && $cachedResult !== false) {
             return $cachedResult;
         }
 
@@ -204,13 +205,7 @@ final class UserController extends Controller
      */
     private function fetchAndCacheUsers(array $query): array
     {
-        [$records, $pagination] = $this->userService->pagination(
-            $query['limit'],
-            $query['offset'],
-            $query['filters'],
-            $query['sortBy'],
-            $query['sortDirection']
-        );
+        [$records, $pagination] = $this->userService->pagination($query);
 
         $data = [
             'data'       => $records,
@@ -325,6 +320,7 @@ final class UserController extends Controller
      * @param array<string, string|null> $params Route parameters
      *
      * @return array<string, mixed> User data
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     #[OA\Get(
         path: '/users/email/{email}',
@@ -365,7 +361,12 @@ final class UserController extends Controller
         $data = $this->userService->findByEmail(urldecode($email));
 
         $this->cacheService->setRecord('users', $data['id'], $data);
-        $this->cacheService->setRecordByColumn('users', 'email', $email, $data);
+        $this->cacheService->setRecordByColumn(CacheRecordParams::fromArray([
+            'entity' => 'users',
+            'column' => 'email',
+            'value'  => $email,
+            'data'   => $data,
+        ]));
 
         return $this->json($data);
     }

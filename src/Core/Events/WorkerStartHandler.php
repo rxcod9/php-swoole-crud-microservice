@@ -52,7 +52,7 @@ final class WorkerStartHandler
         private readonly Table $table,
         private readonly PoolFacade $poolFacade
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -118,7 +118,7 @@ final class WorkerStartHandler
 
     private function handleTick(mixed $timerId, int $workerId, int $pid): void
     {
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, "Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
+        // logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, "Timer {$timerId} heartbeat from Worker {$workerId} (PID {$pid})\n");
 
         $this->updateWorkerStats($workerId, $pid, $timerId);
         $this->poolFacade->autoScale($workerId);

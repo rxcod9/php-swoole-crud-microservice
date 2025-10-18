@@ -44,6 +44,13 @@ final class LoggingMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, Response $response, callable $next): void
     {
+        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
+        $path       = $parsedPath !== false ? $parsedPath : '/';
+        if (in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            $next($request, $response);
+            return;
+        }
+
         $start = microtime(true);
 
         $next($request, $response); // call next middleware first

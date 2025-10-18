@@ -45,7 +45,7 @@ final class PoolBinder
         private PDOPool &$pdoPool,
         private RedisPool &$redisPool
     ) {
-        //
+        // Empty Constructor
     }
 
     public function bind(Container $container): void

@@ -23,8 +23,11 @@ use App\Core\Messages;
 use App\Core\Pools\PDOPool;
 use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
+use App\Models\Item;
+use App\Services\PaginationParams;
 use InvalidArgumentException;
 use PDO;
+use PDOStatement;
 use Throwable;
 
 /**
@@ -39,7 +42,7 @@ use Throwable;
  * @version   1.0.0
  * @since     2025-10-02
  */
-final readonly class ItemRepository
+final readonly class ItemRepository extends Repository
 {
     public const TAG = 'ItemRepository';
 
@@ -48,7 +51,7 @@ final readonly class ItemRepository
      *
      * @param PDOPool $pdoPool The database context for managing connections.
      */
-    public function __construct(private PDOPool $pdoPool)
+    public function __construct(protected PDOPool $pdoPool)
     {
         // Initialize repository with PDO connection pool
     }
@@ -88,36 +91,10 @@ final readonly class ItemRepository
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return (int)$lastInsertId;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('CREATE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('CREATE', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -152,36 +129,10 @@ final readonly class ItemRepository
 
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FIND', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FIND',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FIND', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -216,36 +167,10 @@ final readonly class ItemRepository
 
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FIND_BY_SKU', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FIND_BY_SKU', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -253,187 +178,171 @@ final readonly class ItemRepository
     /**
      * List items with optional filters, sorting, and pagination.
      *
-     * @param int               $limit   Max rows
-     * @param int               $offset  Offset
-     * @param array<string, mixed> $filters Filter conditions
-     * @param string            $sortBy  Sort column
-     * @param string            $sortDir Sort direction
+     * @param PaginationParams $paginationParams Pagination parameters
      *
-     * @return array<int, mixed> List of items
+     * @return array<int, Item> Array of items
      */
-    public function list(
-        int $limit = 20,
-        int $offset = 0,
-        array $filters = [],
-        string $sortBy = 'id',
-        string $sortDir = 'DESC'
-    ): array {
-        return $this->pdoPool->withConnectionAndRetry(function (
-            PDO $pdo,
-            int $pdoId
-        ) use (
-            $limit,
-            $offset,
-            $filters,
-            $sortBy,
-            $sortDir
-        ) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'LIST', 'pdoId: ' . $pdoId . ' Listing items with limit: ' . var_export($limit, true) . ', offset: ' . var_export($offset, true) . ', filters: ' . var_export($filters, true) . ', sortBy: ' . var_export($sortBy, true) . ', sortDir: ' . var_export($sortDir, true));
+    public function list(PaginationParams $paginationParams): array
+    {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($paginationParams): array {
+            $this->logListStart($pdoId, $paginationParams);
             try {
-                $limit  = max(1, min($limit, 100));
-                $offset = max(0, $offset);
+                $stmt = $this->prepareListStatement($pdo, $paginationParams);
 
-                $sql    = 'SELECT id, sku, title, price, created_at, updated_at FROM items';
-                $where  = [];
-                $params = [];
-
-                // Apply filters
-                foreach ($filters as $field => $value) {
-                    if ($value === null) {
-                        continue;
-                    }
-
-                    switch ($field) {
-                        case 'sku':
-                            $where[]       = 'sku = :sku';
-                            $params['sku'] = $value;
-                            break;
-                        case 'title':
-                            $where[]         = 'title LIKE :title';
-                            $params['title'] = sprintf(' %%%s%%', $value);
-                            break;
-                        case 'created_after':
-                            $where[]                 = 'created_at > :created_after';
-                            $params['created_after'] = $value;
-                            break;
-                        case 'created_before':
-                            $where[]                  = 'created_at < :created_before';
-                            $params['created_before'] = $value;
-                            break;
-                        default:
-                            throw new InvalidArgumentException('Invalid filter ' . $field);
-                    }
-                }
-
-                if ($where !== []) {
-                    $sql .= ' WHERE ' . implode(' AND ', $where);
-                }
-
-                // Sorting
-                $allowedSort = ['id', 'sku', 'title', 'price', 'created_at', 'updated_at'];
-                if (!in_array($sortBy, $allowedSort, true)) {
-                    $sortBy = 'id';
-                }
-
-                $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
-                $sql .= sprintf('  ORDER BY %s %s', $sortBy, $sortDir);
-
-                // Pagination
-                $sql .= ' LIMIT :offset, :limit';
-
-                $stmt = $pdo->prepare($sql);
-
-                // Bind filter parameters
-                foreach ($params as $key => $val) {
-                    $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                    $stmt->bindValue(':' . $key, $val, $type);
-                }
-
-                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-
+                // Execute the prepared statement
                 $stmt->execute();
+
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                return $results;
+
+                // Hydrate each row into an Item domain entity
+                return array_map(static fn (array $result): Item => Item::fromArray($result), $results);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('LIST', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'LIST',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('LIST', $pdoId, $stmt ?? null);
             }
         });
     }
 
     /**
-     * Count items with optional filters.
+     * Builds and prepares a List query for items.
+     */
+    private function prepareListStatement(PDO $pdo, PaginationParams $paginationParams): PDOStatement
+    {
+        $sql    = 'SELECT id, sku, title, price, created_at, updated_at FROM items';
+        $params = [];
+
+        $whereSql = $this->buildWhereClause($paginationParams->filters, $params);
+        if ($whereSql !== '') {
+            $sql .= ' WHERE ' . $whereSql;
+        }
+
+        $sql .= $this->buildOrderByClause($paginationParams->sortBy, $paginationParams->sortDir);
+        $sql .= ' LIMIT :offset, :limit';
+
+        $stmt = $pdo->prepare($sql);
+
+        $this->bindQueryParams($stmt, $params);
+        $this->bindPaginationParams($stmt, $paginationParams);
+
+        return $stmt;
+    }
+
+    /**
+     * Builds WHERE clause dynamically from filters.
      *
-     * @param array<string, mixed> $filters Filter conditions
+     * @param array<string, mixed> $filters
+     * @param array<string, mixed> $params
+     */
+    protected function buildWhereClause(array $filters, array &$params): string
+    {
+        $conditions     = [];
+        $allowedFilters = $this->getAllowedFilters();
+
+        foreach ($filters as $field => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            if (!isset($allowedFilters[$field])) {
+                throw new InvalidArgumentException(sprintf('Invalid filter: %s', $field));
+            }
+
+            [$condition, $param] = $allowedFilters[$field]($value);
+            $conditions[]        = $condition;
+            $params += $param;
+        }
+
+        return implode(' AND ', $conditions);
+    }
+
+    /**
+     * Returns filter-to-SQL mapping closures.
+     *
+     * @return array<string, callable(string): array{0:string,1:array<string, mixed>}>
+     */
+    private function getAllowedFilters(): array
+    {
+        return [
+            'sku'            => static fn (string $v): array => ['sku = :sku', ['sku' => $v]],
+            'title'          => static fn (string $v): array => ['title LIKE :title', ['title' => sprintf('%%%s%%', $v)]],
+            'price'          => static fn (string $v): array => ['price = :price', ['price' => $v]],
+            'created_after'  => static fn (string $v): array => ['created_at > :created_after', ['created_after' => $v]],
+            'created_before' => static fn (string $v): array => ['created_at < :created_before', ['created_before' => $v]],
+        ];
+    }
+
+    /**
+     * Builds ORDER BY clause.
+     */
+    private function buildOrderByClause(string $sortBy, string $sortDir): string
+    {
+        $allowedSort = ['id', 'sku', 'title', 'price', 'created_at', 'updated_at'];
+        $sortBy      = in_array($sortBy, $allowedSort, true) ? $sortBy : 'id';
+        $sortDir     = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+        return sprintf(' ORDER BY %s %s', $sortBy, $sortDir);
+    }
+
+    /**
+     * Binds dynamic query parameters.
+     *
+     * @param array<string, mixed> $params
+     */
+    protected function bindQueryParams(PDOStatement $pdoStatement, array $params): void
+    {
+        foreach ($params as $key => $val) {
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $pdoStatement->bindValue(':' . $key, $val, $type);
+        }
+    }
+
+    /**
+     * Binds pagination offset and limit.
+     */
+    protected function bindPaginationParams(PDOStatement $pdoStatement, PaginationParams $paginationParams): void
+    {
+        $pdoStatement->bindValue(':offset', $paginationParams->offset, PDO::PARAM_INT);
+        $pdoStatement->bindValue(':limit', $paginationParams->limit, PDO::PARAM_INT);
+    }
+
+    /**
+     * Log the start of an filterCount.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param PaginationParams $paginationParams  Data being used for the list
+     */
+    protected function logListStart(int $pdoId, PaginationParams $paginationParams): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'LIST',
+            sprintf(
+                'pdoId: %d Listing items with limit: %s, offset: %s, filters: %s, sortBy: %s, sortDir: %s',
+                $pdoId,
+                var_export($paginationParams->limit, true),
+                var_export($paginationParams->offset, true),
+                var_export($paginationParams->filters, true),
+                var_export($paginationParams->sortBy, true),
+                var_export($paginationParams->sortDir, true)
+            )
+        );
+    }
+
+    /**
+     * Count filtered items.
+     *
+     * @param array<string, mixed> $filters Optional filters
      *
      * @return int Number of filtered items
      */
     public function filteredCount(array $filters = []): int
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($filters): int {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT', 'pdoId: ' . $pdoId . ' Counting items with filters: ' . var_export($filters, true));
+            $this->logFilterCountStart($pdoId, $filters);
             try {
-                $sql    = 'SELECT count(*) as filtered FROM items';
-                $where  = [];
-                $params = [];
-
-                foreach ($filters as $field => $value) {
-                    if ($value === null) {
-                        continue;
-                    }
-
-                    switch ($field) {
-                        case 'sku':
-                            $where[]       = 'sku = :sku';
-                            $params['sku'] = $value;
-                            break;
-                        case 'title':
-                            $where[]         = 'title LIKE :title';
-                            $params['title'] = sprintf(' %%%s%%', $value);
-                            break;
-                        case 'created_after':
-                            $where[]                 = 'created_at > :created_after';
-                            $params['created_after'] = $value;
-                            break;
-                        case 'created_before':
-                            $where[]                  = 'created_at < :created_before';
-                            $params['created_before'] = $value;
-                            break;
-                        default:
-                            throw new InvalidArgumentException('Invalid filter ' . $field);
-                    }
-                }
-
-                if ($where !== []) {
-                    $sql .= ' WHERE ' . implode(' AND ', $where);
-                }
-
-                $stmt = $pdo->prepare($sql);
-
-                foreach ($params as $key => $val) {
-                    $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                    $stmt->bindValue(':' . $key, $val, $type);
-                }
+                $stmt = $this->prepareFilterCountStatement($pdo, $filters);
 
                 // Execute the prepared statement
                 $stmt->execute();
@@ -451,49 +360,60 @@ final readonly class ItemRepository
                 // Safely access the 'filtered' key
                 return (int) ($result['filtered'] ?? 0);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FILTERED_COUNT', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FILTERED_COUNT', $pdoId, $stmt ?? null);
             }
         });
     }
 
     /**
-     * Count all items in the table.
+     * Builds and prepares a filtered COUNT(*) query for items.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function prepareFilterCountStatement(PDO $pdo, array $filters = []): PDOStatement
+    {
+        $sql    = 'SELECT COUNT(*) AS filtered FROM items';
+        $params = [];
+
+        $whereSql = $this->buildWhereClause($filters, $params);
+        if ($whereSql !== '') {
+            $sql .= ' WHERE ' . $whereSql;
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        $this->bindQueryParams($stmt, $params);
+
+        return $stmt;
+    }
+
+    /**
+     * Log the start of an filterCount.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param array<string, mixed> $filters  Data being used for the filterCount
+     */
+    protected function logFilterCountStart(int $pdoId, array $filters): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
+            sprintf('pdoId: %d Counting items with filters: %s', $pdoId, var_export($filters, true))
+        );
+    }
+
+    /**
+     * Count total items in the table.
      */
     public function count(): int
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId): int {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT', 'pdoId: ' . $pdoId . ' Counting all items');
             try {
-                $stmt = $pdo->prepare('SELECT count(*) as total FROM items');
+                $sql  = 'SELECT count(*) as total FROM items';
+                $stmt = $pdo->prepare($sql);
 
                 // Execute the prepared statement
                 $stmt->execute();
@@ -511,44 +431,18 @@ final readonly class ItemRepository
                 // Safely access the 'total' key
                 return (int) ($result['total'] ?? 0);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('COUNT', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('COUNT', $pdoId, $stmt ?? null);
             }
         });
     }
 
     /**
-     * Update an existing item.
+     * Update a item record.
      *
-     * @param int               $id   Item ID
+     * @param int                 $id   Item ID
      * @param array<string, mixed> $data Item data ('sku', 'title', 'price')
      *
      * @return bool True if updated
@@ -556,56 +450,108 @@ final readonly class ItemRepository
     public function update(int $id, array $data): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): bool {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'UPDATE', 'pdoId: ' . $pdoId . ' Updating item with ID: ' . var_export($id, true) . ' and data: ' . var_export($data, true));
+            $this->logUpdateStart($pdoId, $id, $data);
+
             try {
-                $stmt = $pdo->prepare('UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id');
-
-                $stmt->bindValue(':sku', $data['sku'], PDO::PARAM_STR);
-                $stmt->bindValue(':title', $data['title'], PDO::PARAM_STR);
-                $stmt->bindValue(':price', (float)$data['price'], PDO::PARAM_STR);
-                $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-
+                $stmt = $this->prepareUpdateStatement($pdo, $id, $data);
                 $stmt->execute();
+
                 $result = $stmt->rowCount() > 0;
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                $this->pdoPool->clearStatement($stmt);
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('UPDATE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('UPDATE', $pdoId, $stmt ?? null);
             }
         });
     }
 
     /**
-     * Delete an item by ID.
+     * Prepare the PDO statement for updating item.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function prepareUpdateStatement(PDO $pdo, int $id, array $data): \PDOStatement
+    {
+        $sql  = 'UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id';
+        $stmt = $pdo->prepare($sql);
+
+        $stmt->bindValue(':sku', $data['sku'], PDO::PARAM_STR);
+        $stmt->bindValue(':title', $data['title'], PDO::PARAM_STR);
+        $stmt->bindValue(':price', $data['price'], PDO::PARAM_STR);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        return $stmt;
+    }
+
+    /**
+     * Log the start of an update.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param int   $id    Item ID being updated
+     * @param array<string, mixed> $data  Data being used for the update
+     */
+    protected function logUpdateStart(int $pdoId, int $id, array $data): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
+            sprintf('pdoId: %d Updating item ID: %d with data: %s', $pdoId, $id, var_export($data, true))
+        );
+    }
+
+    /**
+     * Log an exception during update.
+     *
+     * @param string    $functionName Name of the function (for logging)
+     * @param int       $pdoId        ID of the PDO connection
+     * @param Throwable $throwable    The caught exception
+     */
+    protected function logException(string $functionName, int $pdoId, Throwable $throwable): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . '' . $functionName . '][Exception',
+            sprintf(
+                Messages::PDO_EXCEPTION_MESSAGE,
+                $pdoId,
+                $throwable->getCode(),
+                $throwable->getMessage()
+            )
+        );
+    }
+
+    /**
+     * Clean up and log PDO statement info.
+     *
+     * @param string         $functionName Name of the function (for logging)
+     * @param int            $pdoId        ID of the PDO connection
+     * @param \PDOStatement|null $pdoStatement The PDO statement to finalize
+     */
+    protected function finalizeStatement(string $functionName, int $pdoId, ?\PDOStatement $pdoStatement): void
+    {
+        if (!$pdoStatement instanceof \PDOStatement) {
+            return;
+        }
+
+        $errorCode = $pdoStatement->errorCode();
+        $errorInfo = $pdoStatement->errorInfo();
+
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . $functionName,
+            sprintf(
+                Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                $pdoId,
+                $errorCode ?? 'N/A',
+                implode(', ', $errorInfo)
+            )
+        );
+
+        $this->pdoPool->clearStatement($pdoStatement);
+    }
+
+    /**
+     * Delete a item by ID.
      *
      * @param int $id Item ID
      *
@@ -616,7 +562,8 @@ final readonly class ItemRepository
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id): bool {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting item with ID: ' . var_export($id, true));
             try {
-                $stmt = $pdo->prepare('DELETE FROM items WHERE id=:id');
+                $sql  = 'DELETE FROM items WHERE id=:id';
+                $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
                 $stmt->execute();
@@ -625,36 +572,10 @@ final readonly class ItemRepository
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('DELETE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('DELETE', $pdoId, $stmt ?? null);
             }
         });
     }

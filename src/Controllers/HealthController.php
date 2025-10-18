@@ -47,14 +47,14 @@ final class HealthController extends Controller
      *
      * @param Server             $server         Swoole HTTP server instance.
      * @param Table              $table          Swoole table for worker status.
-     * @param TableWithLRUAndGC<string, array<string, mixed>>  $tableWithLRUAndGC Swoole table with LRU and GC for cache.
+     * @param TableWithLRUAndGC<string, array<string, mixed>> $tableWithLRUAndGC Swoole table with LRU and GC for cache.
      */
     public function __construct(
         private readonly Server $server,
         private readonly Table $table,
         private readonly TableWithLRUAndGC $tableWithLRUAndGC
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

@@ -44,7 +44,7 @@ final readonly class TaskRequestDispatcher
     public function __construct(
         private Container $container
     ) {
-        //
+        // Empty Constructor
     }
 
     public function dispatch(Task $task): bool

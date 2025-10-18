@@ -52,11 +52,11 @@ trait Retryable
             return $callback();
         } catch (Throwable $throwable) {
             if (!$this->canRetry($throwable, $attempt, $maxRetry)) {
-                $this->logRetryFailure($throwable, $attempt);
+                $this->logRetryFailure($throwable, $attempt, $this->getRetryLabel(false));
                 throw $throwable;
             }
 
-            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__);
+            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__, $this->getRetryLabel(false));
             return $this->retry($callback, ++$attempt, $maxRetry, $delayMs);
         }
     }
@@ -74,11 +74,11 @@ trait Retryable
             return $callback();
         } catch (Throwable $throwable) {
             if (!$this->withinRetryLimit($attempt, $maxRetry)) {
-                $this->logRetryFailure($throwable, $attempt, true);
+                $this->logRetryFailure($throwable, $attempt, $this->getRetryLabel(true));
                 throw $throwable;
             }
 
-            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__, true);
+            $this->sleepWithBackoff($attempt, $delayMs, __FUNCTION__, $this->getRetryLabel(true));
             return $this->forceRetry($callback, ++$attempt, $maxRetry, $delayMs);
         }
     }
@@ -97,7 +97,15 @@ trait Retryable
      */
     private function withinRetryLimit(int $attempt, int $maxRetry): bool
     {
-        return ($attempt <= $maxRetry || $maxRetry === -1);
+        return $attempt <= $maxRetry || $maxRetry === -1;
+    }
+
+    /**
+     * Determine the retry label based on force flag.
+     */
+    private function getRetryLabel(bool $force): string
+    {
+        return $force ? 'Force Retry' : 'Retry';
     }
 
     /**
@@ -105,24 +113,24 @@ trait Retryable
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    private function sleepWithBackoff(int $attempt, int $delayMs, string $method, bool $force = false): void
+    private function sleepWithBackoff(int $attempt, int $delayMs, string $method, string $label): void
     {
         $backoffUs = (1 << $attempt) * $delayMs * 1000;
-        $label     = $force ? 'Force Retry' : 'Retry';
         $tag       = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
 
-        logDebug($tag . ':' . __LINE__ . ('][' . $method), sprintf('[%s] #%d in %.2f seconds...', $label, $attempt + 1, $backoffUs / 1_000_000));
+        logDebug($tag . ':' . __LINE__ . '][' . $method, sprintf('[%s] #%d in %.2f seconds...', $label, $attempt + 1, $backoffUs / 1_000_000));
         Coroutine::sleep($backoffUs / 1_000_000);
     }
 
     /**
      * Log final failure before throwing.
      */
-    private function logRetryFailure(Throwable $throwable, int $attempt, bool $force = false): void
+    /**
+     * Log final failure before throwing.
+     */
+    private function logRetryFailure(Throwable $throwable, int $attempt, string $label): void
     {
-        $label = $force ? 'Force Retry' : 'Retry';
-        $tag   = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
-
+        $tag = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
         logDebug($tag . ':' . __LINE__ . '][__FUNCTION__', sprintf('[%s] #%d failed error: %s', $label, $attempt, $throwable->getMessage()));
     }
 }

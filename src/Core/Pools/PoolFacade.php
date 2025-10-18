@@ -43,7 +43,7 @@ final class PoolFacade
         private readonly RedisPool $redisPool,
         private readonly CacheService $cacheService
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

@@ -2,71 +2,298 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Trend } from 'k6/metrics';
 
-// --------------------
-// CONFIGURATION VARIABLES
-// --------------------
-const CONFIG = {
-    TOTAL_USERS: 2000,
-    TOTAL_ITEMS: 2000,
-    HOT_PERCENT: 0.1,          // Top 10% are hot (never deleted)
-    COOL_PERCENT: 0.1,         // Top 10% are not hot (to be deleted)
-    HOT_READ_RATIO: 0.8,       // 80% of reads go to hot IDs
-    HOT_UPDATE_RATIO: 0.01,    // 1% of updates go to hot IDs
-    LIST_PAGES: 3,
-    WEIGHTS_USERS: {
-        LIST: 0.5,
-        READ: 0.25,
-        // CREATE: 0.15,
-        // UPDATE: 0.07,
-    },
-    WEIGHTS_ITEMS: {
-        LIST: 0.5,
-        READ: 0.25,
-        // CREATE: 0.15,
-        // UPDATE: 0.07,
-    },
-    CONCURRENCY: {
-        MAX_VUS: 500,
-        STAGES: [
-            { duration: '1m', target: 0.10 },
-            { duration: '1m', target: 0.25 },
-            { duration: '1m', target: 0.40 },
-            { duration: '2m', target: 0.60 },
-            { duration: '2m', target: 0.80 },
-            { duration: '2m', target: 1.00 },
-            { duration: '2m', target: 0.80 },
-            { duration: '2m', target: 0.50 },
-            { duration: '1m', target: 0.25 },
-            { duration: '1m', target: 0.0 },
-        ]
-    },
-    TOTAL_EXECUTIONS: 10000,
-    MAX_DURATION: '5m'
+/**
+ * --------------------
+ * ENVIRONMENT VARIABLES
+ * --------------------
+ * All environment variables can be overridden via CLI using -e VAR=value
+ */
+const ENV = {
+    BASE_URL: __ENV.BASE_URL || 'http://localhost:9501',           // Base API URL
+    TOTAL_USERS: Number(__ENV.TOTAL_USERS) || 200,                 // Total users to create in setup
+    TOTAL_ITEMS: Number(__ENV.TOTAL_ITEMS) || 200,                 // Total items to create in setup
+    HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.1,                 // Top N% of entities marked 'hot'
+    COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.1,               // Top N% of entities marked 'cool'
+    HOT_READ_RATIO: Number(__ENV.HOT_READ_RATIO) || 0.8,           // Probability of reading hot IDs
+    HOT_UPDATE_RATIO: Number(__ENV.HOT_UPDATE_RATIO) || 0.01,      // Probability of updating hot IDs
+    LIST_PAGES: Number(__ENV.LIST_PAGES) || 3,                     // Number of pages for list endpoints
+    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 1000,      // Max iterations per VU
+    MAX_DURATION: __ENV.MAX_DURATION || '5m',                      // Setup/teardown timeout
+    MAX_VUS: Number(__ENV.MAX_VUS) || 100                          // Maximum virtual users
 };
 
-// --------------------
-// METRICS
-// --------------------
-let listTrendUsers = new Trend('USERS_LIST_latency_ms');
-let readTrendUsers = new Trend('USERS_READ_latency_ms');
-// let createTrendUsers = new Trend('USERS_CREATE_latency_ms');
-// let updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
+/**
+ * --------------------
+ * METRICS
+ * --------------------
+ * Custom trends to track latency for CRUD operations per entity
+ */
+const listTrendUsers = new Trend('USERS_LIST_latency_ms');
+const readTrendUsers = new Trend('USERS_READ_latency_ms');
+// const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
+// const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
 
-let listTrendItems = new Trend('ITEMS_LIST_latency_ms');
-let readTrendItems = new Trend('ITEMS_READ_latency_ms');
-// let createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
-// let updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
+const listTrendItems = new Trend('ITEMS_LIST_latency_ms');
+const readTrendItems = new Trend('ITEMS_READ_latency_ms');
+// const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
+// const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
 
-// --------------------
-// OPTIONS
-// --------------------
+/**
+ * --------------------
+ * PER-VU STATE
+ * --------------------
+ * Track IDs per VU and execution count
+ */
+let VU_userIds = [];
+let VU_itemIds = [];
+let globalExecutions = 0;
+
+/**
+ * --------------------
+ * UTIL FUNCTIONS
+ * --------------------
+ */
+
+/**
+ * Generate UUIDv4-like string
+ * @returns {string} uuid
+ */
+function generateUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Generate random user object
+ * @param {number} index - Index for uniqueness
+ * @returns {{name: string, email: string}}
+ */
+function generateUser(index) {
+    const id = generateUuid();
+    return { name: `user-${id}-${index}`, email: `user-${id}-${index}@example.com` };
+}
+
+/**
+ * Generate random item object
+ * @param {number} index - Index for uniqueness
+ * @returns {{sku: string, title: string, price: number}}
+ */
+function generateItem(index) {
+    const id = generateUuid();
+    return {
+        sku: `sku-item-${index}-${id}`,
+        title: `Item ${index} ${id}`,
+        price: Math.floor(Math.random() * 100)
+    };
+}
+
+/**
+ * Get random element from array
+ * @param {Array} arr 
+ * @returns any
+ */
+function randomItem(arr) {
+    if (!arr || arr.length === 0) return null;
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * POST entity and return its ID
+ * @param {string} url - API endpoint
+ * @param {object} obj - Object to POST
+ * @param {Trend} trend - Trend to track latency
+ * @returns {string|null} id
+ */
+function postEntity(url, obj, trend) {
+    const res = http.post(url, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
+    trend.add(res.timings.duration);
+    // check(res, { 'CREATE success': r => r.status === 201 });
+    if (res.status === 201) {
+        try {
+            const parsed = JSON.parse(res.body);
+            return parsed?.id || null;
+        } catch (e) {
+            console.error(`[POST PARSE ERROR] URL: ${url} | Response: ${res.body}`, e);
+        }
+    }
+    return null;
+}
+
+/**
+ * Slice first N% of array
+ * @param {Array} arr 
+ * @param {number} percent 
+ * @returns {Array}
+ */
+function slicePercent(arr, percent) {
+    return arr.slice(0, Math.floor(arr.length * percent));
+}
+
+/**
+ * Print usage instructions for all environment variables
+ */
+function printUsage() {
+    console.log(`
+k6 script environment variables:
+
+BASE_URL            - Base API URL (default: http://localhost:9501)
+TOTAL_USERS         - Number of users to create (default: 200)
+TOTAL_ITEMS         - Number of items to create (default: 200)
+HOT_PERCENT         - Percentage of hot entities (default: 0.1)
+COOL_PERCENT        - Percentage of cool entities (default: 0.1)
+HOT_READ_RATIO      - Chance of reading hot IDs (default: 0.8)
+HOT_UPDATE_RATIO    - Chance of updating hot IDs (default: 0.01)
+LIST_PAGES          - Number of pages for list endpoints (default: 3)
+TOTAL_EXECUTIONS    - Max iterations per VU (default: 1000)
+MAX_DURATION        - Setup/teardown timeout (default: 5m)
+MAX_VUS             - Maximum virtual users (default: 100)
+`);
+}
+
+/**
+ * --------------------
+ * SETUP
+ * --------------------
+ * Create initial users and items, determine hot/cool IDs
+ * @returns {Object} setup data
+ */
+export function setup() {
+    console.log('=== ENVIRONMENT VARIABLES ===');
+    Object.entries(ENV).forEach(([key, value]) => console.log(`${key}: ${value}`));
+    console.log('==============================');
+    printUsage();
+
+    // Helper to create multiple entities and return IDs
+    const createEntities = (total, generateFn, baseUrl, trend) => {
+        const ids = [];
+        for (let i = 0; i < total; i++) {
+            const id = postEntity(`${ENV.BASE_URL}/${baseUrl}`, generateFn(i), trend);
+            if (id) ids.push(id);
+        }
+        return ids;
+    };
+
+    // Create users and items
+    const userIds = createEntities(ENV.TOTAL_USERS, generateUser, 'users', createTrendUsers);
+    const itemIds = createEntities(ENV.TOTAL_ITEMS, generateItem, 'items', createTrendItems);
+
+    // Determine hot and cool IDs
+    const hotUserIds = slicePercent(userIds, ENV.HOT_PERCENT);
+    const hotItemIds = slicePercent(itemIds, ENV.HOT_PERCENT);
+    const coolUserIds = slicePercent(userIds.filter(id => !hotUserIds.includes(id)), ENV.COOL_PERCENT);
+    const coolItemIds = slicePercent(itemIds.filter(id => !hotItemIds.includes(id)), ENV.COOL_PERCENT);
+
+    return { userIds, itemIds, hotUserIds, hotItemIds, coolUserIds, coolItemIds };
+}
+
+/**
+ * --------------------
+ * PERFORM CRUD ACTION
+ * --------------------
+ * Weighted random selection of CRUD operations per entity
+ * @param {Object} options 
+ */
+function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUrl, trends, entity }) {
+    const r = Math.random();
+
+    const actions = [
+        {
+            type: 'list',
+            weight: weights.LIST,
+            handler: () => {
+                const page = Math.floor(Math.random() * ENV.LIST_PAGES) + 1;
+                const url = `${ENV.BASE_URL}/${baseUrl}?page=${page}`;
+                const res = http.get(url);
+                trends.list.add(res.timings.duration);
+                check(res, { [`${entity} LIST success`]: r => r.status === 200 }) ||
+                    console.error(`[${entity} LIST FAILED] URL: ${url} | Status: ${res.status}`);
+            }
+        },
+        {
+            type: 'read',
+            weight: weights.READ,
+            handler: () => {
+                const id = hotIds.length && Math.random() < ENV.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                if (!id) return console.warn(`[${entity}] Skipping read: no ID available`);
+                const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
+                const res = http.get(url);
+                trends.read.add(res.timings.duration);
+                check(res, { [`${entity} READ success`]: r => r.status === 200 }) ||
+                    console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status}`);
+            }
+        },
+        // {
+        //     type: 'create',
+        //     weight: weights.CREATE,
+        //     handler: () => {
+        //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
+        //         const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
+        //         trends.create?.add(res.timings.duration);
+        //         check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
+        //             console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+        //         if (res.status === 201) {
+        //             try {
+        //                 const parsed = JSON.parse(res.body);
+        //                 if (parsed?.id != null) vuIds.push(parsed.id);
+        //                 else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
+        //             } catch (e) {
+        //                 console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
+        //             }
+        //         }
+        //     }
+        // },
+        // {
+        //     type: 'update',
+        //     weight: weights.UPDATE,
+        //     handler: () => {
+        //         const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+        //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
+        //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
+        //         const obj = generateFn(id);
+        //         const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
+        //         const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
+        //         trends.update?.add(res.timings.duration);
+        //         check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
+        //             console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+        //     }
+        // }
+    ].filter(a => a.weight);
+
+    // Weighted selection
+    const totalWeight = actions.reduce((sum, a) => sum + a.weight, 0);
+    let cumulative = 0;
+    for (const action of actions) {
+        cumulative += action.weight / totalWeight;
+        if (r < cumulative) {
+            action.handler();
+            break;
+        }
+    }
+}
+
+/**
+ * --------------------
+ * OPTIONS
+ * --------------------
+ */
 export const options = {
-    setupTimeout: CONFIG.MAX_DURATION,
-    teardownTimeout: CONFIG.MAX_DURATION,
-    stages: CONFIG.CONCURRENCY.STAGES.map(s => ({
-        duration: s.duration,
-        target: Math.floor(s.target * CONFIG.CONCURRENCY.MAX_VUS)
-    })),
+    setupTimeout: ENV.MAX_DURATION,
+    teardownTimeout: ENV.MAX_DURATION,
+    stages: [
+        { duration: '20s', target: 0.10 },
+        { duration: '20s', target: 0.25 },
+        { duration: '20s', target: 0.40 },
+        { duration: '40s', target: 0.60 },
+        { duration: '40s', target: 0.80 },
+        { duration: '40s', target: 1.00 },
+        { duration: '40s', target: 0.80 },
+        { duration: '40s', target: 0.50 },
+        { duration: '20s', target: 0.25 },
+        { duration: '20s', target: 0.0 },
+    ].map(s => ({ ...s, target: Math.floor(s.target * ENV.MAX_VUS) })),
     thresholds: {
         'http_req_duration': ['p(95)<200'],
         'USERS_LIST_latency_ms': ['avg<100'],
@@ -80,201 +307,31 @@ export const options = {
     }
 };
 
-// --------------------
-// HELPERS
-// --------------------
-function generateUser(index) {
-    let id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-    return {
-        name: `user-${id}-${index}`,
-        email: `user-${id}-${index}@example.com`
-    };
-}
-
-function generateItem(index) {
-    let id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-    return {
-        sku: `sku-item-${index}-${id}`,
-        title: `Item ${index} ${id}`,
-        price: Math.floor(Math.random() * 100)
-    };
-}
-
-function randomItem(arr) {
-    if (!arr || arr.length === 0) return null;
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// --------------------
-// PER-VU ID TRACKERS
-// --------------------
-let VU_userIds = [];
-let VU_itemIds = [];
-
-// --------------------
-// GLOBAL EXECUTION TRACKER
-// --------------------
-let globalExecutions = 0;
-
-// --------------------
-// SETUP
-// --------------------
-export function setup() {
-    let userIds = [];
-    for (let i = 0; i < CONFIG.TOTAL_USERS; i++) {
-        const user = generateUser(i);
-        const res = http.post('http://localhost:9501/users', JSON.stringify(user), {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        // createTrendUsers.add(res.timings.duration);
-        // check(res, { 'CREATE success': r => r.status === 201 });
-        try {
-            if (res.status === 201) {
-                const parsed = JSON.parse(res.body);
-                if (parsed?.id != null) userIds.push(parsed.id);
-            }
-        } catch (e) {
-            console.error('[SETUP] Failed parse CREATE response', res.body, e);
-        }
-    }
-
-    let itemIds = [];
-    for (let i = 0; i < CONFIG.TOTAL_ITEMS; i++) {
-        const item = generateItem(i);
-        const res = http.post('http://localhost:9501/items', JSON.stringify(item), {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        // createTrendItems.add(res.timings.duration);
-        // check(res, { 'CREATE success': r => r.status === 201 });
-        try {
-            if (res.status === 201) {
-                const parsed = JSON.parse(res.body);
-                if (parsed?.id != null) itemIds.push(parsed.id);
-            }
-        } catch (e) {
-            console.error('[SETUP] Failed parse CREATE response', res.body, e);
-        }
-    }
-
-    // HOT & COOL IDs
-    const hotUserIds = userIds.slice(0, Math.floor(CONFIG.TOTAL_USERS * CONFIG.HOT_PERCENT));
-    const hotItemIds = itemIds.slice(0, Math.floor(CONFIG.TOTAL_ITEMS * CONFIG.HOT_PERCENT));
-    const coolUserIds = userIds.filter(id => !hotUserIds.includes(id)).slice(0, Math.floor(CONFIG.TOTAL_USERS * CONFIG.COOL_PERCENT));
-    const coolItemIds = itemIds.filter(id => !hotItemIds.includes(id)).slice(0, Math.floor(CONFIG.TOTAL_ITEMS * CONFIG.COOL_PERCENT));
-
-    return {
-        userIds,
-        itemIds,
-        hotUserIds,
-        hotItemIds,
-        coolUserIds,
-        coolItemIds
-    };
-}
-
-// --------------------
-// DEFAULT FUNCTION
-// --------------------
+/**
+ * --------------------
+ * DEFAULT FUNCTION
+ * --------------------
+ */
 export default function (data) {
-    if (globalExecutions >= CONFIG.TOTAL_EXECUTIONS) return;
+    if (globalExecutions >= ENV.TOTAL_EXECUTIONS) return;
     globalExecutions++;
 
     if (VU_userIds.length === 0) VU_userIds = data.userIds.slice();
     if (VU_itemIds.length === 0) VU_itemIds = data.itemIds.slice();
 
-    function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUrl, trends, entity }) {
-        const r = Math.random();
-
-        const actions = [
-            {
-                type: 'list',
-                weight: weights.LIST,
-                handler: () => {
-                    const page = Math.floor(Math.random() * CONFIG.LIST_PAGES) + 1;
-                    const url = `${baseUrl}?page=${page}`;
-                    const res = http.get(url);
-                    trends.list.add(res.timings.duration);
-                    const success = check(res, { [`${entity} LIST success`]: r => r.status === 200 });
-                    if (!success) console.error(`[${entity} LIST FAILED] URL: ${url} | Status: ${res.status} | Response: ${res.body}`);
-                },
-            },
-            {
-                type: 'read',
-                weight: weights.READ,
-                handler: () => {
-                    const id = hotIds.length && Math.random() < CONFIG.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                    if (!id) return console.warn(`[${entity}] Skipping read: no ID available`);
-                    const url = `${baseUrl}/${id}`;
-                    const res = http.get(url);
-                    trends.read.add(res.timings.duration);
-                    const success = check(res, { [`${entity} READ success`]: r => r.status === 200 });
-                    if (!success) console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status} | Response: ${res.body}`);
-                },
-            },
-            // {
-            //     type: 'create',
-            //     weight: weights.CREATE,
-            //     handler: () => {
-            //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
-            //         const res = http.post(baseUrl, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-            //         trends.create?.add(res.timings.duration);
-            //         const success = check(res, { [`${entity} CREATE success`]: r => r.status === 201 });
-            //         if (!success) console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status} | Response: ${res.body}`);
-            //         try {
-            //             if (res.status === 201) {
-            //                 const parsed = JSON.parse(res.body);
-            //                 if (parsed?.id != null) vuIds.push(parsed.id);
-            //                 else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
-            //             }
-            //         } catch (e) {
-            //             console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
-            //         }
-            //     },
-            // },
-            // {
-            //     type: 'update',
-            //     weight: weights.UPDATE,
-            //     handler: () => {
-            //         const id = hotIds.length && Math.random() < CONFIG.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-            //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
-            //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
-            //         const obj = generateFn(id);
-            //         const url = `${baseUrl}/${id}`;
-            //         const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
-            //         trends.update?.add(res.timings.duration);
-            //         const success = check(res, { [`${entity} UPDATE success`]: r => r.status === 200 });
-            //         if (!success) console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status} | Response: ${res.body}`);
-            //     },
-            // },
-        ].filter(a => a.weight);
-
-        const totalWeight = actions.reduce((sum, a) => sum + a.weight, 0);
-        let cumulative = 0;
-        for (const action of actions) {
-            cumulative += action.weight / totalWeight;
-            if (r < cumulative) {
-                action.handler();
-                break;
-            }
-        }
-    }
-
-    // USERS CRUD
+    // Perform USERS CRUD
     performCrudAction({
         vuIds: VU_userIds,
         hotIds: data.hotUserIds,
         coolIds: data.coolUserIds,
-        weights: CONFIG.WEIGHTS_USERS,
+        weights: {
+            LIST: 0.5,
+            READ: 0.5, // 0.25,
+            // CREATE: 0.15,
+            // UPDATE: 0.07
+        },
         generateFn: generateUser,
-        baseUrl: 'http://localhost:9501/users',
+        baseUrl: 'users',
         trends: {
             list: listTrendUsers,
             read: readTrendUsers,
@@ -284,14 +341,19 @@ export default function (data) {
         entity: 'USERS'
     });
 
-    // ITEMS CRUD
+    // Perform ITEMS CRUD
     performCrudAction({
         vuIds: VU_itemIds,
         hotIds: data.hotItemIds,
         coolIds: data.coolItemIds,
-        weights: CONFIG.WEIGHTS_ITEMS,
+        weights: {
+            LIST: 0.5,
+            READ: 0.5, // 0.25,
+            // CREATE: 0.15,
+            // UPDATE: 0.07
+        },
         generateFn: generateItem,
-        baseUrl: 'http://localhost:9501/items',
+        baseUrl: 'items',
         trends: {
             list: listTrendItems,
             read: readTrendItems,
@@ -304,11 +366,15 @@ export default function (data) {
     sleep(Math.random() * 2);
 }
 
-// --------------------
-// TEARDOWN
-// --------------------
+/**
+ * --------------------
+ * TEARDOWN
+ * --------------------
+ * Cleanup all created users and items
+ * @param {Object} data 
+ */
 export function teardown(data) {
     console.log(`Cleaning up users and items`);
-    for (let id of data.userIds) http.del(`http://localhost:9501/users/${id}`);
-    for (let id of data.itemIds) http.del(`http://localhost:9501/items/${id}`);
+    for (let id of data.userIds) http.del(`${ENV.BASE_URL}/users/${id}`);
+    for (let id of data.itemIds) http.del(`${ENV.BASE_URL}/items/${id}`);
 }

@@ -50,7 +50,7 @@ final class MetricsController extends Controller
         private readonly RedisPool $redisPool,
         private readonly Metrics $metrics
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

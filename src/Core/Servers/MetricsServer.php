@@ -67,7 +67,7 @@ final readonly class MetricsServer
         private array $config,
         private int $port = 9310
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -131,7 +131,6 @@ final readonly class MetricsServer
 
     /**
      * Determine if the given Throwable belongs to the App\Exception namespace.
-     *
      */
     private function isAppException(Throwable $throwable): bool
     {

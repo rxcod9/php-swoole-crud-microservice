@@ -50,7 +50,7 @@ final readonly class TaskDispatcher
     public function __construct(
         private Container $container
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

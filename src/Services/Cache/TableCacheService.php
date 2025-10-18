@@ -61,7 +61,7 @@ final readonly class TableCacheService
         private int $recordTtl = 300,
         private int $listTtl = 120,
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -136,18 +136,13 @@ final readonly class TableCacheService
     /**
      * Set a cached record by a specific column value.
      *
-     * @param string          $entity   Entity name (e.g., 'users')
-     * @param string          $column   Column name (e.g., 'id', 'email')
-     * @param int|string      $value    Column value to look up
-     * @param mixed           $data     Record data to cache (associative array)
-     * @param int|null        $localTtl Optional TTL for this record (in seconds). Defaults to service's recordTtl.
+     * @param CacheRecordParams $cacheRecordParams DTO containing all cache record info
      * @return bool True on success, false on failure
-     * @throws CacheSetException If unable to set the cache
      */
-    public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data, ?int $localTtl = null): bool
+    public function setRecordByColumn(CacheRecordParams $cacheRecordParams): bool
     {
-        $key = $this->recordKeyByColumn($entity, $column, $value);
-        return $this->set($key, json_encode($data), $localTtl ?? $this->recordTtl);
+        $key = $this->recordKeyByColumn($cacheRecordParams->entity, $cacheRecordParams->column, $cacheRecordParams->value);
+        return $this->set($key, json_encode($cacheRecordParams->data), $cacheRecordParams->ttl ?? $this->recordTtl);
     }
 
     /**
@@ -199,10 +194,17 @@ final readonly class TableCacheService
      * @param mixed           $data     Record data to cache (associative array)
      * @param int|null        $localTtl Optional TTL for this record (in seconds). Defaults to service's recordTtl.
      * @throws CacheSetException If unable to set the cache
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function setRecord(string $entity, int|string $id, mixed $data, ?int $localTtl = null): void
     {
-        $this->setRecordByColumn($entity, 'id', $id, $data, $localTtl);
+        $this->setRecordByColumn(CacheRecordParams::fromArray([
+            'entity' => $entity,
+            'column' => 'id',
+            'value'  => $id,
+            'data'   => $data,
+            'ttl'    => $localTtl,
+        ]));
     }
 
     /**
@@ -256,24 +258,31 @@ final readonly class TableCacheService
      */
     public function invalidateLists(string $entity): void
     {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Invalidating lists for entity: ' . $entity);
         $key = $entity . ':version';
         $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version key: ' . $key);
 
         $row = $this->tableWithLRUAndGC->get($key);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Current version row: ' . json_encode($row));
         if ($row !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for key: ' . $key . ' value: ' . (((int)$row['value'] ?? 0) + 1));
             $this->tableWithLRUAndGC->set($key, [
-                'value'       => 1,
+                'value'       => ((int)$row['value'] ?? 0) + 1,
                 'expires_at'  => Carbon::now()->getTimestamp() + 86400, // keep version for a day
                 'last_access' => Carbon::now()->getTimestamp(), // keep version for a day
             ]);
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for key: ' . $key . ' value: ' . (((int)$row['value'] ?? 0) + 1));
             return;
         }
 
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Setting initial version for key: ' . $key . ' value: 1');
         $this->tableWithLRUAndGC->set($key, [
             'value'       => 1,
             'expires_at'  => Carbon::now()->getTimestamp() + 86400, // keep version for a day
             'last_access' => Carbon::now()->getTimestamp(), // keep version for a day
         ]);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Initial version set for key: ' . $key . ' value: 1');
     }
 
     /**

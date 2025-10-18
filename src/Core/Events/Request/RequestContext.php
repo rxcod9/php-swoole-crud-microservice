@@ -48,6 +48,6 @@ final readonly class RequestContext
         public string $reqId,
         public float $start
     ) {
-        //
+        // Empty Constructor
     }
 }

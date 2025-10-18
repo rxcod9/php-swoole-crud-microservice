@@ -51,7 +51,7 @@ final readonly class TaskRequestHandler
     public function __construct(
         private Container $container
     ) {
-        //
+        // Empty Constructor
     }
 
     /**

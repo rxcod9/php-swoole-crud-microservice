@@ -51,7 +51,7 @@ final readonly class CacheService
         private TableCacheService $tableCacheService,
         private RedisCacheService $redisCacheService
     ) {
-        //
+        // Empty Constructor
     }
 
     /**
@@ -66,13 +66,13 @@ final readonly class CacheService
     {
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
-        if ($value !== null) {
+        if ($value !== null && $value !== false) {
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
         $value = $this->redisCacheService->get($key);
-        if ($value !== null) {
+        if ($value !== null && $value !== false) {
             // warm local cache for faster next access
             try {
                 $this->tableCacheService->set($key, $value, 120);
@@ -156,6 +156,7 @@ final readonly class CacheService
      * @param string $column The column name to query
      * @param int|string $value The value to match
      * @return array{0: mixed, 1: string|null} Tuple of (data, cache type)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function getRecordByColumn(string $entity, string $column, int|string $value): mixed
     {
@@ -170,7 +171,12 @@ final readonly class CacheService
         if ($data !== null) {
             // warm local cache for faster next access
             try {
-                $this->tableCacheService->setRecordByColumn($entity, $column, $value, $data);
+                $this->tableCacheService->setRecordByColumn(CacheRecordParams::fromArray([
+                    'entity' => $entity,
+                    'column' => $column,
+                    'value'  => $value,
+                    'data'   => $data,
+                ]));
             } catch (Throwable $e) {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }
@@ -185,22 +191,20 @@ final readonly class CacheService
      * Set a cached record for an entity by a specific column and value.
      * Writes through both local table cache and Redis.
      *
-     * @param string $entity The entity name
-     * @param string $column The column name to identify the record
-     * @param int|string $value The value of the column to identify the record
-     * @param mixed $data The data to cache
-     * @param int|null $localTtl Optional TTL for local cache in seconds
+     * @param CacheRecordParams $cacheRecordParams The cache record parameters
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function setRecordByColumn(string $entity, string $column, int|string $value, mixed $data, ?int $localTtl = null): void
+    public function setRecordByColumn(CacheRecordParams $cacheRecordParams): void
     {
         // Write-through both caches
         try {
-            $this->tableCacheService->setRecordByColumn($entity, $column, $value, $data, $localTtl);
+            $this->tableCacheService->setRecordByColumn($cacheRecordParams);
         } catch (Throwable $throwable) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
-        $this->redisCacheService->setRecordByColumn($entity, $column, $value, $data, $localTtl);
+        $this->redisCacheService->setRecordByColumn($cacheRecordParams);
     }
 
     /**
@@ -241,10 +245,18 @@ final readonly class CacheService
      * @param int|string $id The record ID
      * @param mixed $data The data to cache
      * @param int|null $localTtl Optional TTL for local cache in seconds
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function setRecord(string $entity, int|string $id, mixed $data, ?int $localTtl = null): void
     {
-        $this->setRecordByColumn($entity, 'id', $id, $data, $localTtl);
+        $this->setRecordByColumn(CacheRecordParams::fromArray([
+            'entity' => $entity,
+            'column' => 'id',
+            'value'  => $id,
+            'data'   => $data,
+            'ttl'    => $localTtl,
+        ]));
     }
 
     /**
@@ -269,12 +281,12 @@ final readonly class CacheService
     public function getList(string $entity, array $query): array
     {
         $value = $this->tableCacheService->getList($entity, $query);
-        if ($value !== null) {
+        if ($value !== null && $value !== false) {
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         $value = $this->redisCacheService->getList($entity, $query);
-        if ($value !== null) {
+        if ($value !== null && $value !== false) {
             try {
                 $this->tableCacheService->setList($entity, $query, $value);
             } catch (Throwable $e) {
@@ -315,6 +327,7 @@ final readonly class CacheService
      */
     public function invalidateLists(string $entity): void
     {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . ']', 'Invalidating lists for entity: ' . $entity);
         $this->tableCacheService->invalidateLists($entity);
         $this->redisCacheService->invalidateLists($entity);
     }

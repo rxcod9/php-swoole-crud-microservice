@@ -23,8 +23,11 @@ use App\Core\Messages;
 use App\Core\Pools\PDOPool;
 use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
+use App\Models\User;
+use App\Services\PaginationParams;
 use InvalidArgumentException;
 use PDO;
+use PDOStatement;
 use Throwable;
 
 /**
@@ -40,7 +43,7 @@ use Throwable;
  * @version   1.0.0
  * @since     2025-10-02
  */
-final readonly class UserRepository
+final readonly class UserRepository extends Repository
 {
     public const TAG = 'UserRepository';
 
@@ -49,7 +52,7 @@ final readonly class UserRepository
      *
      * @param PDOPool $pdoPool The PDO connection pool
      */
-    public function __construct(private PDOPool $pdoPool)
+    public function __construct(protected PDOPool $pdoPool)
     {
         // Initialize repository with PDO connection pool
     }
@@ -57,7 +60,7 @@ final readonly class UserRepository
     /**
      * Create a new user in the database.
      *
-     * @param array<string, mixed> $data User data ('name', 'email')
+     * @param array<string, mixed> $data User data ('email', 'name')
      *
      * @throws CreateFailedException on failure
      *
@@ -69,12 +72,14 @@ final readonly class UserRepository
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating user with data: ' . var_export($data, true));
             try {
                 // Prepare INSERT statement with named parameters
-                $sql  = 'INSERT INTO users (name, email) VALUES (:name, :email)';
+                $sql  = 'INSERT INTO users (email, name) VALUES (:email, :name)';
                 $stmt = $pdo->prepare($sql);
 
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' data: ' . var_export($data, true));
+
                 // Bind values safely to prevent SQL injection
-                $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
                 $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
+                $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
 
                 $stmt->execute();
 
@@ -91,36 +96,10 @@ final readonly class UserRepository
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return (int)$lastInsertId;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'CREATE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('CREATE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'CREATE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('CREATE', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -138,7 +117,7 @@ final readonly class UserRepository
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding user with ID: ' . var_export($id, true));
             try {
                 // Prepare SELECT query
-                $sql  = 'SELECT id, name, email, created_at, updated_at FROM users WHERE id=:id LIMIT 1';
+                $sql  = 'SELECT id, email, name, created_at, updated_at FROM users WHERE id=:id LIMIT 1';
                 $stmt = $pdo->prepare($sql);
 
                 // Bind ID parameter
@@ -158,36 +137,10 @@ final readonly class UserRepository
 
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FIND', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FIND',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FIND', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -204,7 +157,7 @@ final readonly class UserRepository
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($email) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL', 'pdoId: ' . $pdoId . ' Finding user with email: ' . var_export($email, true));
             try {
-                $sql  = 'SELECT id, name, email, created_at, updated_at FROM users WHERE email=:email LIMIT 1';
+                $sql  = 'SELECT id, email, name, created_at, updated_at FROM users WHERE email=:email LIMIT 1';
                 $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':email', $email, PDO::PARAM_STR);
@@ -223,36 +176,10 @@ final readonly class UserRepository
 
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FIND_BY_EMAIL', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FIND_BY_EMAIL', $pdoId, $stmt ?? null);
             }
         });
     }
@@ -260,135 +187,154 @@ final readonly class UserRepository
     /**
      * List users with optional filters, sorting, and pagination.
      *
-     * @param int               $limit   Max rows (default 100, max 1000)
-     * @param int               $offset  Offset for pagination
-     * @param array<string, mixed> $filters Associative array of filters
-     * @param string            $sortBy  Column to sort by
-     * @param string            $sortDir Sort direction ('ASC' or 'DESC')
+     * @param PaginationParams $paginationParams Pagination parameters
      *
-     * @return array<int, mixed> Array of users
+     * @return array<int, User> Array of users
      */
-    public function list(
-        int $limit = 20,
-        int $offset = 0,
-        array $filters = [],
-        string $sortBy = 'id',
-        string $sortDir = 'DESC'
-    ): array {
-        return $this->pdoPool->withConnectionAndRetry(function (
-            PDO $pdo,
-            int $pdoId
-        ) use (
-            $limit,
-            $offset,
-            $filters,
-            $sortBy,
-            $sortDir
-        ) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'LIST', 'pdoId: ' . $pdoId . ' Listing users with limit: ' . var_export($limit, true) . ', offset: ' . var_export($offset, true) . ', filters: ' . var_export($filters, true) . ', sortBy: ' . var_export($sortBy, true) . ', sortDir: ' . var_export($sortDir, true));
+    public function list(PaginationParams $paginationParams): array
+    {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($paginationParams): array {
+            $this->logListStart($pdoId, $paginationParams);
             try {
-                // Validate pagination values
-                $limit  = max(1, min($limit, 100));
-                $offset = max(0, $offset);
+                $stmt = $this->prepareListStatement($pdo, $paginationParams);
 
-                $sql    = 'SELECT id, name, email, created_at, updated_at FROM users';
-                $where  = [];
-                $params = [];
-
-                // Build dynamic WHERE clause using filters
-                foreach ($filters as $field => $value) {
-                    if ($value === null) {
-                        continue;
-                    }
-
-                    switch ($field) {
-                        case 'email':
-                            $where[]         = 'email = :email';
-                            $params['email'] = $value;
-                            break;
-                        case 'name':
-                            $where[]        = 'name LIKE :name';
-                            $params['name'] = sprintf('%%%s%%', $value);
-                            break;
-                        case 'created_after':
-                            $where[]                 = 'created_at > :created_after';
-                            $params['created_after'] = $value;
-                            break;
-                        case 'created_before':
-                            $where[]                  = 'created_at < :created_before';
-                            $params['created_before'] = $value;
-                            break;
-                        default:
-                            throw new InvalidArgumentException('Invalid filter ' . $field);
-                    }
-                }
-
-                if ($where !== []) {
-                    $sql .= ' WHERE ' . implode(' AND ', $where);
-                }
-
-                // Validate sorting column
-                $allowedSort = ['id', 'name', 'email', 'created_at', 'updated_at'];
-                if (!in_array($sortBy, $allowedSort, true)) {
-                    $sortBy = 'id';
-                }
-
-                $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
-                $sql .= sprintf(' ORDER BY %s %s', $sortBy, $sortDir);
-
-                // Add pagination parameters
-                $sql .= ' LIMIT :offset, :limit';
-
-                $stmt = $pdo->prepare($sql);
-
-                // Bind filter parameters
-                foreach ($params as $key => $val) {
-                    $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                    $stmt->bindValue(':' . $key, $val, $type);
-                }
-
-                // Bind limit and offset
-                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-
+                // Execute the prepared statement
                 $stmt->execute();
 
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                return $results;
+
+                // Hydrate each row into an User domain entity
+                return array_map(static fn (array $result): \App\Models\User => User::fromArray($result), $results);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'LIST' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('LIST', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'LIST',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('LIST', $pdoId, $stmt ?? null);
             }
         });
+    }
+
+    /**
+     * Builds and prepares a List query for users.
+     */
+    private function prepareListStatement(PDO $pdo, PaginationParams $paginationParams): PDOStatement
+    {
+        $sql    = 'SELECT id, email, name, created_at, updated_at FROM users';
+        $params = [];
+
+        $whereSql = $this->buildWhereClause($paginationParams->filters, $params);
+        if ($whereSql !== '') {
+            $sql .= ' WHERE ' . $whereSql;
+        }
+
+        $sql .= $this->buildOrderByClause($paginationParams->sortBy, $paginationParams->sortDir);
+        $sql .= ' LIMIT :offset, :limit';
+
+        $stmt = $pdo->prepare($sql);
+
+        $this->bindQueryParams($stmt, $params);
+        $this->bindPaginationParams($stmt, $paginationParams);
+
+        return $stmt;
+    }
+
+    /**
+     * Builds WHERE clause dynamically from filters.
+     *
+     * @param array<string, mixed> $filters
+     * @param array<string, mixed> $params
+     */
+    protected function buildWhereClause(array $filters, array &$params): string
+    {
+        $conditions     = [];
+        $allowedFilters = $this->getAllowedFilters();
+
+        foreach ($filters as $field => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            if (!isset($allowedFilters[$field])) {
+                throw new InvalidArgumentException(sprintf('Invalid filter: %s', $field));
+            }
+
+            [$condition, $param] = $allowedFilters[$field]($value);
+            $conditions[]        = $condition;
+            $params += $param;
+        }
+
+        return implode(' AND ', $conditions);
+    }
+
+    /**
+     * Returns filter-to-SQL mapping closures.
+     *
+     * @return array<string, callable(string): array{0:string,1:array<string, string>}>
+     */
+    private function getAllowedFilters(): array
+    {
+        return [
+            'email'          => static fn (string $value): array => ['email = :email', ['email' => $value]],
+            'name'           => static fn (string $value): array => ['name LIKE :name', ['name' => sprintf('%%%s%%', $value)]],
+            'created_after'  => static fn (string $value): array => ['created_at > :created_after', ['created_after' => $value]],
+            'created_before' => static fn (string $value): array => ['created_at < :created_before', ['created_before' => $value]],
+        ];
+    }
+
+    /**
+     * Builds ORDER BY clause.
+     */
+    private function buildOrderByClause(string $sortBy, string $sortDir): string
+    {
+        $allowedSort = ['id', 'email', 'name', 'created_at', 'updated_at'];
+        $sortBy      = in_array($sortBy, $allowedSort, true) ? $sortBy : 'id';
+        $sortDir     = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+        return sprintf(' ORDER BY %s %s', $sortBy, $sortDir);
+    }
+
+    /**
+     * Binds dynamic query parameters.
+     *
+     * @param array<string, mixed> $params
+     */
+    protected function bindQueryParams(PDOStatement $pdoStatement, array $params): void
+    {
+        foreach ($params as $key => $val) {
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $pdoStatement->bindValue(':' . $key, $val, $type);
+        }
+    }
+
+    /**
+     * Binds pagination offset and limit.
+     */
+    protected function bindPaginationParams(PDOStatement $pdoStatement, PaginationParams $paginationParams): void
+    {
+        $pdoStatement->bindValue(':offset', $paginationParams->offset, PDO::PARAM_INT);
+        $pdoStatement->bindValue(':limit', $paginationParams->limit, PDO::PARAM_INT);
+    }
+
+    /**
+     * Log the start of an filterCount.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param PaginationParams $paginationParams  Data being used for the list
+     */
+    protected function logListStart(int $pdoId, PaginationParams $paginationParams): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'LIST',
+            sprintf(
+                'pdoId: %d Listing users with limit: %s, offset: %s, filters: %s, sortBy: %s, sortDir: %s',
+                $pdoId,
+                var_export($paginationParams->limit, true),
+                var_export($paginationParams->offset, true),
+                var_export($paginationParams->filters, true),
+                var_export($paginationParams->sortBy, true),
+                var_export($paginationParams->sortDir, true)
+            )
+        );
     }
 
     /**
@@ -401,51 +347,9 @@ final readonly class UserRepository
     public function filteredCount(array $filters = []): int
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($filters): int {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT', 'pdoId: ' . $pdoId . ' Counting users with filters: ' . var_export($filters, true));
+            $this->logFilterCountStart($pdoId, $filters);
             try {
-                $sql    = 'SELECT count(*) as filtered FROM users';
-                $where  = [];
-                $params = [];
-
-                // Build dynamic WHERE clause using filters
-                foreach ($filters as $field => $value) {
-                    if ($value === null) {
-                        continue;
-                    }
-
-                    switch ($field) {
-                        case 'email':
-                            $where[]         = 'email = :email';
-                            $params['email'] = $value;
-                            break;
-                        case 'name':
-                            $where[]        = 'name LIKE :name';
-                            $params['name'] = sprintf('%%%s%%', $value);
-                            break;
-                        case 'created_after':
-                            $where[]                 = 'created_at > :created_after';
-                            $params['created_after'] = $value;
-                            break;
-                        case 'created_before':
-                            $where[]                  = 'created_at < :created_before';
-                            $params['created_before'] = $value;
-                            break;
-                        default:
-                            throw new InvalidArgumentException('Invalid filter ' . $field);
-                    }
-                }
-
-                if ($where !== []) {
-                    $sql .= ' WHERE ' . implode(' AND ', $where);
-                }
-
-                $stmt = $pdo->prepare($sql);
-
-                // Bind filter parameters
-                foreach ($params as $key => $val) {
-                    $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                    $stmt->bindValue(':' . $key, $val, $type);
-                }
+                $stmt = $this->prepareFilterCountStatement($pdo, $filters);
 
                 // Execute the prepared statement
                 $stmt->execute();
@@ -463,38 +367,48 @@ final readonly class UserRepository
                 // Safely access the 'filtered' key
                 return (int) ($result['filtered'] ?? 0);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('FILTERED_COUNT', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('FILTERED_COUNT', $pdoId, $stmt ?? null);
             }
         });
+    }
+
+    /**
+     * Builds and prepares a filtered COUNT(*) query for users.
+     *
+     * @param array<string, mixed> $filters
+     */
+    private function prepareFilterCountStatement(PDO $pdo, array $filters = []): PDOStatement
+    {
+        $sql    = 'SELECT COUNT(*) AS filtered FROM users';
+        $params = [];
+
+        $whereSql = $this->buildWhereClause($filters, $params);
+        if ($whereSql !== '') {
+            $sql .= ' WHERE ' . $whereSql;
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        $this->bindQueryParams($stmt, $params);
+
+        return $stmt;
+    }
+
+    /**
+     * Log the start of an filterCount.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param array<string, mixed> $filters  Data being used for the filterCount
+     */
+    protected function logFilterCountStart(int $pdoId, array $filters): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
+            sprintf('pdoId: %d Counting users with filters: %s', $pdoId, var_export($filters, true))
+        );
     }
 
     /**
@@ -524,97 +438,122 @@ final readonly class UserRepository
                 // Safely access the 'total' key
                 return (int) ($result['total'] ?? 0);
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'COUNT' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('COUNT', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'COUNT',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('COUNT', $pdoId, $stmt ?? null);
             }
         });
     }
 
     /**
-     * Update a user.
+     * Update a user record.
      *
-     * @param int               $id   User ID
-     * @param array<string, mixed> $data User data ('name', 'email')
+     * @param int                 $id   User ID
+     * @param array<string, mixed> $data User data ('email', 'name')
      *
      * @return bool True if updated
      */
     public function update(int $id, array $data): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): bool {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'UPDATE', 'pdoId: ' . $pdoId . ' Updating user with ID: ' . var_export($id, true) . ' and data: ' . var_export($data, true));
+            $this->logUpdateStart($pdoId, $id, $data);
+
             try {
-                $sql  = 'UPDATE users SET name=:name, email=:email WHERE id=:id';
-                $stmt = $pdo->prepare($sql);
-
-                $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
-                $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
-                $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-
+                $stmt = $this->prepareUpdateStatement($pdo, $id, $data);
                 $stmt->execute();
+
                 $result = $stmt->rowCount() > 0;
-                $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
+                $this->pdoPool->clearStatement($stmt);
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'UPDATE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('UPDATE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('UPDATE', $pdoId, $stmt ?? null);
             }
         });
+    }
+
+    /**
+     * Prepare the PDO statement for updating user.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function prepareUpdateStatement(PDO $pdo, int $id, array $data): \PDOStatement
+    {
+        $sql  = 'UPDATE users SET email=:email, name=:name WHERE id=:id';
+        $stmt = $pdo->prepare($sql);
+
+        $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
+        $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        return $stmt;
+    }
+
+    /**
+     * Log the start of an update.
+     *
+     * @param int   $pdoId ID of the PDO connection
+     * @param int   $id    User ID being updated
+     * @param array<string, mixed> $data  Data being used for the update
+     */
+    protected function logUpdateStart(int $pdoId, int $id, array $data): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
+            sprintf('pdoId: %d Updating user ID: %d with data: %s', $pdoId, $id, var_export($data, true))
+        );
+    }
+
+    /**
+     * Log an exception during update.
+     *
+     * @param string    $functionName Name of the function (for logging)
+     * @param int       $pdoId        ID of the PDO connection
+     * @param Throwable $throwable    The caught exception
+     */
+    protected function logException(string $functionName, int $pdoId, Throwable $throwable): void
+    {
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . '' . $functionName . '][Exception',
+            sprintf(
+                Messages::PDO_EXCEPTION_MESSAGE,
+                $pdoId,
+                $throwable->getCode(),
+                $throwable->getMessage()
+            )
+        );
+    }
+
+    /**
+     * Clean up and log PDO statement info.
+     *
+     * @param string         $functionName Name of the function (for logging)
+     * @param int            $pdoId        ID of the PDO connection
+     * @param \PDOStatement|null $pdoStatement The PDO statement to finalize
+     */
+    protected function finalizeStatement(string $functionName, int $pdoId, ?\PDOStatement $pdoStatement): void
+    {
+        if (!$pdoStatement instanceof \PDOStatement) {
+            return;
+        }
+
+        $errorCode = $pdoStatement->errorCode();
+        $errorInfo = $pdoStatement->errorInfo();
+
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . $functionName,
+            sprintf(
+                Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                $pdoId,
+                $errorCode ?? 'N/A',
+                implode(', ', $errorInfo)
+            )
+        );
+
+        $this->pdoPool->clearStatement($pdoStatement);
     }
 
     /**
@@ -639,36 +578,10 @@ final readonly class UserRepository
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
                 return $result;
             } catch (Throwable $throwable) {
-                // Log exception here
-                logDebug(
-                    self::TAG . ':' . __LINE__ . '] [' . 'DELETE' . '][Exception',
-                    sprintf(
-                        Messages::PDO_EXCEPTION_MESSAGE,
-                        $pdoId,
-                        $throwable->getCode(),
-                        $throwable->getMessage()
-                    )
-                );
+                $this->logException('DELETE', $pdoId, $throwable);
                 throw $throwable;
             } finally {
-                if (isset($stmt)) {
-                    // Log PDO error code if $stmt exists
-                    $errorCode = $stmt->errorCode(); // returns '00000' if no error
-                    $errorInfo = $stmt->errorInfo(); // optional: [SQLSTATE, driverCode, message]
-
-                    // Log only if there was an error
-                    logDebug(
-                        self::TAG . ':' . __LINE__ . '] [' . 'DELETE',
-                        sprintf(
-                            Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                            $pdoId,
-                            $errorCode ?? 'N/A',
-                            implode(', ', $errorInfo)
-                        )
-                    );
-
-                    $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
-                }
+                $this->finalizeStatement('DELETE', $pdoId, $stmt ?? null);
             }
         });
     }
