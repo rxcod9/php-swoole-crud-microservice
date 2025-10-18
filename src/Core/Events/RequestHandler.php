@@ -54,6 +54,8 @@ use Throwable;
  */
 final readonly class RequestHandler
 {
+    public const TAG = 'RequestHandler';
+
     /**
      * RequestHandler constructor.
      *
@@ -136,34 +138,16 @@ final readonly class RequestHandler
         // Metrics & Logging
         $dur = microtime(true) - $start;
 
-        if (!in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            [$route] = $this->router->getRouteByPath(
-                $request->server['request_method'],
-                $path ?? '/'
-            );
+        [$route] = $this->router->getRouteByPath(
+            $request->server['request_method'],
+            $path ?? '/'
+        );
 
-            // Metrics setup
-            $redisPool = $this->container->get(RedisPool::class);
-            $redis     = $redisPool->get();
-            defer(fn () => $redisPool->put($redis));
-
-            $metrics = $this->container->get(Metrics::class);
-            $reg     = $metrics->getCollectorRegistry($redis);
-
-            $counter = $reg->getOrRegisterCounter(
-                'http_requests_total',
-                'Requests',
-                'Total HTTP requests',
-                ['method', 'path', 'status']
-            );
-            $histogram = $reg->getOrRegisterHistogram(
-                'http_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['method', 'path']
-            );
-            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+        if (
+            $route !== null &&
+            !in_array($path, ['/health', '/health.html', '/metrics'], true)
+        ) {
+            $this->logMetrics($request, $route, $status, $dur);
 
             $requestLogger = new RequestLogger();
             $requestLogger->log(
@@ -259,7 +243,8 @@ final readonly class RequestHandler
         string $reqId,
         Response $response,
         float $start
-    ): void { // Execute controller/handler
+    ): void {
+        // Execute controller/handler
         $dispatcher = new Dispatcher($this->container);
         $payload    = $dispatcher->dispatch($action, $params, $request);
 
@@ -289,12 +274,15 @@ final readonly class RequestHandler
         // Metrics & Logging
         $dur = microtime(true) - $start;
 
-        if (!in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            [$route] = $this->router->getRouteByPath(
-                $request->server['request_method'],
-                $path ?? '/'
-            );
+        [$route] = $this->router->getRouteByPath(
+            $request->server['request_method'],
+            $path ?? '/'
+        );
 
+        if (
+            $route !== null &&
+            !in_array($path, ['/health', '/health.html', '/metrics'], true)
+        ) {
             $this->logMetrics($request, $route, $status, $dur);
 
             $requestLogger = new RequestLogger();
@@ -317,7 +305,7 @@ final readonly class RequestHandler
      * Log metrics for the request.
      *
      * @param Request $request The incoming HTTP request
-     * @param array   $route   The matched route information
+     * @param array{regex: string, vars: array<int, string>, path: string}   $route   The matched route information
      * @param int     $status  The HTTP response status code
      * @param float   $dur     The duration of the request handling in seconds
      */

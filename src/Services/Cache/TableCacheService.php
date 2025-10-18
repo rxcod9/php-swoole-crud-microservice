@@ -266,13 +266,13 @@ final readonly class TableCacheService
         $row = $this->tableWithLRUAndGC->get($key);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Current version row: ' . json_encode($row));
         if ($row !== null) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for key: ' . $key . ' value: ' . (((int)$row['value'] ?? 0) + 1));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for key: ' . $key . ' value: ' . (((int)$row['value']) + 1));
             $this->tableWithLRUAndGC->set($key, [
-                'value'       => ((int)$row['value'] ?? 0) + 1,
+                'value'       => ((int)$row['value']) + 1,
                 'expires_at'  => Carbon::now()->getTimestamp() + 86400, // keep version for a day
                 'last_access' => Carbon::now()->getTimestamp(), // keep version for a day
             ]);
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for key: ' . $key . ' value: ' . (((int)$row['value'] ?? 0) + 1));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for key: ' . $key . ' value: ' . (((int)$row['value']) + 1));
             return;
         }
 

@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Core\Messages;
-use App\Core\Pools\PDOPool;
 use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
 use App\Models\User;
@@ -46,16 +45,6 @@ use Throwable;
 final readonly class UserRepository extends Repository
 {
     public const TAG = 'UserRepository';
-
-    /**
-     * Constructor
-     *
-     * @param PDOPool $pdoPool The PDO connection pool
-     */
-    public function __construct(protected PDOPool $pdoPool)
-    {
-        // Initialize repository with PDO connection pool
-    }
 
     /**
      * Create a new user in the database.
@@ -245,7 +234,7 @@ final readonly class UserRepository extends Repository
      * @param array<string, mixed> $filters
      * @param array<string, mixed> $params
      */
-    protected function buildWhereClause(array $filters, array &$params): string
+    private function buildWhereClause(array $filters, array &$params): string
     {
         $conditions     = [];
         $allowedFilters = $this->getAllowedFilters();

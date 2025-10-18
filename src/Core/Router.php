@@ -175,7 +175,7 @@ final class Router
      * @param string $method HTTP method
      * @param string $uri    Request URI
      *
-     * @return mixed[] The route details (compiled, action, middlewares) if found
+     * @return array{0: array{regex: string, vars: array<int, string>, path: string}|null, 1: string|null, 2: array<class-string>} The route details (compiled, action, middlewares)
      */
     public function getRouteByPath(string $method, string $uri): array
     {

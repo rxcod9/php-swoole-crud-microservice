@@ -66,13 +66,13 @@ final readonly class CacheService
     {
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
-        if ($value !== null && $value !== false) {
+        if ($value !== null) {
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
         $value = $this->redisCacheService->get($key);
-        if ($value !== null && $value !== false) {
+        if ($value !== null) {
             // warm local cache for faster next access
             try {
                 $this->tableCacheService->set($key, $value, 120);
@@ -83,7 +83,7 @@ final readonly class CacheService
             return [$value, RedisCacheService::CACHE_TYPE];
         }
 
-        return [null, $value];
+        return [$value, null];
     }
 
     /**
@@ -281,12 +281,12 @@ final readonly class CacheService
     public function getList(string $entity, array $query): array
     {
         $value = $this->tableCacheService->getList($entity, $query);
-        if ($value !== null && $value !== false) {
+        if ($value !== null) {
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         $value = $this->redisCacheService->getList($entity, $query);
-        if ($value !== null && $value !== false) {
+        if ($value !== null) {
             try {
                 $this->tableCacheService->setList($entity, $query, $value);
             } catch (Throwable $e) {
@@ -296,7 +296,7 @@ final readonly class CacheService
             return [$value, RedisCacheService::CACHE_TYPE];
         }
 
-        return [null, $value];
+        return [$value, null];
     }
 
     /**

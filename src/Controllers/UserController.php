@@ -171,7 +171,7 @@ final class UserController extends Controller
         // Check cache
         // --------------------
         $cachedResult = $this->getCachedUserList($query);
-        if ($cachedResult !== null && $cachedResult !== false) {
+        if ($cachedResult !== null) {
             return $cachedResult;
         }
 

@@ -22,7 +22,6 @@ namespace App\Repositories;
 use App\Core\Messages;
 use App\Core\Pools\PDOPool;
 use App\Services\PaginationParams;
-use InvalidArgumentException;
 use PDO;
 use PDOStatement;
 use Throwable;
@@ -51,34 +50,6 @@ abstract readonly class Repository implements RepositoryInterface
     public function __construct(protected PDOPool $pdoPool)
     {
         // Initialize repository with PDO connection pool
-    }
-
-    /**
-     * Builds WHERE clause dynamically from filters.
-     *
-     * @param array<string, mixed> $filters
-     * @param array<string, mixed> $params
-     */
-    protected function buildWhereClause(array $filters, array &$params): string
-    {
-        $conditions     = [];
-        $allowedFilters = $this->getAllowedFilters();
-
-        foreach ($filters as $field => $value) {
-            if ($value === null) {
-                continue;
-            }
-
-            if (!isset($allowedFilters[$field])) {
-                throw new InvalidArgumentException(sprintf('Invalid filter: %s', $field));
-            }
-
-            [$condition, $param] = $allowedFilters[$field]($value);
-            $conditions[]        = $condition;
-            $params += $param;
-        }
-
-        return implode(' AND ', $conditions);
     }
 
     /**
