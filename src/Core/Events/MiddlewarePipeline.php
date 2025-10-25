@@ -91,7 +91,7 @@ final class MiddlewarePipeline
     {
         return array_reduce(
             array_reverse($this->middlewares),
-            fn ($next, $middleware): \Closure => fn (Request $request, Response $response) => $this->invokeMiddleware($middleware, $request, $response, $next),
+            fn (callable $next, callable|string $middleware): \Closure => fn (Request $request, Response $response) => $this->invokeMiddleware($middleware, $request, $response, $next),
             $finalHandler
         );
     }
