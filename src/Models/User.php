@@ -41,11 +41,11 @@ class User extends Model
      * @SuppressWarnings("PHPMD.ExcessiveParameterList")
      */
     public function __construct(
-        public readonly int $id,
-        public readonly string $email,
-        public readonly string $name,
-        public readonly DateTimeImmutable $createdAt,
-        public readonly DateTimeImmutable $updatedAt
+        public int $id,
+        public string $email,
+        public string $name,
+        public DateTimeImmutable $createdAt,
+        public DateTimeImmutable $updatedAt
     ) {
         // Empty constructor
     }

@@ -41,12 +41,12 @@ class Item extends Model
      * @SuppressWarnings("PHPMD.ExcessiveParameterList")
      */
     public function __construct(
-        public readonly int $id,
-        public readonly string $sku,
-        public readonly string $title,
-        public readonly float $price,
-        public readonly DateTimeImmutable $createdAt,
-        public readonly DateTimeImmutable $updatedAt
+        public int $id,
+        public string $sku,
+        public string $title,
+        public float $price,
+        public DateTimeImmutable $createdAt,
+        public DateTimeImmutable $updatedAt
     ) {
         // Empty constructor
     }
