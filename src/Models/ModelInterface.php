@@ -33,11 +33,18 @@ namespace App\Models;
 interface ModelInterface
 {
     /**
-     * Hydrate an Item object from a database row array.
+     * Hydrate an Model object from a database row array.
      *
      * @param array<string, mixed> $row
      */
     public static function fromArray(array $row): self;
+
+    /**
+     * Merge an Model object from a request data array.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function merge(array $data): self;
 
     /**
      * Convert the model object to a serializable array (for JSON output).

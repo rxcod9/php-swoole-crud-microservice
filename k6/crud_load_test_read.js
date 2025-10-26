@@ -17,9 +17,9 @@ const ENV = {
     HOT_READ_RATIO: Number(__ENV.HOT_READ_RATIO) || 0.8,           // Probability of reading hot IDs
     HOT_UPDATE_RATIO: Number(__ENV.HOT_UPDATE_RATIO) || 0.01,      // Probability of updating hot IDs
     LIST_PAGES: Number(__ENV.LIST_PAGES) || 3,                     // Number of pages for list endpoints
-    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 1000,      // Max iterations per VU
-    MAX_DURATION: __ENV.MAX_DURATION || '5m',                      // Setup/teardown timeout
-    MAX_VUS: Number(__ENV.MAX_VUS) || 100                          // Maximum virtual users
+    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 2000,      // Max iterations per VU
+    MAX_DURATION: __ENV.MAX_DURATION || '10m',                      // Setup/teardown timeout
+    MAX_VUS: Number(__ENV.MAX_VUS) || 50                          // Maximum virtual users
 };
 
 /**
@@ -30,13 +30,13 @@ const ENV = {
  */
 const listTrendUsers = new Trend('USERS_LIST_latency_ms');
 const readTrendUsers = new Trend('USERS_READ_latency_ms');
-// const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
-// const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
+const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
+const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
 
 const listTrendItems = new Trend('ITEMS_LIST_latency_ms');
 const readTrendItems = new Trend('ITEMS_READ_latency_ms');
-// const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
-// const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
+const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
+const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
 
 /**
  * --------------------
@@ -60,7 +60,7 @@ let globalExecutions = 0;
  */
 function generateUuid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16;
+        const r = Math.floor(Math.random() * 16); // ensure integer
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
@@ -110,7 +110,7 @@ function randomItem(arr) {
 function postEntity(url, obj, trend) {
     const res = http.post(url, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
     trend.add(res.timings.duration);
-    // check(res, { 'CREATE success': r => r.status === 201 });
+    check(res, { 'CREATE success': r => r.status === 201 });
     if (res.status === 201) {
         try {
             const parsed = JSON.parse(res.body);
@@ -225,41 +225,41 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
                     console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status}`);
             }
         },
-        // {
-        //     type: 'create',
-        //     weight: weights.CREATE,
-        //     handler: () => {
-        //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
-        //         const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-        //         trends.create?.add(res.timings.duration);
-        //         check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
-        //             console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-        //         if (res.status === 201) {
-        //             try {
-        //                 const parsed = JSON.parse(res.body);
-        //                 if (parsed?.id != null) vuIds.push(parsed.id);
-        //                 else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
-        //             } catch (e) {
-        //                 console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
-        //             }
-        //         }
-        //     }
-        // },
-        // {
-        //     type: 'update',
-        //     weight: weights.UPDATE,
-        //     handler: () => {
-        //         const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-        //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
-        //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
-        //         const obj = generateFn(id);
-        //         const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
-        //         const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
-        //         trends.update?.add(res.timings.duration);
-        //         check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
-        //             console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-        //     }
-        // }
+        {
+            type: 'create',
+            weight: weights.CREATE,
+            handler: () => {
+                const obj = generateFn(Math.floor(Math.random() * 1_000_000));
+                const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
+                trends.create?.add(res.timings.duration);
+                check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
+                    console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+                if (res.status === 201) {
+                    try {
+                        const parsed = JSON.parse(res.body);
+                        if (parsed?.id != null) vuIds.push(parsed.id);
+                        else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
+                    } catch (e) {
+                        console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
+                    }
+                }
+            }
+        },
+        {
+            type: 'update',
+            weight: weights.UPDATE,
+            handler: () => {
+                const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
+                if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
+                const obj = generateFn(id);
+                const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
+                const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
+                trends.update?.add(res.timings.duration);
+                check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
+                    console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+            }
+        }
     ].filter(a => a.weight);
 
     // Weighted selection
@@ -283,27 +283,27 @@ export const options = {
     setupTimeout: ENV.MAX_DURATION,
     teardownTimeout: ENV.MAX_DURATION,
     stages: [
-        { duration: '20s', target: 0.10 },
-        { duration: '20s', target: 0.25 },
-        { duration: '20s', target: 0.40 },
-        { duration: '40s', target: 0.60 },
-        { duration: '40s', target: 0.80 },
-        { duration: '40s', target: 1.00 },
-        { duration: '40s', target: 0.80 },
-        { duration: '40s', target: 0.50 },
-        { duration: '20s', target: 0.25 },
-        { duration: '20s', target: 0.0 },
+        { duration: '2s', target: 0.1 },
+        { duration: '2s', target: 0.25 },
+        { duration: '2s', target: 0.4 },
+        { duration: '4s', target: 0.6 },
+        { duration: '4s', target: 0.8 },
+        { duration: '4s', target: 1 },
+        { duration: '4s', target: 0.8 },
+        { duration: '4s', target: 0.5 },
+        { duration: '2s', target: 0.25 },
+        { duration: '2s', target: 0 },
     ].map(s => ({ ...s, target: Math.floor(s.target * ENV.MAX_VUS) })),
     thresholds: {
         'http_req_duration': ['p(95)<200'],
         'USERS_LIST_latency_ms': ['avg<100'],
-        // 'USERS_CREATE_latency_ms': ['avg<100'],
+        'USERS_CREATE_latency_ms': ['avg<100'],
         'USERS_READ_latency_ms': ['avg<50'],
-        // 'USERS_UPDATE_latency_ms': ['avg<100'],
+        'USERS_UPDATE_latency_ms': ['avg<100'],
         'ITEMS_LIST_latency_ms': ['avg<100'],
-        // 'ITEMS_CREATE_latency_ms': ['avg<100'],
+        'ITEMS_CREATE_latency_ms': ['avg<100'],
         'ITEMS_READ_latency_ms': ['avg<50'],
-        // 'ITEMS_UPDATE_latency_ms': ['avg<100'],
+        'ITEMS_UPDATE_latency_ms': ['avg<100'],
     }
 };
 
@@ -324,20 +324,10 @@ export default function (data) {
         vuIds: VU_userIds,
         hotIds: data.hotUserIds,
         coolIds: data.coolUserIds,
-        weights: {
-            LIST: 0.5,
-            READ: 0.5, // 0.25,
-            // CREATE: 0.15,
-            // UPDATE: 0.07
-        },
+        weights: { LIST: 0.5, READ: 0.5, CREATE: 0, UPDATE: 0 },
         generateFn: generateUser,
         baseUrl: 'users',
-        trends: {
-            list: listTrendUsers,
-            read: readTrendUsers,
-            // create: createTrendUsers,
-            // update: updateTrendUsers
-        },
+        trends: { list: listTrendUsers, read: readTrendUsers, create: createTrendUsers, update: updateTrendUsers },
         entity: 'USERS'
     });
 
@@ -346,20 +336,10 @@ export default function (data) {
         vuIds: VU_itemIds,
         hotIds: data.hotItemIds,
         coolIds: data.coolItemIds,
-        weights: {
-            LIST: 0.5,
-            READ: 0.5, // 0.25,
-            // CREATE: 0.15,
-            // UPDATE: 0.07
-        },
+        weights: { LIST: 0.5, READ: 0.5, CREATE: 0, UPDATE: 0 },
         generateFn: generateItem,
         baseUrl: 'items',
-        trends: {
-            list: listTrendItems,
-            read: readTrendItems,
-            // create: createTrendItems,
-            // update: updateTrendItems
-        },
+        trends: { list: listTrendItems, read: readTrendItems, create: createTrendItems, update: updateTrendItems },
         entity: 'ITEMS'
     });
 

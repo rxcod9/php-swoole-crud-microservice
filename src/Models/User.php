@@ -81,6 +81,21 @@ class User extends Model
     }
 
     /**
+     * Merge an User object from a request data array.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function merge(array $data): self
+    {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'data: ' . var_export($data, true));
+
+        $this->email = (string)$data['email'];
+        $this->name = (string)$data['name'];
+
+        return $this;
+    }
+
+    /**
      * Convert the model object to a serializable array (for JSON output).
      *
      * @return array<string, mixed>
