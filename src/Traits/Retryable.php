@@ -46,7 +46,7 @@ trait Retryable
      *
      * @throws Throwable
      */
-    public function retry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
+    public function retry(callable $callback, int $attempt = 0, int $maxRetry = 10, int $delayMs = 100): mixed
     {
         try {
             return $callback();
@@ -68,7 +68,7 @@ trait Retryable
      *
      * @throws Throwable
      */
-    public function forceRetry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
+    public function forceRetry(callable $callback, int $attempt = 0, int $maxRetry = 10, int $delayMs = 100): mixed
     {
         try {
             return $callback();

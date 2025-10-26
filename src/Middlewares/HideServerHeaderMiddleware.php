@@ -19,8 +19,8 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class HideServerHeaderMiddleware
@@ -43,7 +43,7 @@ final class HideServerHeaderMiddleware implements MiddlewareInterface
     public function handle(Request $request, Response $response, callable $next): void
     {
         // Remove default server header
-        $response->header('Server', null);
+        $response->setHeader('Server', null);
 
         $next($request, $response);
     }

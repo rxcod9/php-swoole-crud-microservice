@@ -720,7 +720,7 @@
                     "Users"
                 ],
                 "summary": "Update user",
-                "description": "Update a user by ID.",
+                "description": "Update a user by ID.\nExpects JSON body with updated user data.",
                 "operationId": "e14711e3727e4a4f04dfc70a7545196f",
                 "parameters": [
                     {

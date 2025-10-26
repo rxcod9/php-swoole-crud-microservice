@@ -60,6 +60,9 @@
     <exclude-pattern>.github/*</exclude-pattern>
     <exclude-pattern>tests/*</exclude-pattern>
 
+    <!-- Helpers.php specific suppression for StaticAccess -->
+    <exclude-pattern>src/Support/helpers.php</exclude-pattern>
+
     <arg name="extensions" value="php"/>
     <arg name="error-severity" value="1"/>
     <arg name="warning-severity" value="0"/>

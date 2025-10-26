@@ -80,7 +80,30 @@ jobs:
           cache-to: type=gha,mode=max
 
       # --------------------------
+      # Build and Push alpine Docker image
+      # --------------------------
+      - name: Build and Push Alpine Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.alpine
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            rxcod9/php-swoole-crud-microservice:alpine-${{ steps.meta.outputs.version }}
+            rxcod9/php-swoole-crud-microservice:alpine-latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --------------------------
       # Show resulting image tags (debugging)
       # --------------------------
       - name: Show image tags
-        run: echo "${{ steps.meta.outputs.tags }}"
+        run: |
+          echo "Standard image tags:"
+          echo "${{ steps.meta.outputs.tags }}"
+          echo ""
+          echo "Alpine image tags:"
+          echo "rxcod9/php-swoole-crud-microservice:alpine-${{ steps.meta.outputs.version }}"
+          echo "rxcod9/php-swoole-crud-microservice:alpine-latest"

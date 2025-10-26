@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Core\Http\Request;
+
 /**
  * Class Controller
  * Abstract base controller providing common functionality for all controllers.
@@ -37,31 +39,31 @@ abstract class Controller
     /**
      * The container object associated with the controller.
      */
-    protected mixed $container;
+    protected Container $container;
 
     /**
      * Assigns the container object to the controller.
      *
-     * @param mixed $app The container object.
+     * @param Container $container The container object.
      */
-    public function setContainer(mixed $app): void
+    public function setContainer(Container $container): void
     {
-        $this->container = $app;
+        $this->container = $container;
     }
 
     /**
      * The request object associated with the controller.
      */
-    protected mixed $request;
+    protected Request $request;
 
     /**
      * Assigns the request object to the controller.
      *
-     * @param mixed $req The request object.
+     * @param Request $request The request object.
      */
-    public function setRequest(mixed $req): void
+    public function setRequest(Request $request): void
     {
-        $this->request = $req;
+        $this->request = $request;
     }
 
     /**

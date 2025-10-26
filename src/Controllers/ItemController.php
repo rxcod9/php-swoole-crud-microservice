@@ -21,6 +21,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Messages;
+use App\Models\Item;
 use App\Services\ItemService;
 use OpenApi\Attributes as OA;
 
@@ -76,7 +77,7 @@ final class ItemController extends Controller
     )]
     public function create(): array
     {
-        $data = json_decode($this->request->rawContent() ?? '[]', true);
+        $data = $this->request->getJsonBody();
         $item = $this->itemService->create($data);
         return $this->json($item, 201);
     }
@@ -191,29 +192,35 @@ final class ItemController extends Controller
     public function index(): array
     {
         // Pagination params
-        $page   = (int)($this->request->get['page'] ?? 1);
-        $limit  = max(1, min((int)($this->request->get['limit'] ?? 20), 100));
+        $page   = (int)($this->request->get('page', 1));
+        $limit  = max(1, min((int)($this->request->get('limit', 20)), 100));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override with direct offset if provided
-        $limit  = (int)($this->request->get['limit'] ?? $limit);
-        $offset = (int)($this->request->get['offset'] ?? $offset);
+        $limit  = (int)($this->request->get('limit', $limit));
+        $offset = (int)($this->request->get('offset', $offset));
 
         $filters = [
-            'sku'            => $this->request->get['sku'] ?? null,
-            'title'          => $this->request->get['title'] ?? null,
-            'created_after'  => $this->request->get['created_after'] ?? null,
-            'created_before' => $this->request->get['created_before'] ?? null,
+            'sku'            => $this->request->get('sku'),
+            'title'          => $this->request->get('title'),
+            'created_after'  => $this->request->get('created_after'),
+            'created_before' => $this->request->get('created_before'),
         ];
 
-        $sortBy        = $this->request->get['sortBy'] ?? 'id';
-        $sortDirection = $this->request->get['sortDirection'] ?? 'DESC';
+        $sortBy        = $this->request->get('sortBy', 'id');
+        $sortDirection = $this->request->get('sortDirection', 'DESC');
 
         // Fetch from service if not cached
-        [$records, $pagination] = $this->itemService->pagination(['limit' => $limit, 'offset' => $offset, 'filters' => $filters, 'sortBy' => $sortBy, 'sortDir' => $sortDirection]);
+        [$records, $pagination] = $this->itemService->pagination([
+            'limit'   => $limit,
+            'offset'  => $offset,
+            'filters' => array_filter($filters, fn (?string $v): bool => $v !== null),
+            'sortBy'  => $sortBy,
+            'sortDir' => $sortDirection,
+        ]);
 
         $data = [
-            'data'       => $records,
+            'data'       => array_map(static fn (Item $item): array => $item->toArray(), $records),
             'pagination' => $pagination,
         ];
 
@@ -261,9 +268,9 @@ final class ItemController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
-        $data = $this->itemService->find($id);
+        $item = $this->itemService->find($id);
 
-        return $this->json($data);
+        return $this->json($item->toArray());
     }
 
     /**
@@ -306,9 +313,9 @@ final class ItemController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['sku']);
         $sku  = urldecode($params['sku']);
-        $data = $this->itemService->findBySku($sku);
+        $item = $this->itemService->findBySku($sku);
 
-        return $this->json($data);
+        return $this->json($item);
     }
 
     /**
@@ -351,12 +358,12 @@ final class ItemController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
-        $data = json_decode($this->request->rawContent() ?? '[]', true);
+        $data = $this->request->getJsonBody();
         // Calling find to validate if entiry exists
         $this->itemService->find($id);
         $item = $this->itemService->update($id, $data);
 
-        return $this->json($item);
+        return $this->json($item->toArray());
     }
 
     /**

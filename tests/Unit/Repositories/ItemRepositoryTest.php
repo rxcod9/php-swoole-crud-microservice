@@ -107,8 +107,8 @@ final class ItemRepositoryTest extends TestCase
             $item = $this->itemRepository->find(1);
 
             $this->assertNotNull($item, 'Item with ID 1 should exist');
-            $this->assertEquals('Item 001', $item['title']);
-            $this->assertEquals('item-001', $item['sku']);
+            $this->assertEquals('Item 001', $item->title);
+            $this->assertEquals('item-001', $item->sku);
         });
     }
 
@@ -127,9 +127,9 @@ final class ItemRepositoryTest extends TestCase
             $this->assertIsInt($newId, 'Newly created item should return an integer ID');
 
             $item = $this->itemRepository->find($newId);
-            $this->assertEquals('Item 101', $item['title']);
-            $this->assertEquals('item-101', $item['sku']);
-            $this->assertEquals(1001, $item['price']);
+            $this->assertEquals('Item 101', $item->title);
+            $this->assertEquals('item-101', $item->sku);
+            $this->assertEquals(1001, $item->price);
         });
     }
 
@@ -148,9 +148,9 @@ final class ItemRepositoryTest extends TestCase
             $this->assertTrue($updated, 'Expected update() to return true');
 
             $item = $this->itemRepository->find(1);
-            $this->assertEquals('Item 001 Updated', $item['title']);
-            $this->assertEquals('item-101-updated', $item['sku']);
-            $this->assertEquals(1002, $item['price']);
+            $this->assertEquals('Item 001 Updated', $item->title);
+            $this->assertEquals('item-101-updated', $item->sku);
+            $this->assertEquals(1002, $item->price);
         });
     }
 
@@ -158,10 +158,9 @@ final class ItemRepositoryTest extends TestCase
      * Test deleting a item.
      */
     public function testDeleteItem(): void
-    {
+    {        
         $this->runCoroutine(function (): void {
             $deleted = $this->itemRepository->delete(1);
-
             $this->assertTrue($deleted, 'Expected delete() to return true');
 
             $this->expectException(ResourceNotFoundException::class);

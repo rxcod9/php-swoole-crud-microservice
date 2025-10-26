@@ -20,8 +20,8 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Container;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * MiddlewarePipeline handles request/response middleware execution.

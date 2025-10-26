@@ -13,18 +13,18 @@
     beStrictAboutOutputDuringTests="true"
 >
     <!-- ✅ Code Coverage Reports -->
-    <coverage>
-        <report>
+    <!-- <coverage> -->
+        <!-- <report> -->
             <!-- Clover for SonarQube or Codecov -->
-            <clover outputFile="tests/coverage/clover.xml"/>
+            <!-- <clover outputFile="tests/coverage/clover.xml"/> -->
             <!-- HTML report for humans -->
-            <html outputDirectory="tests/coverage/html"/>
+            <!-- <html outputDirectory="tests/coverage/html"/> -->
             <!-- Text summary for CI logs -->
-            <text outputFile="tests/coverage/coverage.txt" showUncoveredFiles="false"/>
+            <!-- <text outputFile="tests/coverage/coverage.txt" showUncoveredFiles="false"/> -->
             <!-- Cobertura XML for Jenkins -->
-            <cobertura outputFile="tests/coverage/cobertura.xml"/>
-        </report>
-    </coverage>
+            <!-- <cobertura outputFile="tests/coverage/cobertura.xml"/> -->
+        <!-- </report> -->
+    <!-- </coverage> -->
 
     <!-- ✅ Logging -->
     <logging>
@@ -39,7 +39,7 @@
         <!-- Test Environment -->
         <env name="APP_ENV" value="testing"/>
         <env name="LOG_CHANNEL" value="null"/>
-        <env name="DEBUG" value="false"/>
+        <env name="APP_DEBUG" value="false"/>
 
         <!-- Database -->
         <env name="DB_DRIVER" value="sqlite"/>

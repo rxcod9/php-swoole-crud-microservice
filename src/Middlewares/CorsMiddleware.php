@@ -20,8 +20,8 @@ declare(strict_types=1);
 namespace App\Middlewares;
 
 use App\Core\Config;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class CorsMiddleware
@@ -56,15 +56,15 @@ final class CorsMiddleware implements MiddlewareInterface
         $cors           = $this->config->get('cors') ?? [];
         $originsAllowed = $cors['origin'] ?? null;
         if ($originsAllowed !== null) {
-            $response->header('Access-Control-Allow-Origin', $originsAllowed);
+            $response->setHeader('Access-Control-Allow-Origin', $originsAllowed);
         }
 
-        $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Cache-Type, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset');
+        $response->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        $response->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Cache-Type, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset');
         // respond immediately to OPTIONS
-        if ($request->server['request_method'] === 'OPTIONS') {
-            $response->status(204);
-            $response->end();
+        if ($request->getMethod() === 'OPTIONS') {
+            $response->setStatus(204);
+            $response->send();
             return;
         }
 

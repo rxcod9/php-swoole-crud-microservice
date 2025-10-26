@@ -22,11 +22,11 @@ declare(strict_types=1);
 namespace App\Middlewares;
 
 use App\Core\Config;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 use App\Services\Cache\CacheRecordParams;
 use App\Services\Cache\CacheService;
 use Carbon\Carbon;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
 
 /**
  * Class RateLimitMiddleware
@@ -96,11 +96,12 @@ final class RateLimitMiddleware implements MiddlewareInterface
         $skipPattern     = $rateLimitConfig['skip_ip_patterns'] ?? null;
 
         // 🟢 Early exit: Allow excluded routes without limiting
-        if ($this->isExcludedPath($request->server['request_uri'])) {
+        if ($this->isExcludedPath($request->getPath())) {
             $next($request, $response);
             return;
         }
 
+        error_log('$request->server ' . print_r($request->server, true));
         // 🟢 Early exit: Allow IPs matching skip pattern (e.g., Docker bridge)
         if ($this->isSkippedIp($ip, $skipPattern)) {
             $next($request, $response);
@@ -118,9 +119,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
         // ✅ Normal response: send informative rate-limit headers
         $remaining = max(0, $limit - $count);
-        $response->header('X-RateLimit-Limit', (string)$limit);
-        $response->header('X-RateLimit-Remaining', (string)$remaining);
-        $response->header('X-RateLimit-Reset', (string)$retryAfter);
+        $response->setHeader('X-RateLimit-Limit', (string)$limit);
+        $response->setHeader('X-RateLimit-Remaining', (string)$remaining);
+        $response->setHeader('X-RateLimit-Reset', (string)$retryAfter);
 
         // Continue middleware pipeline
         $next($request, $response);
@@ -249,14 +250,15 @@ final class RateLimitMiddleware implements MiddlewareInterface
      */
     private function sendTooManyRequests(Response $response, int $limit, int $retryAfter): void
     {
-        $response->status(429);
-        $response->header('Retry-After', (string)$retryAfter);
-        $response->header('X-RateLimit-Limit', (string)$limit);
-        $response->header('X-RateLimit-Remaining', '0');
-        $response->header('X-RateLimit-Reset', (string)$retryAfter);
-        $response->header('Content-Type', 'application/json');
+        $response->setStatus(429);
+        $response->setHeader('Retry-After', (string)$retryAfter);
+        $response->setHeader('X-RateLimit-Limit', (string)$limit);
+        $response->setHeader('X-RateLimit-Remaining', '0');
+        $response->setHeader('X-RateLimit-Reset', (string)$retryAfter);
+        $response->setHeader('Content-Type', 'application/json');
 
         // End response with JSON body
-        $response->end(json_encode(['error' => 'Too many requests']));
+        $response->setBody(json_encode(['error' => 'Too many requests']));
+        $response->send();
     }
 }

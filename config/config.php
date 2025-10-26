@@ -151,6 +151,13 @@ return [
             'http_compression' => true,
 
             /**
+             * Ssl alpn protocols.
+             *
+             * @var string
+             */
+            'ssl_alpn_protocols' => 'h2,http/1.1',  // critical for HTTP/2
+
+            /**
              * Enable HTTP POST parsing.
              *
              * @var bool

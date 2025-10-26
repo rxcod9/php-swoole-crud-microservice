@@ -19,8 +19,8 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class SecurityHeadersMiddleware
@@ -42,10 +42,10 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
 {
     public function handle(Request $request, Response $response, callable $next): void
     {
-        $response->header('X-Frame-Options', 'DENY');
-        $response->header('X-Content-Type-Options', 'nosniff');
-        $response->header('X-XSS-Protection', '1; mode=block');
-        $response->header('Referrer-Policy', 'no-referrer');
+        $response->setHeader('X-Frame-Options', 'DENY');
+        $response->setHeader('X-Content-Type-Options', 'nosniff');
+        $response->setHeader('X-XSS-Protection', '1; mode=block');
+        $response->setHeader('Referrer-Policy', 'no-referrer');
 
         $next($request, $response);
     }

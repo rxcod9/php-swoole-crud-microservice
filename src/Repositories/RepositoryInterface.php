@@ -52,9 +52,9 @@ interface RepositoryInterface
      *
      * @param int $id Record ID
      *
-     * @return array<string, mixed> Record data or null if not found
+     * @return Model Record data or null if not found
      */
-    public function find(int $id): array;
+    public function find(int $id): Model;
 
     /**
      * List records with optional filters, sorting, and pagination.

@@ -186,12 +186,14 @@ PHPDOC;
             $tags = [];
             foreach ($lines as $line) {
                 $line = trim(ltrim($line, "* \t"));
-                if ($line === '') continue;
+                if ($line === '') {
+                    continue;
+                }
 
                 if (str_starts_with($line, '@')) {
                     // Remove extra @ symbols and extract tag/value
                     preg_match('/^@+(\S+)\s*(.*)$/', $line, $matches);
-                    $tag = strtolower($matches[1] ?? '');
+                    $tag = $matches[1] ?? '';
                     $value = $matches[2] ?? '';
                     if ($tag) {
                         $tags[$tag][] = $value;

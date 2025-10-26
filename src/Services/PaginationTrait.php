@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\ModelInterface;
 use App\Repositories\Repository;
 
 /**
@@ -32,9 +31,14 @@ use App\Repositories\Repository;
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-14
+ * @template  TModel of \App\Models\Model
  */
 trait PaginationTrait
 {
+    /**
+     * Return the repository instance.
+     *
+     */
     abstract protected function getRepository(): Repository;
 
     /**
@@ -42,27 +46,26 @@ trait PaginationTrait
      *
      * @param PaginationParams $paginationParams Pagination parameters
      *
-     * @return array{0: array<int, mixed>, 1: array<string, mixed>} Records + metadata
+     * @return array{0: array<int, TModel>, 1: array<string, mixed>} Records + metadata
      */
     public function paginate(PaginationParams $paginationParams): array
     {
         $repo = $this->getRepository();
 
         $total         = $repo->count();
-        $filteredTotal = $total === 0 ? 0 : $repo->filteredCount($paginationParams->filters);
+        $filtersCount  = count($paginationParams->filters);
+        $filteredTotal = $total === 0 ? 0 : ($filtersCount > 0 ? $repo->filteredCount($paginationParams->filters) : $total);
 
         if ($filteredTotal === 0) {
             return [[], $this->buildPaginationMetadata($total, 0, $paginationParams->limit, $paginationParams->offset)];
         }
 
+        /** @var array<int, TModel> $records */
         $records = $repo->list($paginationParams);
 
         $metadata = $this->buildPaginationMetadata($total, $filteredTotal, $paginationParams->limit, $paginationParams->offset);
 
-        // Map domain entities into serializable arrays
-        $recordsArray = array_map(static fn (ModelInterface $model): array => $model->toArray(), $records);
-
-        return [$recordsArray, $metadata];
+        return [$records, $metadata];
     }
 
     /**

@@ -104,8 +104,8 @@ final class UserRepositoryTest extends TestCase
             $user = $this->userRepository->find(1);
 
             $this->assertNotNull($user, 'User with ID 1 should exist');
-            $this->assertEquals('Alice', $user['name']);
-            $this->assertEquals('alice@example.com', $user['email']);
+            $this->assertEquals('Alice', $user->name);
+            $this->assertEquals('alice@example.com', $user->email);
         });
     }
 
@@ -123,8 +123,8 @@ final class UserRepositoryTest extends TestCase
             $this->assertIsInt($newId, 'Newly created user should return an integer ID');
 
             $user = $this->userRepository->find($newId);
-            $this->assertEquals('Charlie', $user['name']);
-            $this->assertEquals('charlie@example.com', $user['email']);
+            $this->assertEquals('Charlie', $user->name);
+            $this->assertEquals('charlie@example.com', $user->email);
         });
     }
 
@@ -142,7 +142,7 @@ final class UserRepositoryTest extends TestCase
             $this->assertTrue($updated, 'Expected update() to return true');
 
             $user = $this->userRepository->find(1);
-            $this->assertEquals('Alice Updated', $user['name']);
+            $this->assertEquals('Alice Updated', $user->name);
         });
     }
 
@@ -153,7 +153,6 @@ final class UserRepositoryTest extends TestCase
     {
         $this->runCoroutine(function (): void {
             $deleted = $this->userRepository->delete(1);
-
             $this->assertTrue($deleted, 'Expected delete() to return true');
 
             $this->expectException(ResourceNotFoundException::class);

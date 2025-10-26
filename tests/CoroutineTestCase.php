@@ -1,7 +1,7 @@
 <?php
 
 /**
- * tests/TestCase.php
+ * tests/CoroutineTestCase.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
@@ -13,7 +13,7 @@
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
- * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/TestCase.php
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/tests/CoroutineTestCase.php
  */
 declare(strict_types=1);
 
@@ -21,6 +21,7 @@ namespace Tests;
 
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Swoole\Coroutine;
+use Throwable;
 
 /**
  * Class CoroutineTestCase
@@ -33,9 +34,7 @@ use Swoole\Coroutine;
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
- * @covers    \App\Repositories\Base
  */
-// tests/CoroutineTestCase.php
 abstract class CoroutineTestCase extends BaseTestCase
 {
     protected function runCoroutine(callable $fn): void
@@ -44,7 +43,7 @@ abstract class CoroutineTestCase extends BaseTestCase
         Coroutine\run(function () use ($fn, &$exception): void {
             try {
                 $fn();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $exception = $e;
             }
         });

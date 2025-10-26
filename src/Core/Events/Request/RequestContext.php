@@ -19,9 +19,6 @@ declare(strict_types=1);
 
 namespace App\Core\Events\Request;
 
-use Swoole\Http\Request;
-use Swoole\Http\Response;
-
 /**
  * Class RequestContext
  * Encapsulates data for a single HTTP request lifecycle.
@@ -37,17 +34,31 @@ use Swoole\Http\Response;
 final readonly class RequestContext
 {
     /**
-     * @param Request  $request  Incoming Swoole HTTP request
-     * @param Response $response Swoole HTTP response
-     * @param string   $reqId    Unique request ID
-     * @param float    $start    Request start timestamp (for metrics)
      */
     public function __construct(
-        public Request $request,
-        public Response $response,
-        public string $reqId,
-        public float $start
+        private HttpExchange $httpExchange,
+        private RequestMeta $requestMeta
     ) {
         // Empty Constructor
+    }
+
+    public function exchange(): HttpExchange
+    {
+        return $this->httpExchange;
+    }
+
+    public function meta(): RequestMeta
+    {
+        return $this->requestMeta;
+    }
+
+    public function path(): string
+    {
+        return $this->httpExchange->path();
+    }
+
+    public function duration(): float
+    {
+        return $this->requestMeta->duration();
     }
 }

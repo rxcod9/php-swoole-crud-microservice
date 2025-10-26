@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace App\Core\Servers;
 
+use App\Core\Http\Response as HttpResponse;
 use App\Core\Messages;
 use App\Core\Pools\RedisPool;
 use Prometheus\CollectorRegistry;
@@ -101,12 +102,16 @@ final readonly class MetricsServer
 
                 $metrics = $renderTextFormat->render($collectorRegistry->getMetricFamilySamples());
 
-                $response->header('Content-Type', RenderTextFormat::MIME_TYPE);
-                $response->end($metrics);
+                $httpResponse = new HttpResponse($response);
+                $httpResponse->setHeader('Content-Type', RenderTextFormat::MIME_TYPE);
+                $httpResponse->setBody($metrics);
+                $httpResponse->send();
             } catch (Throwable $throwable) {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
-                $response->status(500);
-                $response->end(json_encode(['error' => $this->getErrorMessage($throwable)]));
+                $httpResponse = new HttpResponse($response);
+                $httpResponse->setStatus(500);
+                $httpResponse->setBody(json_encode(['error' => $this->getErrorMessage($throwable)]));
+                $httpResponse->send();
             } finally {
                 if (isset($redisPool, $redis)) {
                     $redisPool->put($redis);

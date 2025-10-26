@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use DateTimeImmutable;
+use Exception;
 
 /**
  * Represents a single Item entity in the model layer.
@@ -36,6 +37,9 @@ class Item extends Model
 {
     public const TAG = 'Item';
 
+    /**
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
+     */
     public function __construct(
         public readonly int $id,
         public readonly string $sku,
@@ -44,6 +48,7 @@ class Item extends Model
         public readonly DateTimeImmutable $createdAt,
         public readonly DateTimeImmutable $updatedAt
     ) {
+        // Empty constructor
     }
 
     /**
@@ -55,14 +60,26 @@ class Item extends Model
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'row: ' . var_export($row, true));
 
-        return new self(
-            id: (int)$row['id'],
-            sku: (string)$row['sku'],
-            title: (string)$row['title'],
-            price: (float)$row['price'],
-            createdAt: new DateTimeImmutable($row['created_at']),
-            updatedAt: new DateTimeImmutable($row['updated_at']),
-        );
+        try {
+            if (
+                $row['created_at'] === null ||
+                $row['updated_at'] === null
+            ) {
+                throw new Exception('Empty dates');
+            }
+
+            return new self(
+                id: (int)$row['id'],
+                sku: (string)$row['sku'],
+                title: (string)$row['title'],
+                price: (float)$row['price'],
+                createdAt: new DateTimeImmutable($row['created_at']),
+                updatedAt: new DateTimeImmutable($row['updated_at']),
+            );
+        } catch (Exception $exception) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, $exception->getMessage() . ' row: ' . var_export($row, true));
+            throw $exception;
+        }
     }
 
     /**
@@ -73,12 +90,13 @@ class Item extends Model
     public function toArray(): array
     {
         return [
-            'id'         => $this->id,
-            'sku'        => $this->sku,
-            'title'      => $this->title,
-            'price'      => number_format($this->price, 2, '.', ''),
-            'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updatedAt->format('Y-m-d H:i:s'),
+            'id'              => $this->id,
+            'sku'             => $this->sku,
+            'title'           => $this->title,
+            'price'           => $this->price,
+            'price_formatted' => number_format($this->price, 2, '.', ''),
+            'created_at'      => $this->createdAt->format('Y-m-d H:i:s'),
+            'updated_at'      => $this->updatedAt->format('Y-m-d H:i:s'),
         ];
     }
 }

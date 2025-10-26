@@ -48,4 +48,6 @@ class Messages
     public const PDO_EXCEPTION_FINALLY_MESSAGE = '[FINALLY] pdoId #%s - Code: %s | Info: %s';
 
     public const CREATE_FAILED = 'Unable to create. Please try again later.';
+
+    public const QUERY_FAILED = 'Query failed.';
 }

@@ -28,10 +28,9 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     supervisor \
     unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create supervisor log directory
-RUN mkdir -p /var/log/supervisor
+    && rm -rf /var/lib/apt/lists/* \
+    # Create supervisor log directory
+    && mkdir -p /var/log/supervisor
 
 # ================= Build Stage =================
 FROM base AS build
@@ -68,7 +67,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 # --- Copy only composer files first for caching ---
-COPY composer.json composer.lock* ./
+COPY composer.json composer.lock ./
 
 # --- Install application dependencies with caching ---
 RUN --mount=type=cache,target=/root/.composer/cache \

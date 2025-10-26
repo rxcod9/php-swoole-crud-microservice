@@ -23,6 +23,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Pools\PDOPool;
+use App\Core\Pools\RetryContext;
+use App\Models\Item;
 use App\Repositories\ItemRepository;
 use App\Repositories\Repository;
 use App\Traits\Retryable;
@@ -34,23 +36,28 @@ use PDO;
  * Service layer for Item entity.
  * Encapsulates business logic and interacts with ItemRepository.
  *
- * @category  Services
- * @package   App\Services
- * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @copyright Copyright (c) 2025
- * @license   MIT
- * @version   1.0.0
- * @since     2025-10-02
- * @method    int   count()
- * @method    bool delete(int $id)
- * @method    int   filteredCount()
- * @method    array<string, mixed> find(int $id)
- * @method    array<string, mixed> findBySku(string $sku)
- * @method    array<string, mixed> list(int $limit = 20, int $offset = 0, array<string, mixed> $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @category       Services
+ * @package        App\Services
+ * @author         Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
+ * @copyright      Copyright (c) 2025
+ * @license        MIT
+ * @version        1.0.0
+ * @since          2025-10-02
+ * @method         int   count()
+ * @method         bool delete(int $id)
+ * @method         int   filteredCount()
+ * @method         Item find(int $id)
+ * @method         Item findBySku(string $sku)
+ * @method         array<string, Item> list(int $limit = 20, int $offset = 0, array<string, mixed> $filters = [], string $sortBy = 'id', string $sortDir = 'DESC')
+ * @template-using Item PaginationTrait
  */
 final readonly class ItemService
 {
     use Retryable;
+
+    /**
+     * @use PaginationTrait<Item>
+     */
     use PaginationTrait;
 
     public const TAG = 'ItemService';
@@ -64,6 +71,7 @@ final readonly class ItemService
         private PDOPool $pdoPool,
         private ItemRepository $itemRepository
     ) {
+        // Empty Constructor
     }
 
     /**
@@ -81,19 +89,20 @@ final readonly class ItemService
      *
      * @param array<string, mixed> $data Item data.
      *
-     * @return array<string, mixed> Created item record.
+     * @return Item Created item record.
      *
      * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
-    public function create(array $data): array
+    public function create(array $data): Item
     {
-        return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): array {
-            $id = $this->itemRepository->create($data);
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'pdoId: #' . $pdoId . 'Created item with ID: ' . var_export($id, true));
-            return $this->pdoPool->forceRetryConnection($pdoId, function () use ($id): array {
-                return $this->itemRepository->find($id);
-            });
+        // return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($data): array {
+        $id = $this->itemRepository->create($data);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Created item with ID: ' . var_export($id, true));
+        $retryContext = new RetryContext();
+        return $this->pdoPool->forceRetryConnection($retryContext, function () use ($id): Item {
+            return $this->itemRepository->find($id);
         });
+        // });
     }
 
     /**
@@ -101,17 +110,20 @@ final readonly class ItemService
      *
      * @param array<string, mixed> $params PaginateParams
      *
-     * @return array<int, mixed> Array of records
+     * @return array{0: array<int, Item>, 1: array<string, mixed>} Records + metadata
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function pagination(array $params): array
     {
-        return $this->pdoPool->withConnection(function () use (
-            $params
-        ): array {
-            $paginationParams = PaginationParams::fromArray($params);
-            return $this->paginate($paginationParams);
-        });
+        // return $this->pdoPool->withConnection(function () use (
+        //     $params
+        // ): array {
+        $paginationParams = PaginationParams::fromArray($params);
+        [$records, $meta] = $this->paginate($paginationParams);
+        // Ensure all records are Item instances
+        /** @var array<int, Item> $records */
+        return [$records, $meta];
+        // });
     }
 
     /**
@@ -120,11 +132,11 @@ final readonly class ItemService
      * @param int               $id   Item ID.
      * @param array<string, mixed> $data Updated item data.
      *
-     * @return array<string, mixed> Updated item record.
+     * @return Item Updated item record.
      */
-    public function update(int $id, array $data): array
+    public function update(int $id, array $data): Item
     {
-        return $this->pdoPool->withConnection(function () use ($id, $data): array {
+        return $this->pdoPool->withConnection(function () use ($id, $data): Item {
             $this->itemRepository->update($id, $data);
             return $this->itemRepository->find($id);
         });

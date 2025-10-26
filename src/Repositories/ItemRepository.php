@@ -22,6 +22,7 @@ namespace App\Repositories;
 use App\Core\Messages;
 use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
+use App\Exceptions\StatementException;
 use App\Models\Item;
 use App\Services\PaginationParams;
 use InvalidArgumentException;
@@ -56,17 +57,27 @@ final readonly class ItemRepository extends Repository
      */
     public function create(array $data): int
     {
-        return $this->pdoPool->withConnectionAndRetryForCreate(function (PDO $pdo, int $pdoId) use ($data): int {
+        return $this->pdoPool->withConnectionAndRetryForCreate('items', function (PDO $pdo, int $pdoId) use ($data): int {
             try {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating item with data: ' . var_export($data, true));
                 // Prepare INSERT statement with named parameters
-                $stmt = $pdo->prepare('INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)');
+                $sql  = 'INSERT INTO items (sku, title, price) VALUES (:sku, :title, :price)';
+                $stmt = $pdo->prepare($sql);
+
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' data: ' . var_export($data, true));
 
                 // Bind values safely
                 $stmt->bindValue(':sku', $data['sku'], PDO::PARAM_STR);
                 $stmt->bindValue(':title', $data['title'], PDO::PARAM_STR);
                 $stmt->bindValue(':price', isset($data['price']) ? (float)$data['price'] : null, PDO::PARAM_STR);
-                $stmt->execute();
+
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('CREATE', $stmt, $data, $isExecuted);
 
                 $lastInsertId = $pdo->lastInsertId();
 
@@ -93,30 +104,38 @@ final readonly class ItemRepository extends Repository
      *
      * @param int $id Item ID
      *
-     * @return array<string, mixed> Item data or null if not found
+     * @return Item Item data
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function find(int $id): array
+    public function find(int $id): Item
     {
-        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id): Item {
             try {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding item with ID: ' . var_export($id, true));
-                $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1');
+                $sql  = 'SELECT id, sku, title, price, created_at, updated_at FROM items WHERE id=:id LIMIT 1';
+                $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
                 // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FIND', $stmt, ['id' => $id], $result);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
-                if ($result === null) {
+                if ($result === false || $result === null) {
                     throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'Item id#' . $id), 404);
                 }
 
-                return $result;
+                return Item::fromArray($result);
             } catch (Throwable $throwable) {
                 $this->logException('FIND', $pdoId, $throwable);
                 throw $throwable;
@@ -131,30 +150,38 @@ final readonly class ItemRepository extends Repository
      *
      * @param string $sku Item SKU
      *
-     * @return array<string, mixed> Item data if not found
+     * @return Item Item data
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function findBySku(string $sku): array
+    public function findBySku(string $sku): Item
     {
-        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($sku) {
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($sku): Item {
             try {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU', 'pdoId: ' . $pdoId . ' Finding item with SKU: ' . var_export($sku, true));
-                $stmt = $pdo->prepare('SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1');
+                $sql  = 'SELECT id, sku, title, price, created_at, updated_at FROM items WHERE sku=:sku LIMIT 1';
+                $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':sku', $sku, PDO::PARAM_STR);
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FIND_BY_SKU', $stmt, ['sku' => $sku], $result);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
-                if ($result === null) {
+                if ($result === false || $result === null) {
                     throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'Item sku#' . $sku), 404);
                 }
 
-                return $result;
+                return Item::fromArray($result);
             } catch (Throwable $throwable) {
                 $this->logException('FIND_BY_SKU', $pdoId, $throwable);
                 throw $throwable;
@@ -170,6 +197,8 @@ final readonly class ItemRepository extends Repository
      * @param PaginationParams $paginationParams Pagination parameters
      *
      * @return array<int, Item> Array of items
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function list(PaginationParams $paginationParams): array
     {
@@ -179,14 +208,20 @@ final readonly class ItemRepository extends Repository
                 $stmt = $this->prepareListStatement($pdo, $paginationParams);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('LIST', $stmt, [], $results);
 
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Hydrate each row into an Item domain entity
-                return array_map(static fn (array $result): Item => Item::fromArray($result), $results);
+                return array_map(fn (array $result): Item => Item::fromArray($result), $results);
             } catch (Throwable $throwable) {
                 $this->logException('LIST', $pdoId, $throwable);
                 throw $throwable;
@@ -334,14 +369,24 @@ final readonly class ItemRepository extends Repository
                 $stmt = $this->prepareFilterCountStatement($pdo, $filters);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FILTERED_COUNT', $stmt, [], $result);
+
+                if ($result === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
                 if ($result === null) {
                     return 0; // No rows returned
                 }
@@ -405,14 +450,24 @@ final readonly class ItemRepository extends Repository
                 $stmt = $pdo->prepare($sql);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('COUNT', $stmt, [], $result);
+
+                if ($result === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
                 if ($result === null) {
                     return 0; // No rows returned
                 }
@@ -442,8 +497,14 @@ final readonly class ItemRepository extends Repository
             $this->logUpdateStart($pdoId, $id, $data);
 
             try {
-                $stmt = $this->prepareUpdateStatement($pdo, $id, $data);
-                $stmt->execute();
+                $stmt       = $this->prepareUpdateStatement($pdo, $id, $data);
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('UPDATE', $stmt, $data, $isExecuted);
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt);
@@ -549,13 +610,19 @@ final readonly class ItemRepository extends Repository
     public function delete(int $id): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id): bool {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting item with ID: ' . var_export($id, true));
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting item with ID: ' . var_export($id, true));
                 $sql  = 'DELETE FROM items WHERE id=:id';
                 $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('DELETE', $stmt, ['id' => $id], $isExecuted);
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole

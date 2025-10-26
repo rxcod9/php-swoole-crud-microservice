@@ -19,11 +19,11 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 use App\Core\Metrics;
 use App\Core\Pools\RedisPool;
 use App\Core\Router;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
 
 /**
  * Class MetricsMiddleware
@@ -69,18 +69,17 @@ final class MetricsMiddleware implements MiddlewareInterface
         $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
         $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
 
-        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $path       = $parsedPath !== false ? $parsedPath : '/';
-        $status     = 200; // $response->status ?? 200
+        $path   = $request->getPath();
+        $status = $response->getStatus();
 
         [$route] = $this->router->getRouteByPath(
-            $request->server['request_method'],
-            $path ?? '/'
+            $request->getMethod(),
+            $path
         );
 
         if ($route !== null && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
+            $counter->inc([$request->getMethod(), $route['path'], (string) $status]);
+            $histogram->observe($dur, [$request->getMethod(), $route['path']]);
         }
     }
 }

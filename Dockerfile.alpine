@@ -1,0 +1,44 @@
+FROM php:8.4-cli-alpine AS alpine-base
+
+# Minimal dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    libpq \
+    libzip \
+    openssl \
+    sqlite \
+    supervisor \
+    && mkdir -p /var/log/supervisor /app/logs
+
+# PHP extensions
+RUN docker-php-ext-install sockets opcache pdo pdo_mysql pdo_sqlite
+
+# Swoole via PECL
+ARG SWOOLE_VERSION=6.0.0
+RUN apk add --no-cache --virtual
+    .build-deps \
+    autoconf \
+    g++ \
+    make \
+    pkgconfig \
+    linux-headers \
+    libressl-dev \
+    c-ares-dev \
+    && pecl install swoole-${SWOOLE_VERSION} \
+    && docker-php-ext-enable swoole \
+    && apk del .build-deps
+
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --prefer-dist
+
+COPY . .
+COPY docker/supervisord.conf /etc/supervisor/conf.d/swoole.conf
+
+EXPOSE 9501 9310 9502
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/swoole.conf"]

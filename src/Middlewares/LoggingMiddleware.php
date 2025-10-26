@@ -19,8 +19,8 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class LoggingMiddleware
@@ -44,8 +44,7 @@ final class LoggingMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, Response $response, callable $next): void
     {
-        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $path       = $parsedPath !== false ? $parsedPath : '/';
+        $path = $request->getPath();
         if (in_array($path, ['/health', '/health.html', '/metrics'], true)) {
             $next($request, $response);
             return;
@@ -56,10 +55,12 @@ final class LoggingMiddleware implements MiddlewareInterface
         $next($request, $response); // call next middleware first
 
         $dur = microtime(true) - $start;
+
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf(
-            "[%s] %s - %.2fms\n",
-            $request->server['request_method'] ?? '-',
-            $request->server['request_uri'] ?? '-',
+            "[%s] %s %s - %.2fms\n",
+            $request->getMethod(),
+            $request->getPath(),
+            $response->getStatus(),
             $dur * 1000
         ));
     }

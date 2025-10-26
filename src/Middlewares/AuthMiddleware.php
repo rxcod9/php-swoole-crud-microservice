@@ -19,8 +19,8 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class AuthMiddleware
@@ -62,19 +62,20 @@ final class AuthMiddleware implements MiddlewareInterface
     public function handle(Request $request, Response $response, callable $next): void
     {
         // Allow public paths without auth
-        if (in_array($request->server['request_uri'], $this->publicPaths, true)) {
+        if (in_array($request->getPath(), $this->publicPaths, true)) {
             $next($request, $response);
             return;
         }
 
         // Simple auth check (e.g., check for Authorization header)
-        $authHeader = $request->header['authorization'] ?? null;
+        $authHeader = $request->getBearerToken();
 
-        if (!$authHeader) {
+        if (in_array($authHeader, [null, '', '0'], true)) {
             // Short-circuit: send response and DO NOT call $next
-            $response->status(401);
-            $response->header('Content-Type', 'application/json');
-            $response->end(json_encode(['error' => 'Unauthorized']));
+            $response->setStatus(401);
+            $response->setHeader('Content-Type', 'application/json');
+            $response->setBody(json_encode(['error' => 'Unauthorized']));
+            $response->send();
             return;
         }
 

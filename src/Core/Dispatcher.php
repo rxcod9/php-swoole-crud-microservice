@@ -39,11 +39,10 @@ final readonly class Dispatcher
 {
     /**
      * Dispatcher constructor.
-     *
-     * @param Container $container Dependency Injection Container
      */
-    public function __construct(private Container $container)
-    {
+    public function __construct(
+        private Container $container
+    ) {
         //
     }
 

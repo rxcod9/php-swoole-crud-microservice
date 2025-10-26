@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use DateTimeImmutable;
+use Exception;
 
 /**
  * Represents a single User entity in the model layer.
@@ -36,6 +37,9 @@ class User extends Model
 {
     public const TAG = 'User';
 
+    /**
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
+     */
     public function __construct(
         public readonly int $id,
         public readonly string $email,
@@ -43,6 +47,7 @@ class User extends Model
         public readonly DateTimeImmutable $createdAt,
         public readonly DateTimeImmutable $updatedAt
     ) {
+        // Empty constructor
     }
 
     /**
@@ -52,13 +57,27 @@ class User extends Model
      */
     public static function fromArray(array $row): self
     {
-        return new self(
-            id: (int)$row['id'],
-            email: (string)$row['email'],
-            name: (string)$row['name'],
-            createdAt: new DateTimeImmutable($row['created_at']),
-            updatedAt: new DateTimeImmutable($row['updated_at']),
-        );
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'row: ' . var_export($row, true));
+
+        try {
+            if (
+                $row['created_at'] === null ||
+                $row['updated_at'] === null
+            ) {
+                throw new Exception('Empty dates');
+            }
+
+            return new self(
+                id: (int)$row['id'],
+                email: (string)$row['email'],
+                name: (string)$row['name'],
+                createdAt: new DateTimeImmutable($row['created_at']),
+                updatedAt: new DateTimeImmutable($row['updated_at']),
+            );
+        } catch (Exception $exception) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, $exception->getMessage() . ' row: ' . var_export($row, true));
+            throw $exception;
+        }
     }
 
     /**

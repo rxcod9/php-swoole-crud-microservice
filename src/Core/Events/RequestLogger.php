@@ -19,8 +19,8 @@ declare(strict_types=1);
 
 namespace App\Core\Events;
 
+use App\Core\Http\Request;
 use App\Tasks\LogTask;
-use Swoole\Http\Request;
 use Swoole\Http\Server;
 
 /**

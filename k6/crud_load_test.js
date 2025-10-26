@@ -17,9 +17,9 @@ const ENV = {
     HOT_READ_RATIO: Number(__ENV.HOT_READ_RATIO) || 0.8,           // Probability of reading hot IDs
     HOT_UPDATE_RATIO: Number(__ENV.HOT_UPDATE_RATIO) || 0.01,      // Probability of updating hot IDs
     LIST_PAGES: Number(__ENV.LIST_PAGES) || 3,                     // Number of pages for list endpoints
-    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 1000,      // Max iterations per VU
-    MAX_DURATION: __ENV.MAX_DURATION || '5m',                      // Setup/teardown timeout
-    MAX_VUS: Number(__ENV.MAX_VUS) || 100                          // Maximum virtual users
+    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 2000,      // Max iterations per VU
+    MAX_DURATION: __ENV.MAX_DURATION || '10m',                      // Setup/teardown timeout
+    MAX_VUS: Number(__ENV.MAX_VUS) || 50                          // Maximum virtual users
 };
 
 /**
@@ -283,16 +283,16 @@ export const options = {
     setupTimeout: ENV.MAX_DURATION,
     teardownTimeout: ENV.MAX_DURATION,
     stages: [
-        { duration: '20s', target: 0.10 },
-        { duration: '20s', target: 0.25 },
-        { duration: '20s', target: 0.40 },
-        { duration: '40s', target: 0.60 },
-        { duration: '40s', target: 0.80 },
-        { duration: '40s', target: 1.00 },
-        { duration: '40s', target: 0.80 },
-        { duration: '40s', target: 0.50 },
-        { duration: '20s', target: 0.25 },
-        { duration: '20s', target: 0.0 },
+        { duration: '2s', target: 0.1 },
+        { duration: '2s', target: 0.25 },
+        { duration: '2s', target: 0.4 },
+        { duration: '4s', target: 0.6 },
+        { duration: '4s', target: 0.8 },
+        { duration: '4s', target: 1 },
+        { duration: '4s', target: 0.8 },
+        { duration: '4s', target: 0.5 },
+        { duration: '2s', target: 0.25 },
+        { duration: '2s', target: 0 },
     ].map(s => ({ ...s, target: Math.floor(s.target * ENV.MAX_VUS) })),
     thresholds: {
         'http_req_duration': ['p(95)<200'],

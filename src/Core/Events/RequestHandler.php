@@ -12,7 +12,7 @@
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-23
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/RequestHandler.php
  */
 declare(strict_types=1);
@@ -20,29 +20,17 @@ declare(strict_types=1);
 namespace App\Core\Events;
 
 use App\Core\Container;
-use App\Core\Dispatcher;
-use App\Core\Messages;
-use App\Core\Metrics;
-use App\Core\Pools\RedisPool;
-use App\Core\Router;
-use App\Middlewares\CorsMiddleware;
-use App\Middlewares\HideServerHeaderMiddleware;
-use App\Middlewares\LoggingMiddleware;
-use App\Middlewares\RateLimitMiddleware;
-use App\Middlewares\SecurityHeadersMiddleware;
-use ReflectionClass;
+use App\Core\Events\Request\HttpExchange;
+use App\Core\Events\Request\RequestContext;
+use App\Core\Events\Request\RequestMeta;
+use App\Core\Http\Request as HttpRequest;
+use App\Core\Http\Response as HttpResponse;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
-use Swoole\Http\Server;
 use Throwable;
 
 /**
- * Handles incoming HTTP requests, including routing, middleware, and response generation.
- * Also manages CORS headers and preflight requests.
- * Binds request-scoped dependencies like connection pools.
- * Logs request details asynchronously.
- * Provides health check endpoints.
- * Ensures worker readiness before processing requests.
+ * Handles incoming HTTP requests by delegating to specialized components.
  *
  * @category  Core
  * @package   App\Core\Events
@@ -50,293 +38,42 @@ use Throwable;
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-23
  */
 final readonly class RequestHandler
 {
-    public const TAG = 'RequestHandler';
-
     /**
-     * RequestHandler constructor.
-     *
-     * @param Router    $router    Router instance for HTTP request routing
-     * @param Server    $server    Swoole HTTP server instance
-     * @param Container $container Dependency injection container
+     * @SuppressWarnings("PHPMD.LongVariable")
      */
     public function __construct(
-        private Router $router,
-        private Server $server,
-        private Container $container
+        private Container $container,
+        private GlobalMiddlewareRegistrar $globalMiddlewareRegistrar,
+        private RouteDispatcher $routeDispatcher,
+        private HttpExceptionHandler $httpExceptionHandler,
+        private RequestTelemetry $requestTelemetry
     ) {
         // Empty Constructor
     }
 
-    /**
-     * Handle the incoming HTTP request.
-     *
-     * @param Request  $request  The incoming HTTP request
-     * @param Response $response The HTTP response to be sent
-     */
     public function __invoke(Request $request, Response $response): void
     {
-        $reqId = bin2hex(random_bytes(8));
-        $start = microtime(true);
+        $httpReq = new HttpRequest($request);
+        $httpRes = new HttpResponse($response);
+
+        $requestMeta    = new RequestMeta(bin2hex(random_bytes(8)), microtime(true));
+        $requestContext = new RequestContext(new HttpExchange($httpReq, $httpRes), $requestMeta);
 
         try {
-            $workerReadyChecker = new WorkerReadyChecker();
-            $workerReadyChecker->wait();
-
-            // Prepare middleware pipeline
-            $middlewarePipeline = new MiddlewarePipeline($this->container);
-            $this->registerGlobalMiddlewares($middlewarePipeline);
-
-            // Run pipeline + final dispatcher
-            $middlewarePipeline->handle(
-                $request,
-                $response,
-                fn () => $this->dispatchRouteMiddlewarePipeline($request, $reqId, $response, $start)
+            $pipeline = $this->globalMiddlewareRegistrar->createPipeline($this->container);
+            $pipeline->handle(
+                $httpReq,
+                $httpRes,
+                fn () => $this->routeDispatcher->dispatch($requestContext)
             );
         } catch (Throwable $throwable) {
-            $this->handleException($request, $response, $reqId, $start, $throwable);
-        }
-    }
-
-    /**
-     * Register global middleware in the intended order.
-     */
-    private function registerGlobalMiddlewares(MiddlewarePipeline $middlewarePipeline): void
-    {
-        // $middlewarePipeline->addMiddleware(MetricsMiddleware::class);
-        $middlewarePipeline->addMiddleware(LoggingMiddleware::class);
-        $middlewarePipeline->addMiddleware(HideServerHeaderMiddleware::class);
-        $middlewarePipeline->addMiddleware(SecurityHeadersMiddleware::class);
-        $middlewarePipeline->addMiddleware(CorsMiddleware::class);
-        $middlewarePipeline->addMiddleware(RateLimitMiddleware::class);
-    }
-
-    /**
-     * Centralized exception handler for all request failures.
-     */
-    private function handleException(Request $request, Response $response, string $reqId, float $start, Throwable $throwable): void
-    {
-        $parsedPath = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $path       = $parsedPath !== false ? $parsedPath : '/';
-
-        $status = is_int($throwable->getCode()) ? $throwable->getCode() : 500;
-
-        $response->header('Content-Type', 'application/json');
-        $response->status($status);
-        $response->end(json_encode([
-            'error'      => $this->getErrorMessage($throwable),
-            'error_full' => $throwable->getMessage(),
-            'code'       => $status,
-            'trace'      => $throwable->getTraceAsString(),
-            'file'       => $throwable->getFile(),
-            'line'       => $throwable->getLine(),
-        ]));
-
-        // Metrics & Logging
-        $dur = microtime(true) - $start;
-
-        [$route] = $this->router->getRouteByPath(
-            $request->server['request_method'],
-            $path ?? '/'
-        );
-
-        if (
-            $route !== null &&
-            !in_array($path, ['/health', '/health.html', '/metrics'], true)
-        ) {
-            $this->logMetrics($request, $route, $status, $dur);
-
-            $requestLogger = new RequestLogger();
-            $requestLogger->log(
-                'error',
-                $this->server,
-                $request,
-                [
-                    'id'     => $reqId,
-                    'method' => $request->server['request_method'],
-                    'path'   => $path,
-                    'status' => $status,
-                    'dur_ms' => (int) round($dur * 1000),
-                    'error'  => $throwable->getMessage(),
-                    'code'   => $status,
-                    'trace'  => $throwable->getTraceAsString(),
-                    'file'   => $throwable->getFile(),
-                    'line'   => $throwable->getLine(),
-                ]
-            );
-        }
-    }
-
-    /**
-     * Centralized exception handler for all request failures.
-     */
-    private function getErrorMessage(Throwable $throwable): string
-    {
-        if ($this->isAppException($throwable)) {
-            return $throwable->getMessage();
-        }
-
-        return Messages::ERROR_INTERNAL_ERROR;
-    }
-
-    /**
-     * Determine if the given Throwable belongs to the App\Exception namespace.
-     */
-    private function isAppException(Throwable $throwable): bool
-    {
-        $reflectionClass = new ReflectionClass($throwable);
-        $namespace       = $reflectionClass->getNamespaceName();
-
-        // You can tweak this prefix to match your actual project namespace
-        return str_starts_with($namespace, 'App\\Exceptions');
-    }
-
-    /**
-     * Dispatch the request to the appropriate controller action and send the response.
-     *
-     * @param Request  $request  The incoming HTTP request
-     * @param string   $reqId    Unique request ID for logging
-     * @param Response $response The HTTP response to be sent
-     * @param float    $start    Timestamp when the request handling started (for metrics)
-     */
-    private function dispatchRouteMiddlewarePipeline(
-        Request $request,
-        string $reqId,
-        Response $response,
-        float $start
-    ): void {
-        // Route resolution
-        [$action, $params, $routeMiddlewares] = $this->router->match(
-            $request->server['request_method'],
-            $request->server['request_uri']
-        );
-
-        // Prepare middleware pipeline
-        $middlewarePipeline = new MiddlewarePipeline($this->container);
-        $middlewarePipeline->addMiddlewares($routeMiddlewares);
-
-        // Run pipeline + final dispatcher
-        $middlewarePipeline->handle(
-            $request,
-            $response,
-            fn () => $this->dispatch($action, $params, $request, $reqId, $response, $start)
-        );
-    }
-
-    /**
-     * Dispatch the request to the appropriate controller action and send the response.
-     *
-     * @param string               $action   The action handler (e.g. controller@method)
-     * @param array<string,string> $params   Route parameters extracted from the URL
-     * @param Request              $request  The incoming HTTP request
-     * @param string               $reqId    Unique request ID for logging
-     * @param Response             $response The HTTP response to be sent
-     * @param float                $start    Timestamp when the request handling started (for metrics)
-     */
-    private function dispatch(
-        string $action,
-        array $params,
-        Request $request,
-        string $reqId,
-        Response $response,
-        float $start
-    ): void {
-        // Execute controller/handler
-        $dispatcher = new Dispatcher($this->container);
-        $payload    = $dispatcher->dispatch($action, $params, $request);
-
-        $parsedPath   = parse_url($request->server['request_uri'] ?? '/', PHP_URL_PATH);
-        $path         = $parsedPath !== false ? $parsedPath : '/';
-        $status       = $payload['__status'] ?? 200;
-        $json         = $payload['__json'] ?? null;
-        $html         = $payload['__html'] ?? null;
-        $text         = $payload['__text'] ?? null;
-        $ctype        = $payload['__contentType'] ?? null;
-        $cacheTagType = $payload['__cacheTagType'] ?? null;
-
-        $response->status($status);
-        $response->header('X-Cache-Type', $cacheTagType);
-        // Format response
-        if ($html !== null) {
-            $response->header('Content-Type', $ctype ?? 'text/html');
-            $response->end($status === 204 ? '' : $html);
-        } elseif ($text !== null) {
-            $response->header('Content-Type', $ctype ?? 'text/plain');
-            $response->end($status === 204 ? '' : $text);
-        } else {
-            $response->header('Content-Type', $ctype ?? 'application/json');
-            $response->end($status === 204 ? '' : json_encode($json ?? $payload));
-        }
-
-        // Metrics & Logging
-        $dur = microtime(true) - $start;
-
-        [$route] = $this->router->getRouteByPath(
-            $request->server['request_method'],
-            $path ?? '/'
-        );
-
-        if (
-            $route !== null &&
-            !in_array($path, ['/health', '/health.html', '/metrics'], true)
-        ) {
-            $this->logMetrics($request, $route, $status, $dur);
-
-            $requestLogger = new RequestLogger();
-            $requestLogger->log(
-                'debug',
-                $this->server,
-                $request,
-                [
-                    'id'     => $reqId,
-                    'method' => $request->server['request_method'],
-                    'path'   => $path,
-                    'status' => $status,
-                    'dur_ms' => (int) round($dur * 1000),
-                ]
-            );
-        }
-    }
-
-    /**
-     * Log metrics for the request.
-     *
-     * @param Request $request The incoming HTTP request
-     * @param array{regex: string, vars: array<int, string>, path: string}   $route   The matched route information
-     * @param int     $status  The HTTP response status code
-     * @param float   $dur     The duration of the request handling in seconds
-     */
-    private function logMetrics(Request $request, array $route, $status, $dur): void
-    {
-        try {
-            // Metrics setup
-            $redisPool = $this->container->get(RedisPool::class);
-            $redis     = $redisPool->get();
-            defer(fn () => $redisPool->put($redis));
-
-            $metrics = $this->container->get(Metrics::class);
-            $reg     = $metrics->getCollectorRegistry($redis);
-            $counter = $reg->getOrRegisterCounter(
-                'http_requests_total',
-                'Requests',
-                'Total HTTP requests',
-                ['method', 'path', 'status']
-            );
-            $histogram = $reg->getOrRegisterHistogram(
-                'http_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['method', 'path']
-            );
-
-            $counter->inc([$request->server['request_method'], $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->server['request_method'], $route['path']]);
-        } catch (Throwable $throwable) {
-            // Log metrics logging errors
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Metrics logging failed : ' . $throwable->getMessage());
+            $this->httpExceptionHandler->handle($requestContext, $throwable);
+        } finally {
+            $this->requestTelemetry->collect($requestContext);
         }
     }
 }

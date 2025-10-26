@@ -55,8 +55,8 @@ final class PDOPool
 
     private int $created = 0;
 
-    /** @var array<string|int, array{0: PDO, 1: int}> Active PDO instances per coroutine */
-    private array $active = [];
+    // /** @var array<string|int, array{0: PDO, 1: int}> Active PDO instances per coroutine */
+    // private array $active = [];
 
     /**
      * PDOPool constructor.
@@ -66,6 +66,8 @@ final class PDOPool
      * @param int               $max        Maximum connections allowed
      * @param float             $idleBuffer Idle buffer ratio (0-1)
      * @param float             $margin     Scaling margin (0-1)
+     *
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
      */
     public function __construct(
         private array $conf,
@@ -82,7 +84,7 @@ final class PDOPool
      *
      * @param int $maxRetry Max retries for creating initial connections
      */
-    public function init(int $maxRetry = 5): void
+    public function init(int $maxRetry = 10): void
     {
         // Pre-create minimum connections to avoid startup delays
         for ($i = 0; $i < $this->min; ++$i) {
@@ -109,7 +111,7 @@ final class PDOPool
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    private function make(int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): array
+    private function make(int $attempt = 0, int $maxRetry = 10, int $delayMs = 100): array
     {
         return $this->retry(function (): array {
             // Build DSN and create PDO
@@ -131,17 +133,22 @@ final class PDOPool
                 ]
             );
 
-            if (str_starts_with($dsn, 'sqlite:')) {
-                $connectionId = spl_object_id($pdo); // $this->created + 1;
-            } else {
-                $pdoIdStmt    = $pdo->query('SELECT CONNECTION_ID() AS id');
-                $connectionId = (int) $pdoIdStmt->fetchColumn();
-            }
+            $connectionId = $this->getConnectionId($dsn, $pdo);
 
             ++$this->created;
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection created. Total connections: %d', $this->created));
             return [$pdo, $connectionId];
         }, $attempt, $maxRetry, $delayMs);
+    }
+
+    private function getConnectionId(string $dsn, PDO $pdo): int
+    {
+        if (str_starts_with($dsn, 'sqlite:')) {
+            return spl_object_id($pdo); // $this->created + 1;
+        }
+
+        $pdoIdStmt = $pdo->query('SELECT CONNECTION_ID() AS id');
+        return (int) $pdoIdStmt->fetchColumn();
     }
 
     /**
@@ -177,15 +184,15 @@ final class PDOPool
 
         [$pdo, $pdoId] = $item;
 
-        if (!$this->isConnected($pdo)) {
-            unset($pdo);
-            $this->created = max(0, $this->created - 1);
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO dead connection destroyed. Total connections: %d', $this->created));
-            // create a fresh connection synchronously (preserve previous semantics)
+        // if (!$this->isConnected($pdo)) {
+        //     unset($pdo);
+        //     unset($pdoId);
+        //     logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO dead connection destroyed. Total connections: %d', $this->created));
+        //     // create a fresh connection synchronously (preserve previous semantics)
 
-            [$pdo, $pdoId] = $this->make();
-            return [$pdo, $pdoId];
-        }
+        //     [$pdo, $pdoId] = $this->make();
+        //     return [$pdo, $pdoId];
+        // }
 
         return [$pdo, $pdoId];
     }
@@ -197,7 +204,7 @@ final class PDOPool
     {
         try {
             $stmt = $pdo->query('SELECT 1');
-            $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $stmt->fetch(\PDO::FETCH_ASSOC);
             // Clear any remaining result set to be safe in pool context
             $this->clearStatement($stmt);
             return true;
@@ -235,7 +242,8 @@ final class PDOPool
      */
     public function put(PDO $pdo, int $pdoId): void
     {
-        if (!(bool)$this->channel->isFull() && $this->isConnected($pdo)) {
+        // if (!(bool)$this->channel->isFull() && $this->isConnected($pdo)) {
+        if (!(bool)$this->channel->isFull()) {
             $success = $this->channel->push([$pdo, $pdoId]);
             if ($success === false) {
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
@@ -247,12 +255,12 @@ final class PDOPool
 
         // Pool full, let garbage collector close the PDO object
         unset($pdo);
-        $this->created = max(0, $this->created - 1);
-        if ((bool)$this->channel->isFull()) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Pool full, PDO connection discarded. Total connections: %d', $this->created));
-        } else {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO dead connection destroyed. Total connections: %d', $this->created));
-        }
+        unset($pdoId);
+        // if ((bool)$this->channel->isFull()) {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Pool full, PDO connection discarded. Total connections: %d', $this->created));
+        // } else {
+        //     logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO dead connection destroyed. Total connections: %d', $this->created));
+        // }
     }
 
     /**
@@ -260,48 +268,77 @@ final class PDOPool
      * Re-entrant safe: nested calls reuse the same PDO for the current coroutine.
      *
      * @template T
-     * @param callable(PDO,int):T $callback
-     * @return T
+     * @param callable(PDO,int):T $callback Callback receives PDO instance and its pool ID
+     * @return T The result of the callback
      *
-     * @throws Throwable
-     * @see get() and put() for exceptions.
+     * @throws Throwable Any exception thrown by the callback is propagated
      * @SuppressWarnings("PHPMD.StaticAccess")
+     * @SuppressWarnings("PHPMD.UnusedLocalVariable")
      */
     public function withConnection(callable $callback): mixed
     {
-        /** @var int $cid */
-        $cid = Coroutine::getCid();
+        Coroutine::getCid();
 
-        $outermost = false;
+        // Get a PDO connection from the pool; detects re-entrant usage
+        [$pdo, $pdoId, $outermost] = $this->getPdo();
 
-        if (!isset($this->active[$cid])) {
-            // Outermost call for this coroutine
-            [$pdo, $pdoId]      = $this->get();
-            $this->active[$cid] = [$pdo, $pdoId];
-            $outermost          = true;
-        } else {
-            // Nested call, reuse the same PDO
-            [$pdo, $pdoId] = $this->active[$cid];
-            // check if connection is still alive
-            if (!$this->isConnected($pdo)) {
-                // Connection is dead, remove from active and get a new one
-                unset($this->active[$cid]);
-                $this->created = max(0, $this->created - 1);
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection destroyed. Total connections: %d', $this->created));
-                [$pdo, $pdoId]      = $this->get();
-                $this->active[$cid] = [$pdo, $pdoId];
-            }
-        }
+        $result  = null;
+        $success = false;
 
         try {
-            return $callback($pdo, $pdoId);
+            // Execute the callback
+            $result  = $callback($pdo, $pdoId);
+            $success = true;
+            return $result;
+        } catch (Throwable $throwable) {
+            // On exception, discard connection if outermost
+            // if ($outermost) {
+            unset($pdo);
+            unset($pdoId);
+            $this->created = max(0, $this->created - 1);
+            logDebug(
+                self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__,
+                sprintf('Exception in callback, PDO discarded. Total connections: %d', $this->created)
+            );
+            // }
+            throw $throwable; // re-throw
         } finally {
-            if ($outermost && array_key_exists($cid, $this->active)) {
-                [$pdo, $pdoId] = $this->active[$cid];
-                unset($this->active[$cid]);
-                $this->put($pdo, $pdoId); // Return connection to pool
+            // Return connection to the pool only if callback succeeded
+            // if ($success && $outermost) {
+            if ($success && isset($pdo) && isset($pdoId)) {
+                $this->put($pdo, $pdoId);
             }
         }
+    }
+
+    /**
+     * Get PDO
+     *
+     * @return array{PDO, int, bool} [pdo, pdoId, outermost]
+     */
+    private function getPdo(): array
+    {
+        $outermost = false;
+        // if (!isset($this->active[$cid])) {
+        // Outermost call for this coroutine
+        [$pdo, $pdoId] = $this->get();
+        // $this->active[$cid] = [$pdo, $pdoId];
+        $outermost = true;
+        return [$pdo, $pdoId, $outermost];
+        // }
+        // Nested call, reuse the same PDO
+        // [$pdo, $pdoId] = $this->active[$cid];
+        // check if connection is still alive
+        // if ($this->isConnected($pdo)) {
+        // return [$pdo, $pdoId, $outermost];
+        // }
+        // // Connection is dead, remove from active and get a new one
+        // unset($this->active[$cid]);
+        // $this->created = max(0, $this->created - 1);
+        // logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection destroyed. Total connections: %d', $this->created));
+        // [$pdo, $pdoId]      = $this->get();
+        // $this->active[$cid] = [$pdo, $pdoId];
+        // return [$pdo, $pdoId, $outermost];
     }
 
     /**
@@ -314,12 +351,13 @@ final class PDOPool
      *
      * @throws Throwable
      */
-    public function withConnectionAndRetry(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
+    public function withConnectionAndRetry(callable $callback, int $attempt = 0): mixed
     {
-        return $this->withConnection(function (PDO $pdo, int $pdoId) use ($callback, $attempt, $maxRetry, $delayMs): mixed {
-            return $this->retryConnection($pdoId, function () use ($callback, $pdo, $pdoId): mixed {
+        $retryContext = new RetryContext($attempt);
+        return $this->retryConnection($retryContext, function () use ($callback): mixed {
+            return $this->withConnection(function (PDO $pdo, int $pdoId) use ($callback): mixed {
                 return $callback($pdo, $pdoId);
-            }, $attempt, $maxRetry, $delayMs);
+            });
         });
     }
 
@@ -333,104 +371,131 @@ final class PDOPool
      *
      * @throws Throwable
      */
-    public function withConnectionAndRetryForCreate(callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100, ?callable $onDuplicateCallback = null): int
+    public function withConnectionAndRetryForCreate(string $table, callable $callback, int $attempt = 0, ?callable $onDuplicateCallback = null): int
     {
-        return $this->withConnection(function (PDO $pdo, int $pdoId) use ($callback, $attempt, $maxRetry, $delayMs, $onDuplicateCallback): int {
-            return $this->retryConnectionForCreate($pdoId, function () use ($callback, $pdo, $pdoId): int {
+        $retryContext = new RetryContext($attempt);
+        return $this->retryConnectionForCreate($table, $retryContext, function () use ($callback): int {
+            return $this->withConnection(function (PDO $pdo, int $pdoId) use ($callback): int {
                 return $callback($pdo, $pdoId);
-            }, $attempt, $maxRetry, $delayMs, $onDuplicateCallback);
-        });
+            });
+        }, $onDuplicateCallback);
     }
 
     /**
      * Retry a callback a few times with optional delay.
      *
      * @param callable(): mixed $callback
-     * @param int $attempt Number of attempts
-     * @param int $maxRetry Max Number of attempts
-     * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
      * @see retry() in Retryable trait.
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function retryConnection(int $pdoId, callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
+    public function retryConnection(RetryContext $retryContext, callable $callback): mixed
     {
         try {
             return $callback();
         } catch (Throwable $throwable) {
             // Retry only if "Connection refused" (MySQL error 2002)
-            if (shouldRetry($throwable) && ($attempt <= $maxRetry || $maxRetry === -1)) {
-                $backoff = (1 << $attempt) * $delayMs * 1000; // microseconds
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retrying #%d in %.2f seconds...', $pdoId, $attempt + 1, $backoff / 1000000));
+            if (shouldRetry($throwable) && $retryContext->canRetry()) {
+                $backoff = $retryContext->backoff();
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Retrying #%d in %.2f seconds...', $retryContext->attempt + 1, $backoff / 1000000));
                 Coroutine::sleep($backoff / 1000000);
-                ++$attempt;
-                $result = $this->retryConnection($pdoId, $callback, $attempt, $maxRetry, $delayMs);
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retry #%d succeeded', $pdoId, $attempt));
+                $retryContext->next();
+                $result = $this->retryConnection($retryContext, $callback);
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Retry #%d succeeded', $retryContext->attempt));
                 return $result;
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('pdoId: #%d Retry #%d failed error: %s', $pdoId, $attempt, $throwable->getMessage()));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('Retry #%d failed error: %s', $retryContext->attempt, $throwable->getMessage()));
             throw $throwable;
         }
     }
 
     /**
-     * Retry a callback a few times with optional delay.
+     * Retry a callback with exponential backoff and duplicate entry handling.
      *
      * @param callable(): mixed $callback
-     * @param int $attempt Number of attempts
-     * @param int $maxRetry Max Number of attempts
-     * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
-     * @see retry() in Retryable trait.
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function retryConnectionForCreate(
-        int $pdoId,
+        string $table,
+        RetryContext $retryContext,
         callable $callback,
-        int $attempt = 0,
-        int $maxRetry = 5,
-        int $delayMs = 100,
         ?callable $onDuplicateCallback = null
     ): int {
         try {
             return $callback();
         } catch (Throwable $throwable) {
-            // Handle duplicate entry errors only when attempt > 0 (i.e., after a retry)
-            if ($attempt > 0 && isDuplicateException($throwable)) {
-                // Handle duplicate entry errors without retrying
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . ']', sprintf('[DUPLICATE] pdoId: #%d Duplicate entry error encountered: %s', $pdoId, $throwable->getMessage()));
-                $info = $this->parseDuplicateError($throwable->getMessage());
-
-                if ($info['table'] === null || $info['column'] === null || $info['value'] === null) {
-                    logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, '[DuplicateHandler] Failed to parse duplicate error: ' . $throwable->getMessage());
-                    throw $throwable;
-                }
-
-                $id = $onDuplicateCallback !== null ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
-                if ($id === null) {
-                    throw $throwable;
-                }
-
+            // Handle duplicate errors first
+            $id = $this->executeWithDuplicateHandling($table, $throwable, $onDuplicateCallback);
+            if ($id !== null) {
                 return $id;
             }
 
             // Retry only if "Connection refused" (MySQL error 2002)
-            if (shouldRetry($throwable) && ($attempt <= $maxRetry || $maxRetry === -1)) {
-                $backoff = (1 << $attempt) * $delayMs * 1000; // microseconds
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retrying ForCreate #%d in %.2f seconds...', $pdoId, $attempt + 1, $backoff / 1000000));
+            if (shouldForceRetry($throwable) && $retryContext->canRetry()) {
+                $backoff = $retryContext->backoff();
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Retrying For Create #%d in %.2f seconds...', $retryContext->attempt + 1, $backoff / 1000000));
                 Coroutine::sleep($backoff / 1000000);
-                ++$attempt;
-                $result = $this->retryConnectionForCreate($pdoId, $callback, $attempt, $maxRetry, $delayMs, $onDuplicateCallback);
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retry ForCreate #%d succeeded', $pdoId, $attempt));
+                $retryContext->next();
+                $result = $this->retryConnectionForCreate($table, $retryContext, $callback, $onDuplicateCallback);
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Retry For Create #%d succeeded', $retryContext->attempt));
                 return $result;
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('pdoId: #%d Retry ForCreate #%d failed error: %s', $pdoId, $attempt, $throwable->getMessage()));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('Retry For Create #%d failed error: %s', $retryContext->attempt, $throwable->getMessage()));
             throw $throwable;
         }
+    }
+
+    /**
+     * Handle duplicate entry exceptions and invoke appropriate callbacks.
+     *
+     *
+     * @throws Throwable
+     */
+    private function executeWithDuplicateHandling(
+        string $table,
+        Throwable $throwable,
+        ?callable $onDuplicateCallback = null
+    ): ?int {
+        if (!isDuplicateException($throwable)) {
+            return null;
+        }
+
+        logDebug(self::TAG . ':' . __LINE__, sprintf('[DUPLICATE] Duplicate entry error encountered: %s', $throwable->getMessage()));
+
+        $info = $this->parseDuplicateError($throwable->getMessage());
+
+        // Strict checks: ensure table, column, and value exist and are not null
+        if (
+            !isset($info['table']) || $info['table'] === '' ||
+            !isset($info['column']) || $info['column'] === '' ||
+            !isset($info['value']) || $info['value'] === ''
+        ) {
+            logDebug(self::TAG . ':' . __LINE__, '[DuplicateHandler] Failed to parse duplicate error: ' . $throwable->getMessage());
+            return null;
+        }
+
+        if ($table !== $info['table']) {
+            logDebug(self::TAG . ':' . __LINE__, '[DuplicateHandler] Invalid table $table(' . $table . ') === $info[\'table\'](' . $info['table'] . ') duplicate error: ' . $throwable->getMessage());
+            return null;
+        }
+
+        try {
+            $id = $onDuplicateCallback !== null ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
+            if ($id === null) {
+                return null;
+            }
+
+            return $id;
+        } catch (\Throwable) {
+            //
+        }
+
+        return null;
     }
 
     /**
@@ -443,7 +508,7 @@ final class PDOPool
      */
     private function onDuplicateCallback(array $info): ?int
     {
-        return $this->withConnection(function (PDO $pdo) use ($info) {
+        return $this->withConnectionAndRetry(function (PDO $pdo) use ($info) {
             $sql  = sprintf('SELECT id FROM `%s` WHERE `%s` = :value LIMIT 1', $info['table'], $info['column']);
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['value' => $info['value']]);
@@ -474,21 +539,23 @@ final class PDOPool
         // Match MySQL 1062 duplicate entry pattern
         $pattern = "/Duplicate entry '([^']+)' for key '([^']+)'/i";
 
-        if (preg_match($pattern, $message, $matches)) {
-            $value     = $matches[1]; // the duplicate value
-            $keyString = $matches[2]; // like "users.email"
+        if (in_array(preg_match($pattern, $message, $matches), [0, false], true)) {
+            return [
+                'value'  => null,
+                'table'  => null,
+                'column' => null,
+            ];
+        }
 
-            // Split table.column from key name
-            $table  = null;
-            $column = null;
+        $value     = $matches[1]; // the duplicate value
+        $keyString = $matches[2]; // like "users.email"
 
-            if (str_contains($keyString, '.')) {
-                [$table, $column] = explode('.', $keyString, 2);
-            } else {
-                // fallback: MySQL might return only index name like 'PRIMARY'
-                $column = $keyString;
-            }
+        // Split table.column from key name
+        $table  = null;
+        $column = null;
 
+        if (str_contains($keyString, '.')) {
+            [$table, $column] = explode('.', $keyString, 2);
             return [
                 'value'  => $value,
                 'table'  => $table,
@@ -496,10 +563,12 @@ final class PDOPool
             ];
         }
 
+        // fallback: MySQL might return only index name like 'PRIMARY'
+        $column = $keyString;
         return [
-            'value'  => null,
-            'table'  => null,
-            'column' => null,
+            'value'  => $value,
+            'table'  => $table,
+            'column' => $column,
         ];
     }
 
@@ -507,31 +576,28 @@ final class PDOPool
      * Retry a callback a few times with optional delay.
      *
      * @param callable(): mixed $callback
-     * @param int $attempt Number of attempts
-     * @param int $maxRetry Max Number of attempts
-     * @param int $delayMs Delay between retries in milliseconds
      *
      * @throws Throwable
      * @see retry() in Retryable trait.
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function forceRetryConnection(int $pdoId, callable $callback, int $attempt = 0, int $maxRetry = 5, int $delayMs = 100): mixed
+    public function forceRetryConnection(RetryContext $retryContext, callable $callback): mixed
     {
         try {
             return $callback();
         } catch (Throwable $throwable) {
             // Retry only if "Connection refused" (MySQL error 2002)
-            if ($attempt <= $maxRetry || $maxRetry === -1) {
-                $backoff = (1 << $attempt) * $delayMs * 1000; // microseconds
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retrying #%d in %.2f seconds...', $pdoId, $attempt + 1, $backoff / 1000000));
+            if (shouldForceRetry($throwable) && $retryContext->canRetry()) {
+                $backoff = $retryContext->backoff();
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Force Retrying #%d in %.2f seconds...', $retryContext->attempt + 1, $backoff / 1000000));
                 Coroutine::sleep($backoff / 1000000);
-                ++$attempt;
-                $result = $this->forceRetryConnection($pdoId, $callback, $attempt, $maxRetry, $delayMs);
-                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('pdoId: #%d Retry #%d succeeded', $pdoId, $attempt));
+                $retryContext->next();
+                $result = $this->forceRetryConnection($retryContext, $callback);
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Force Retry #%d succeeded', $retryContext->attempt));
                 return $result;
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('pdoId: #%d Retry #%d failed error: %s', $pdoId, $attempt, $throwable->getMessage()));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', sprintf('Force Retry #%d failed error: %s', $retryContext->attempt, $throwable->getMessage()));
             throw $throwable;
         }
     }
@@ -589,47 +655,123 @@ final class PDOPool
     }
 
     /**
-     * Auto-scale connections manually.
-     * Can be run periodically.
+     * Manual trigger for auto-scaling logic.
+     * Can be called periodically (e.g., via a timer) to adjust pool size.
+     *
+     * @throws ChannelException If unable to push to channel.
      */
     public function autoScale(): void
     {
-        $available       = $this->channel->length();
-        $idleBufferCount = (int)($this->max * $this->idleBuffer);
-        $upperThreshold  = (int)($idleBufferCount * (1 + $this->margin));
-        $lowerThreshold  = min($this->min, (int)($idleBufferCount * (1 - $this->margin)));
+        // Current available idle connections in the channel
+        $available = $this->channel->length();
 
-        // Scale UP
+        // Determine thresholds based on idle buffer
+        $thresholds = $this->calculateThresholds();
+
+        // ----------- Scale UP -----------
+        $this->scaleUp($available, $thresholds['lower']);
+
+        // ----------- Scale DOWN -----------
+        $this->scaleDown($available, $thresholds['upper']);
+    }
+
+    /**
+     * Calculate the upper and lower thresholds for scaling operations.
+     *
+     * @return array{upper:int,lower:int} Threshold values for upper and lower limits
+     */
+    private function calculateThresholds(): array
+    {
+        // Number of idle connections we aim to keep in buffer
+        $idleBufferCount = (int)($this->max * $this->idleBuffer);
+
+        // Upper threshold — too many idle connections → scale down
+        $upperThreshold = (int)($idleBufferCount * (1 + $this->margin));
+
+        // Lower threshold — too few idle connections → scale up
+        // Note: min() ensures we never scale below the minimum pool size
+        $lowerThreshold = min($this->min, (int)($idleBufferCount * (1 - $this->margin)));
+
+        return [
+            'upper' => $upperThreshold,
+            'lower' => $lowerThreshold,
+        ];
+    }
+
+    /**
+     * Perform scale-up logic when available idle connections fall below lower threshold.
+     *
+     * @param int $available       Number of currently available idle connections
+     * @param int $lowerThreshold  Threshold below which scaling up should occur
+     *
+     * @throws ChannelException If unable to push new connections into channel
+     */
+    private function scaleUp(int $available, int $lowerThreshold): void
+    {
+        // Condition: available < lowerThreshold → insufficient idle connections
         if ($available < $lowerThreshold && $this->created < $this->max) {
+            // Determine how many new connections to create
             $toCreate = min($this->max - $this->created, $lowerThreshold - $available);
-            for (
-                $i = 0;
-                $i < $toCreate;
-                ++$i
-            ) {
+
+            // Attempt to create and push new PDO connections
+            for ($i = 0; $i < $toCreate; ++$i) {
                 $success = $this->channel->push($this->make());
                 if ($success === false) {
+                    // Fail early if channel is full or push operation fails
                     throw new ChannelException('Unable to push to channel' . PHP_EOL);
                 }
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SCALE-UP PDO] Created %d connections', $toCreate));
+            // Log pool expansion event
+            logDebug(
+                self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__,
+                sprintf('[SCALE-UP PDO] Created %d connections', $toCreate)
+            );
         }
+    }
 
-        // Scale DOWN
+    /**
+     * Perform scale-down logic when available idle connections exceed upper threshold.
+     *
+     * @param int $available       Number of currently available idle connections
+     * @param int $upperThreshold  Threshold above which scaling down should occur
+     */
+    private function scaleDown(int $available, int $upperThreshold): void
+    {
+        // Condition: available > upperThreshold → too many idle connections
         if ($available > $upperThreshold && $this->created > $this->min) {
-            $toClose = min($this->created - $this->min, $available - $upperThreshold);
+            // Determine number of excess idle connections to close
+            $excessIdle = $available - $upperThreshold;
+            $toClose    = min($this->created - $this->min, $excessIdle);
+
+            // Attempt to close and remove idle PDO connections
             for ($i = 0; $i < $toClose; ++$i) {
+                // Non-blocking pop to fetch idle connection
                 $conn = $this->channel->pop(0.01);
-                if ($conn !== false) {
-                    [$pdo] = $conn;
+
+                // Ensure we are handling a valid PDO tuple structure
+                if ($conn !== false && is_array($conn)) {
+                    [$pdo, $pdoId] = $conn;
+
+                    // Close PDO connection
                     unset($pdo);
+                    unset($pdoId);
+                    // Update counter to reflect closed connections
                     $this->created = max(0, $this->created - 1);
-                    logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('PDO connection destroyed. Total connections: %d', $this->created));
+
+                    // Log connection close event for traceability
+                    logDebug(
+                        self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__,
+                        sprintf('PDO connection closed. Total connections: %d', $this->created)
+                    );
                 }
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SCALE-DOWN PDO] Closed %d idle connections', $toClose));
+            // Log pool contraction summary
+            logDebug(
+                self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__,
+                sprintf('[SCALE-DOWN PDO] Closed %d idle connections', $toClose)
+            );
         }
     }
 }

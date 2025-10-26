@@ -21,6 +21,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Messages;
+use App\Models\User;
 use App\Services\Cache\CacheRecordParams;
 use App\Services\Cache\CacheService;
 use App\Services\UserService;
@@ -79,14 +80,13 @@ final class UserController extends Controller
     )]
     public function create(): array
     {
-        $data = json_decode($this->request->rawContent() ?? '[]', true);
-
+        $data = $this->request->getJsonBody();
         $user = $this->userService->create($data);
 
         // Invalidate cache
         $this->cacheService->invalidateLists('users');
 
-        return $this->json($user, 201);
+        return $this->json($user->toArray(), 201);
     }
 
     /**
@@ -208,7 +208,7 @@ final class UserController extends Controller
         [$records, $pagination] = $this->userService->pagination($query);
 
         $data = [
-            'data'       => $records,
+            'data'       => array_map(static fn (User $user): array => $user->toArray(), $records),
             'pagination' => $pagination,
         ];
 
@@ -225,13 +225,13 @@ final class UserController extends Controller
      */
     private function resolvePagination(): array
     {
-        $page   = (int)($this->request->get['page'] ?? 1);
-        $limit  = max(1, min((int)($this->request->get['limit'] ?? 20), 100));
+        $page   = (int)($this->request->get('page', 1));
+        $limit  = max(1, min((int)($this->request->get('limit', 20)), 100));
         $offset = max(0, ($page - 1) * $limit);
 
         // Override offset & limit if explicitly set
-        $limit  = (int)($this->request->get['limit'] ?? $limit);
-        $offset = (int)($this->request->get['offset'] ?? $offset);
+        $limit  = (int)($this->request->get('limit', $limit));
+        $offset = (int)($this->request->get('offset', $offset));
 
         return [$limit, $offset];
     }
@@ -244,10 +244,10 @@ final class UserController extends Controller
     private function resolveFilters(): array
     {
         return [
-            'email'          => $this->request->get['email'] ?? null,
-            'name'           => $this->request->get['name'] ?? null,
-            'created_after'  => $this->request->get['created_after'] ?? null,
-            'created_before' => $this->request->get['created_before'] ?? null,
+            'email'          => $this->request->get('email'),
+            'name'           => $this->request->get('name'),
+            'created_after'  => $this->request->get('created_after'),
+            'created_before' => $this->request->get('created_before'),
         ];
     }
 
@@ -259,8 +259,8 @@ final class UserController extends Controller
     private function resolveSorting(): array
     {
         return [
-            $this->request->get['sortBy'] ?? 'id',
-            $this->request->get['sortDirection'] ?? 'DESC',
+            $this->request->get('sortBy', 'id'),
+            $this->request->get('sortDirection', 'DESC'),
         ];
     }
 
@@ -307,11 +307,11 @@ final class UserController extends Controller
             return $this->json(data: $user, cacheTagType: $cacheTagType);
         }
 
-        $data = $this->userService->find($id);
+        $user = $this->userService->find($id);
 
-        $this->cacheService->setRecord('users', $id, $data);
+        $this->cacheService->setRecord('users', $id, $user->toArray());
 
-        return $this->json($data);
+        return $this->json($user->toArray());
     }
 
     /**
@@ -409,21 +409,21 @@ final class UserController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
-        $data = json_decode($this->request->rawContent() ?? '[]', true);
+        $data = $this->request->getJsonBody();
 
         [$user] = $this->cacheService->getRecord('users', $id);
-        if ($user !== null) {
+        if ($user === null) {
             // Calling find to validate if entiry exists
             $this->userService->find($id);
         }
 
         $user = $this->userService->update((int)$params['id'], $data);
 
-        $this->cacheService->invalidateRecord('users', (int) $data['id']);
+        $this->cacheService->invalidateRecord('users', $id);
         $this->cacheService->invalidateRecordByColumn('users', 'email', (string) $data['email']);
         $this->cacheService->invalidateLists('users');
 
-        return $this->json($user);
+        return $this->json($user->toArray());
     }
 
     /**

@@ -3,16 +3,17 @@
 /**
  * src/Tables/TableWithLRUAndGC.php
  * Project: rxcod9/php-swoole-crud-microservice
- * Description: PHP Swoole CRUD Microservice
+ * Description: Composite Table implementation with LRU eviction, TTL expiration,
+ * and Garbage Collection (GC) capabilities on top of Swoole\Table.
  * PHP version 8.4
  *
  * @category  Tables
  * @package   App\Tables
  * @author    Ramakant Gangwar <14928642+rxcod9@users.noreply.github.com>
- * @copyright Copyright (c) 2025
+ * @copyright Copyright (c)
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-22
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tables/TableWithLRUAndGC.php
  */
 declare(strict_types=1);
@@ -20,17 +21,19 @@ declare(strict_types=1);
 namespace App\Tables;
 
 use App\Exceptions\CacheSetException;
-use BadMethodCallException;
-use Carbon\Carbon;
 use Countable;
 use Iterator;
-use OutOfBoundsException;
 use Swoole\Table;
 
 /**
- * TableWithLRUAndGC
- * Extensible wrapper around Swoole\Table with user-defined schema.
- * Behaves like Table but allows overrides for eviction and GC.
+ * Class TableWithLRUAndGC
+ * Composite abstraction on top of {@see Swoole\Table} adding:
+ * - **LRU Eviction**: Automatically removes least-recently-used entries when capacity is reached.
+ * - **TTL Expiry**: Supports per-item and global TTL-based expiry for cache-like semantics.
+ * - **Garbage Collection (GC)**: Periodic cleanup of expired entries without blocking main flow.
+ * - **Iteration & Countable Interfaces**: Allow iterating and counting table rows directly.
+ * This class is useful for building high-performance in-memory caches or shared data stores
+ * inside Swoole-based microservices, avoiding memory bloat or stale data.
  *
  * @category   Tables
  * @package    App\Tables
@@ -53,7 +56,7 @@ use Swoole\Table;
  * @method     int|float decr(string $key, string $column, int|float $incrby = 1)
  * @method     int getSize()
  * @method     int getMemorySize()
- * @method     false stats(): arra
+ * @method     false stats(): array
  * @method     void  rewind()
  * @method     bool  valid()
  * @method     void  next()
@@ -63,268 +66,142 @@ use Swoole\Table;
  * @template   TValue of array<string, mixed>
  * @implements Iterator<TKey, TValue>
  */
-class TableWithLRUAndGC implements Iterator, Countable
+class TableWithLRUAndGC extends BaseTableProxy implements Iterator, Countable
 {
-    protected Table $table;
+    /**
+     * Timestamp manager that handles TTL calculation and expiry validation.
+     *
+     */
+    private readonly TableTimestamps $timestamps;
 
+    /**
+     * LRU Evictor that ensures table does not exceed capacity.
+     *
+     */
+    private readonly TableEvictor $evictor;
+
+    /**
+     * Garbage collector responsible for removing expired records.
+     *
+     */
+    private readonly TableGarbageCollector $gc;
+
+    /**
+     * Constructor
+     *
+     * @param int $maxSize    Maximum number of rows in the table.
+     * @param int $ttl        Default TTL (seconds) for cache entries.
+     * @param int $bufferSize Additional buffer size for LRU eviction smoothing.
+     *
+     * @throws \RuntimeException If Swoole\Table cannot be created.
+     */
     public function __construct(
-        protected int $maxSize = 1024,
-        protected int $ttl = 120,
-        protected int $bufferSize = 10
+        int $maxSize = 1024,
+        private readonly int $ttl = 120,
+        int $bufferSize = 10
     ) {
+        // Initialize Swoole Table with typed columns
         $table = new Table($maxSize);
-        $table->column('value', Table::TYPE_STRING, 30000);
-        $table->column('last_access', Table::TYPE_INT, 10);
-        $table->column('usage', Table::TYPE_INT, 10);
-        $table->column('expires_at', Table::TYPE_INT, 10);
-        $table->column('created_at', Table::TYPE_INT, 10);
 
-        $this->table = $table;
+        // Data payload (up to 30 KB per row)
+        $table->column('value', Table::TYPE_STRING, 30000);
+
+        // Metadata columns for lifecycle management
+        $table->column('last_access', Table::TYPE_INT, 10); // UNIX timestamp of last access
+        $table->column('usage', Table::TYPE_INT, 10);       // Access counter (for LRU scoring)
+        $table->column('expires_at', Table::TYPE_INT, 10);  // Expiry timestamp
+        $table->column('created_at', Table::TYPE_INT, 10);  // Creation timestamp
+
+        // IMPORTANT: Actual table creation is deferred to BaseTableProxy or explicitly in factory.
+        // Uncomment when running standalone:
+        // $table->create();
+
+        parent::__construct($table);
+
+        // Composition of lifecycle managers
+        $this->timestamps = new TableTimestamps();
+        $this->evictor    = new TableEvictor($this->table, $maxSize, $bufferSize);
+        $this->gc         = new TableGarbageCollector($this->table);
     }
 
     /**
-     * Get a row from the cache table.
-     * Only updates last_access if a threshold time has passed to avoid write storms.
+     * Retrieve a row by key, with TTL enforcement.
      *
-     * @param string $key The key to retrieve.
-     * @return array<string, mixed>|null The row data or null if not found or expired.
+     * @param string $key Unique cache key.
+     *
+     * @return array<string, mixed>|null Returns the row array if present and valid, null if missing or expired.
      */
     public function get(string $key): ?array
     {
-        $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
+        $key = $this->normalizeKey($key);
+
+        // Attempt to fetch entry
         $row = $this->table->get($key);
+
         if ($row === false || $row === null) {
+            // Key not found in table
             return null;
         }
 
-        // check expiration
-        $now = Carbon::now()->getTimestamp();
-        if (isset($row['expires_at']) && $now > $row['expires_at']) {
+        // Check for expiration
+        if ($this->timestamps->isExpired($row)) {
+            // Remove expired entry and return null
             $this->table->del($key);
             return null;
         }
+
+        // TODO: Optionally update usage counter for true LRU tracking
+        // $this->timestamps->touch($this->table, $key);
 
         return $row;
     }
 
     /**
-     * Set row with user-defined schema.
+     * Insert or update an entry with LRU enforcement and TTL management.
      *
-     * @param string $key The key to set.
-     * @param array<string, mixed> $row The row data to set.
-     * @param int $localTtl Optional TTL for this specific entry (overrides default ttl).
-     * @throws CacheSetException
+     * @param string $key       Cache key (normalized internally).
+     * @param array<string, mixed>  $row       Row data. Should include 'value' at minimum.
+     * @param int    $localTtl  Optional per-entry TTL (overrides global).
+     *
+     * @return bool True if entry was set successfully.
+     *
+     * @throws CacheSetException When unable to persist to the table.
      */
     public function set(string $key, array $row, int $localTtl = 0): bool
     {
         $key = $this->normalizeKey($key);
 
-        $this->ensureCapacity();
+        // Ensure there is capacity using LRU eviction if necessary
+        $this->evictor->ensureCapacity();
 
-        $row = $this->applyTimestamps($row, $localTtl);
+        // Add timestamp metadata (created_at, expires_at)
+        $row = $this->timestamps->apply($row, $this->ttl, $localTtl);
 
-        $success = $this->table->set($key, $row);
-        if (!$success) {
-            throw new CacheSetException('Unable to set Cache');
+        // Write entry to Swoole table
+        if (!$this->table->set($key, $row)) {
+            throw new CacheSetException('Unable to set cache entry for key: ' . $key);
         }
 
         return true;
     }
 
     /**
-     * Normalize key length to max 56 chars.
-     */
-    private function normalizeKey(string $key): string
-    {
-        return strlen($key) > 56 ? substr($key, 0, 56) : $key;
-    }
-
-    /**
-     * Enforces LRU eviction if table is near capacity.
-     */
-    private function ensureCapacity(): void
-    {
-        if (count($this->table) >= ($this->maxSize - $this->bufferSize)) {
-            $this->evict();
-        }
-    }
-
-    /**
-     * Apply expiration and creation timestamps.
+     * Trigger garbage collection to remove expired items.
+     * Typically called periodically by a coroutine scheduler or maintenance task.
      *
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
-     */
-    private function applyTimestamps(array $row, int $localTtl): array
-    {
-        $now = Carbon::now()->getTimestamp();
-
-        $row['expires_at'] ??= $now + (($localTtl > 0 ? $localTtl : $this->ttl) * 1000);
-        $row['created_at'] ??= $now;
-
-        return $row;
-    }
-
-    /**
-     * Eviction policy — default LRU (using last_access).
-     */
-    protected function evict(): void
-    {
-        $oldestKey  = null;
-        $oldestTime = PHP_INT_MAX;
-
-        foreach ($this->table as $key => $row) {
-            $lastAccess = $row['last_access'] ?? 0;
-            if ($lastAccess < $oldestTime) {
-                $oldestTime = $lastAccess;
-                $oldestKey  = $key;
-            }
-        }
-
-        if ($oldestKey !== null) {
-            $oldestKey = strlen($oldestKey) > 56 ? substr($oldestKey, 0, 56) : $oldestKey;
-            $this->table->del($oldestKey);
-        }
-    }
-
-    /**
-     * Garbage collection (default: based on expires_at).
      */
     public function gc(): void
     {
-        $now = Carbon::now()->getTimestamp();
-        foreach ($this->table as $key => $row) {
-            $expiresAt = $row['expires_at'] ?? Carbon::now()->getTimestamp();
-            if ($now > $expiresAt) {
-                $key = strlen($key) > 56 ? substr($key, 0, 56) : $key;
-                $this->table->del($key);
-            }
-        }
+        $this->gc->run();
     }
 
+    // --------------------------------------------------------------------------
+    // Iterator & Countable Implementations
+    // --------------------------------------------------------------------------
+
     /**
-     * Proxy unknown calls to Swoole\Table.
+     * Rewind the internal table iterator.
      *
-     * @param mixed $name The method name.
-     * @param mixed $arguments The method arguments.
-     * @return mixed The result of the method call.
-     * @throws BadMethodCallException If the method does not exist on Swoole\Table
-     */
-    public function __call(mixed $name, mixed $arguments): mixed
-    {
-        if (!method_exists($this->table, $name)) {
-            throw new BadMethodCallException(sprintf('Method %s does not exist on Swoole\Table', $name));
-        }
-
-        return call_user_func_array([$this->table, $name], $arguments);
-    }
-
-    /**
-     * Proxy property access to Swoole\Table.
-     *
-     * @param string $name The property name.
-     * @return mixed The property value.
-     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
-     */
-    public function __get(string $name): mixed
-    {
-        if (property_exists($this->table, $name)) {
-            /** @phpstan-ignore-next-line */
-            return $this->table->$name;
-        }
-
-        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
-    }
-
-    /**
-     * Proxy property setting to Swoole\Table.
-     *
-     * @param string $name The property name.
-     * @param mixed $value The property value.
-     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
-     */
-    public function __set(string $name, mixed $value): void
-    {
-        if (property_exists($this->table, $name)) {
-            /** @phpstan-ignore-next-line */
-            $this->table->$name = $value;
-            return;
-        }
-
-        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
-    }
-
-    /**
-     * Proxy isset to Swoole\Table.
-     *
-     * @param string $name The property name.
-     * @return bool True if the property is set, false otherwise.
-     */
-    public function __isset(string $name): bool
-    {
-        /** @phpstan-ignore-next-line */
-        return isset($this->table->$name);
-    }
-
-    /**
-     * Proxy unset to Swoole\Table.
-     *
-     * @param string $name The property name.
-     * @throws OutOfBoundsException If the property does not exist on Swoole\Table
-     */
-    public function __unset(string $name): void
-    {
-        /** @phpstan-ignore-next-line */
-        if (isset($this->table->$name)) {
-            /** @phpstan-ignore-next-line */
-            unset($this->table->$name);
-            return;
-        }
-
-        throw new OutOfBoundsException(sprintf('Property %s does not exist on Swoole\Table', $name));
-    }
-
-    /**
-     * OffsetExists for ArrayAccess
-     * @param mixed $offset The offset to check.
-     * @return bool True if the offset exists, false otherwise.
-     */
-    public function offsetExists(mixed $offset): bool
-    {
-        return isset($this->table[$offset]);
-    }
-
-    /**
-     * OffsetGet for ArrayAccess
-     * @param mixed $offset The offset to get.
-     * @return mixed The value at the offset or null if not found.
-     */
-    public function offsetGet(mixed $offset): mixed
-    {
-        return $this->table[$offset] ?? null;
-    }
-
-    /**
-     * OffsetSet for ArrayAccess
-     * @param mixed $offset The offset to set.
-     * @param mixed $value The value to set.
-     */
-    public function offsetSet(mixed $offset, mixed $value): void
-    {
-        $this->table[$offset] = $value;
-    }
-
-    /**
-     * OffsetUnset for ArrayAccess
-     * @param mixed $offset The offset to unset.
-     */
-    public function offsetUnset(mixed $offset): void
-    {
-        unset($this->table[$offset]);
-    }
-
-    /**
-     * Rewind the iterator (Iterator interface).
      */
     public function rewind(): void
     {
@@ -332,25 +209,31 @@ class TableWithLRUAndGC implements Iterator, Countable
     }
 
     /**
-     * Get current element (Iterator interface).
-     * @return array<string, mixed> The current element.
+     * Return the current row in iteration.
+     *
+     * @return array<string, mixed> Current table row
      */
-    public function current(): mixed
+    public function current(): array
     {
-        return $this->table->current();
+        /** @var array<string, mixed> $row */
+        $row = $this->table->current();
+        return $row;
     }
 
     /**
-     * Get current key (Iterator interface).
-     * @return int|string The current key.
+     * Return the current iterator key.
+     *
+     * @return int|string Key of the current element
      */
-    public function key(): mixed
+    public function key(): int|string
     {
-        return $this->table->key();
+        /** @var int|string $key */
+        $key = $this->table->key();
+        return $key;
     }
 
     /**
-     * Move to next element (Iterator interface).
+     * Advance the iterator to the next element.
      */
     public function next(): void
     {
@@ -358,8 +241,9 @@ class TableWithLRUAndGC implements Iterator, Countable
     }
 
     /**
-     * Check if current position is valid (Iterator interface).
-     * @return bool True if valid, false otherwise.
+     * Check if the current iterator position is valid.
+     *
+     * @return bool True if valid; false if end of table
      */
     public function valid(): bool
     {
@@ -367,8 +251,9 @@ class TableWithLRUAndGC implements Iterator, Countable
     }
 
     /**
-     * Count elements (Countable interface).
-     * @return int<0, max> The number of elements in the table.
+     * Count number of elements in the table.
+     *
+     * @return int<0, max> Total number of active rows (non-negative)
      */
     public function count(): int
     {

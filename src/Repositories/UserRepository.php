@@ -22,6 +22,7 @@ namespace App\Repositories;
 use App\Core\Messages;
 use App\Exceptions\CreateFailedException;
 use App\Exceptions\ResourceNotFoundException;
+use App\Exceptions\StatementException;
 use App\Models\User;
 use App\Services\PaginationParams;
 use InvalidArgumentException;
@@ -30,9 +31,8 @@ use PDOStatement;
 use Throwable;
 
 /**
- * Class UserRepository
  * Repository for managing users in the database.
- * Provides CRUD operations: create, read, update, delete, and list users.
+ * This class provides CRUD operations for the 'users' table using PDO.
  *
  * @category  Repositories
  * @package   App\Repositories
@@ -51,28 +51,33 @@ final readonly class UserRepository extends Repository
      *
      * @param array<string, mixed> $data User data ('email', 'name')
      *
-     * @throws CreateFailedException on failure
+     * @throws CreateFailedException If the insert operation fails.
      *
-     * @return int Last inserted user ID
+     * @return int The ID of the newly created user.
      */
     public function create(array $data): int
     {
-        return $this->pdoPool->withConnectionAndRetryForCreate(function (PDO $pdo, int $pdoId) use ($data): int {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating user with data: ' . var_export($data, true));
+        return $this->pdoPool->withConnectionAndRetryForCreate('users', function (PDO $pdo, int $pdoId) use ($data): int {
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' Creating user with data: ' . var_export($data, true));
                 // Prepare INSERT statement with named parameters
                 $sql  = 'INSERT INTO users (email, name) VALUES (:email, :name)';
                 $stmt = $pdo->prepare($sql);
 
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE', 'pdoId: ' . $pdoId . ' data: ' . var_export($data, true));
 
-                // Bind values safely to prevent SQL injection
+                // Bind values safely
                 $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
                 $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
 
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Return ID of the newly created user
+                // ✅ Dump actual SQL and result
+                $this->logSql('CREATE', $stmt, $data, $isExecuted);
+
                 $lastInsertId = $pdo->lastInsertId();
 
                 if (in_array($lastInsertId, [false, null, '', '0'], true)) {
@@ -94,37 +99,42 @@ final readonly class UserRepository extends Repository
     }
 
     /**
-     * Find a user by ID.
+     * Find an user by ID.
      *
      * @param int $id User ID
      *
-     * @return array<string, mixed> User data if not found
+     * @return User User data
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function find(int $id): array
+    public function find(int $id): User
     {
-        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding user with ID: ' . var_export($id, true));
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($id): User {
             try {
-                // Prepare SELECT query
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND', 'pdoId: ' . $pdoId . ' Finding user with ID: ' . var_export($id, true));
                 $sql  = 'SELECT id, email, name, created_at, updated_at FROM users WHERE id=:id LIMIT 1';
                 $stmt = $pdo->prepare($sql);
 
-                // Bind ID parameter
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
                 // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FIND', $stmt, ['id' => $id], $result);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
-                if ($result === null) {
+                if ($result === false || $result === null) {
                     throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'User id#' . $id), 404);
                 }
 
-                return $result;
+                return User::fromArray($result);
             } catch (Throwable $throwable) {
                 $this->logException('FIND', $pdoId, $throwable);
                 throw $throwable;
@@ -135,35 +145,42 @@ final readonly class UserRepository extends Repository
     }
 
     /**
-     * Find a user by email.
+     * Find an user by EMAIL.
      *
-     * @param string $email Email address
+     * @param string $email User EMAIL
      *
-     * @return array<string, mixed> User data
+     * @return User User data
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function findByEmail(string $email): array
+    public function findByEmail(string $email): User
     {
-        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($email) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL', 'pdoId: ' . $pdoId . ' Finding user with email: ' . var_export($email, true));
+        return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($email): User {
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_EMAIL', 'pdoId: ' . $pdoId . ' Finding user with EMAIL: ' . var_export($email, true));
                 $sql  = 'SELECT id, email, name, created_at, updated_at FROM users WHERE email=:email LIMIT 1';
                 $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':email', $email, PDO::PARAM_STR);
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FIND_BY_EMAIL', $stmt, ['email' => $email], $result);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
-                if ($result === null) {
+                if ($result === false || $result === null) {
                     throw new ResourceNotFoundException(sprintf(Messages::RESOURCE_NOT_FOUND, 'User email#' . $email), 404);
                 }
 
-                return $result;
+                return User::fromArray($result);
             } catch (Throwable $throwable) {
                 $this->logException('FIND_BY_EMAIL', $pdoId, $throwable);
                 throw $throwable;
@@ -179,6 +196,8 @@ final readonly class UserRepository extends Repository
      * @param PaginationParams $paginationParams Pagination parameters
      *
      * @return array<int, User> Array of users
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function list(PaginationParams $paginationParams): array
     {
@@ -188,13 +207,20 @@ final readonly class UserRepository extends Repository
                 $stmt = $this->prepareListStatement($pdo, $paginationParams);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('LIST', $stmt, [], $results);
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Hydrate each row into an User domain entity
-                return array_map(static fn (array $result): \App\Models\User => User::fromArray($result), $results);
+                return array_map(fn (array $result): User => User::fromArray($result), $results);
             } catch (Throwable $throwable) {
                 $this->logException('LIST', $pdoId, $throwable);
                 throw $throwable;
@@ -259,15 +285,15 @@ final readonly class UserRepository extends Repository
     /**
      * Returns filter-to-SQL mapping closures.
      *
-     * @return array<string, callable(string): array{0:string,1:array<string, string>}>
+     * @return array<string, callable(string): array{0:string,1:array<string, mixed>}>
      */
     private function getAllowedFilters(): array
     {
         return [
-            'email'          => static fn (string $value): array => ['email = :email', ['email' => $value]],
-            'name'           => static fn (string $value): array => ['name LIKE :name', ['name' => sprintf('%%%s%%', $value)]],
-            'created_after'  => static fn (string $value): array => ['created_at > :created_after', ['created_after' => $value]],
-            'created_before' => static fn (string $value): array => ['created_at < :created_before', ['created_before' => $value]],
+            'email'          => static fn (string $v): array => ['email = :email', ['email' => $v]],
+            'name'           => static fn (string $v): array => ['name LIKE :name', ['name' => sprintf('%%%s%%', $v)]],
+            'created_after'  => static fn (string $v): array => ['created_at > :created_after', ['created_after' => $v]],
+            'created_before' => static fn (string $v): array => ['created_at < :created_before', ['created_before' => $v]],
         ];
     }
 
@@ -341,14 +367,24 @@ final readonly class UserRepository extends Repository
                 $stmt = $this->prepareFilterCountStatement($pdo, $filters);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('FILTERED_COUNT', $stmt, [], $result);
+
+                if ($result === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
                 if ($result === null) {
                     return 0; // No rows returned
                 }
@@ -412,14 +448,24 @@ final readonly class UserRepository extends Repository
                 $stmt = $pdo->prepare($sql);
 
                 // Execute the prepared statement
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
 
-                // Fetch all results as associative arrays
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch all result as associative array
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('COUNT', $stmt, [], $result);
+
+                if ($result === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
                 // Return the first result if available
-                $result = $results[0] ?? null;
                 if ($result === null) {
                     return 0; // No rows returned
                 }
@@ -449,8 +495,14 @@ final readonly class UserRepository extends Repository
             $this->logUpdateStart($pdoId, $id, $data);
 
             try {
-                $stmt = $this->prepareUpdateStatement($pdo, $id, $data);
-                $stmt->execute();
+                $stmt       = $this->prepareUpdateStatement($pdo, $id, $data);
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('UPDATE', $stmt, $data, $isExecuted);
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt);
@@ -555,13 +607,19 @@ final readonly class UserRepository extends Repository
     public function delete(int $id): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id): bool {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting user with ID: ' . var_export($id, true));
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE', 'pdoId: ' . $pdoId . ' Deleting user with ID: ' . var_export($id, true));
                 $sql  = 'DELETE FROM users WHERE id=:id';
                 $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-                $stmt->execute();
+                $isExecuted = $stmt->execute();
+                if ($isExecuted === false) {
+                    throw new StatementException(Messages::QUERY_FAILED, 500);
+                }
+
+                // ✅ Dump actual SQL and result
+                $this->logSql('DELETE', $stmt, ['id' => $id], $isExecuted);
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole

@@ -56,7 +56,10 @@ class LogHelper
      */
     public static function debug(string $tag, string $message, array $context = []): void
     {
-        if (env('APP_ENV') === 'testing') {
+        // no env helper use, avoding dependency
+        $appDebug = env('APP_DEBUG', false);
+
+        if ($appDebug === false) {
             // redirect to /dev/null in tests
             return;
         }

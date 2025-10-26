@@ -43,6 +43,7 @@ final readonly class WebSocketServer
      */
     public function __construct(private string $host = '0.0.0.0', private int $port = 9502)
     {
+        // Empty constructor
     }
 
     /**
