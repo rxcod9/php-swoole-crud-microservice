@@ -131,8 +131,8 @@ final class Container
         }
 
         $args = [];
-        foreach ($ctor->getParameters() as $parameter) {
-            $t = $parameter->getType();
+        foreach ($ctor->getParameters() as $reflectionParameter) {
+            $t = $reflectionParameter->getType();
 
             // Resolve class dependencies recursively
             /** @var \ReflectionNamedType|null $t */
@@ -142,7 +142,7 @@ final class Container
             }
 
             // Use default value if available, otherwise null
-            $args[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
+            $args[] = $reflectionParameter->isDefaultValueAvailable() ? $reflectionParameter->getDefaultValue() : null;
         }
 
         return $reflectionClass->newInstanceArgs($args);

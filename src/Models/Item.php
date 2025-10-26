@@ -15,7 +15,6 @@
  * @since     2025-10-18
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Models/Item.php
  */
-
 declare(strict_types=1);
 
 namespace App\Models;
@@ -92,7 +91,7 @@ class Item extends Model
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'data: ' . var_export($data, true));
 
-        $this->sku = (string)$data['sku'];
+        $this->sku   = (string)$data['sku'];
         $this->title = (string)$data['title'];
         $this->price = (float)$data['price'];
 

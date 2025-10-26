@@ -485,12 +485,7 @@ final class PDOPool
         }
 
         try {
-            $id = $onDuplicateCallback !== null ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
-            if ($id === null) {
-                return null;
-            }
-
-            return $id;
+            return $onDuplicateCallback !== null ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
         } catch (\Throwable) {
             //
         }

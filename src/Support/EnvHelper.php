@@ -70,6 +70,6 @@ class EnvHelper
      */
     private static function isValidValue(mixed $value): bool
     {
-        return $value !== null && $value !== false && $value !== '';
+        return !in_array($value, [null, false, ''], true);
     }
 }

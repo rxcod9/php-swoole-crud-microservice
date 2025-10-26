@@ -90,7 +90,7 @@ class User extends Model
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'data: ' . var_export($data, true));
 
         $this->email = (string)$data['email'];
-        $this->name = (string)$data['name'];
+        $this->name  = (string)$data['name'];
 
         return $this;
     }
