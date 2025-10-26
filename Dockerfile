@@ -60,6 +60,10 @@ RUN --mount=type=cache,target=/tmp/pecl \
     pecl install redis xdebug \
  && docker-php-ext-enable redis xdebug
 
+# Allow runtime toggle for Xdebug
+ARG XDEBUG_MODE=off
+ENV XDEBUG_MODE=${XDEBUG_MODE}
+
 # --- Composer ---
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

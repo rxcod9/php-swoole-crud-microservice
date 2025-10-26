@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Core\Constants;
 use App\Core\Messages;
 use App\Core\Pools\PDOPool;
 use App\Services\PaginationParams;
@@ -168,15 +169,17 @@ abstract readonly class Repository implements RepositoryInterface
         $errorCode = $pdoStatement->errorCode();
         $errorInfo = $pdoStatement->errorInfo();
 
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . $functionName,
-            sprintf(
-                Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                $pdoId,
-                $errorCode ?? 'N/A',
-                implode(', ', $errorInfo)
-            )
-        );
+        if ($errorCode !== null && $errorCode !== Constants::PDO_NO_ERROR_CODE) {
+            logDebug(
+                self::TAG . ':' . __LINE__ . '] [' . $functionName,
+                sprintf(
+                    Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
+                    $pdoId,
+                    $errorCode,
+                    implode(', ', $errorInfo)
+                )
+            );
+        }
 
         $this->pdoPool->clearStatement($pdoStatement);
     }
@@ -185,14 +188,16 @@ abstract readonly class Repository implements RepositoryInterface
      * Log SQL queries and execution results with parameter substitution.
      *
      * @param string $operation Operation name (CREATE, UPDATE, etc.).
-     * @param PDOStatement|null $pdoStatement The PDO statement (optional).
+     * @param PDOStatement $pdoStatement The PDO statement.
      * @param array<string, mixed> $params Bound query parameters.
+     * @param float $queryTime Execution result.
      * @param mixed $result Execution result (optional).
      */
     protected function logSql(
         string $operation,
-        ?PDOStatement $pdoStatement = null,
-        array $params = [],
+        PDOStatement $pdoStatement,
+        array $params,
+        float $queryTime,
         mixed $result = null
     ): void {
         if ((bool)(env('APP_DEBUG', false)) === false) {
@@ -202,19 +207,20 @@ abstract readonly class Repository implements RepositoryInterface
         $sqlWithValues = $pdoStatement->queryString ?? '';
 
         foreach ($params as $key => $val) {
+            $val         = is_null($val) ? 'NULL' : $val;
             $replacement = is_string($val)
                 ? "'" . addslashes($val) . "'"
-                : (is_null($val) ? 'NULL' : $val);
+                : $val;
             $sqlWithValues = preg_replace('/:' . preg_quote($key, '/') . '\b/', (string)$replacement, $sqlWithValues);
         }
 
-        logDebug(static::TAG ?? __CLASS__, sprintf('[SQL] [%s] => %s', $operation, $sqlWithValues));
+        logDebug(static::TAG ?? __CLASS__, sprintf('[SQL] [%s] => Query time: %f ms %s', $operation, $queryTime, $sqlWithValues));
 
         if ($result !== null) {
             logDebug(static::TAG ?? __CLASS__, sprintf('[SQL-RESULT] [%s] => %s', $operation, var_export($result, true)));
         }
 
-        if ($pdoStatement instanceof PDOStatement) {
+        if ($pdoStatement->errorCode() !== Constants::PDO_NO_ERROR_CODE) {
             $errorInfo = $pdoStatement->errorInfo();
             logDebug(static::TAG ?? __CLASS__, sprintf('[SQL-STATE] [%s] => %s', $operation, implode(', ', $errorInfo)));
         }

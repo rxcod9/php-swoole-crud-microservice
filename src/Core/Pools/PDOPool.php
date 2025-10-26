@@ -453,7 +453,14 @@ final class PDOPool
     /**
      * Handle duplicate entry exceptions and invoke appropriate callbacks.
      *
+     * This method detects duplicate entry SQL errors, validates the parsed
+     * duplicate information, and triggers a duplicate handling callback.
      *
+     * @param string        $table               The table name expected for duplicate validation.
+     * @param Throwable     $throwable           The exception thrown from PDO or Swoole task.
+     * @param callable|null $onDuplicateCallback Optional callback to handle the duplicate.
+     *
+     * @return int|null Result of callback or null if not applicable.
      * @throws Throwable
      */
     private function executeWithDuplicateHandling(
@@ -461,36 +468,68 @@ final class PDOPool
         Throwable $throwable,
         ?callable $onDuplicateCallback = null
     ): ?int {
-        if (!isDuplicateException($throwable)) {
+        if (!$this->isDuplicateThrowable($throwable)) {
             return null;
         }
-
-        logDebug(self::TAG . ':' . __LINE__, sprintf('[DUPLICATE] Duplicate entry error encountered: %s', $throwable->getMessage()));
 
         $info = $this->parseDuplicateError($throwable->getMessage());
 
-        // Strict checks: ensure table, column, and value exist and are not null
-        if (
-            !isset($info['table']) || $info['table'] === '' ||
-            !isset($info['column']) || $info['column'] === '' ||
-            !isset($info['value']) || $info['value'] === ''
-        ) {
-            logDebug(self::TAG . ':' . __LINE__, '[DuplicateHandler] Failed to parse duplicate error: ' . $throwable->getMessage());
+        if (!$this->isValidDuplicateInfo($info, $table, $throwable->getMessage())) {
             return null;
         }
 
-        if ($table !== $info['table']) {
-            logDebug(self::TAG . ':' . __LINE__, '[DuplicateHandler] Invalid table $table(' . $table . ') === $info[\'table\'](' . $info['table'] . ') duplicate error: ' . $throwable->getMessage());
-            return null;
+        return $this->invokeDuplicateCallback($info, $onDuplicateCallback);
+    }
+
+    /**
+     * Check if the throwable represents a duplicate exception.
+     */
+    private function isDuplicateThrowable(Throwable $throwable): bool
+    {
+        $isDuplicate = isDuplicateException($throwable);
+        if ($isDuplicate) {
+            logDebug(self::TAG . ':' . __LINE__, sprintf('[DUPLICATE] Duplicate entry: %s', $throwable->getMessage()));
         }
 
+        return $isDuplicate;
+    }
+
+    /**
+     * Validate parsed duplicate error info structure.
+     * @param array{value:string|null,table:string|null,column:string|null} $info
+     */
+    private function isValidDuplicateInfo(array $info, string $table, string $errorMessage): bool
+    {
+        $requiredKeys = ['table', 'column', 'value'];
+        foreach ($requiredKeys as $requiredKey) {
+            if (isset($info[$requiredKey])) {
+                logDebug(self::TAG . ':' . __LINE__, sprintf("[DuplicateHandler] Missing key '%s' in duplicate info for error: %s", $requiredKey, $errorMessage));
+                return false;
+            }
+        }
+
+        if ($info['table'] !== $table) {
+            logDebug(self::TAG . ':' . __LINE__, sprintf('[DuplicateHandler] Mismatched table. Expected: %s, Found: %s. Error: %s', $table, $info['table'], $errorMessage));
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Execute provided duplicate handler callback safely.
+     * @param array{value:string|null,table:string|null,column:string|null} $info
+     */
+    private function invokeDuplicateCallback(array $info, ?callable $onDuplicateCallback): ?int
+    {
         try {
-            return $onDuplicateCallback !== null ? $onDuplicateCallback($info) : $this->onDuplicateCallback($info);
-        } catch (\Throwable) {
-            //
+            return $onDuplicateCallback !== null
+                ? $onDuplicateCallback($info)
+                : $this->onDuplicateCallback($info);
+        } catch (\Throwable $throwable) {
+            logDebug(self::TAG . ':' . __LINE__, '[DuplicateHandler] Callback failed: ' . $throwable->getMessage());
+            return null;
         }
-
-        return null;
     }
 
     /**

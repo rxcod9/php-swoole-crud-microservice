@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace App\Tables;
 
+use Carbon\Carbon;
+use SplDoublyLinkedList;
 use Swoole\Table;
 
 /**
@@ -35,12 +37,30 @@ use Swoole\Table;
  */
 class TableEvictor
 {
+    /**
+     * @var SplDoublyLinkedList<string>
+     * LRU queue of keys for eviction ordering (head = oldest, tail = most recent)
+     */
+    private readonly SplDoublyLinkedList $lruQueue;
+
     public function __construct(
         private readonly Table $table,
         private readonly int $maxSize,
         private readonly int $bufferSize
     ) {
-        // Empty Constructor
+        $this->lruQueue = new SplDoublyLinkedList();
+        $this->lruQueue->setIteratorMode(SplDoublyLinkedList::IT_MODE_FIFO);
+    }
+
+    public function onAccess(string $key): void
+    {
+        // Move accessed key to tail
+        $index = array_search($key, iterator_to_array($this->lruQueue), true);
+        if ($index !== false) {
+            $this->lruQueue->offsetUnset($index);
+        }
+
+        $this->lruQueue->push($key);
     }
 
     public function ensureCapacity(): void
@@ -52,19 +72,44 @@ class TableEvictor
 
     private function evict(): void
     {
-        $oldestKey  = null;
-        $oldestTime = PHP_INT_MAX;
+        $oldestKey = null;
 
-        foreach ($this->table as $key => $row) {
-            $lastAccess = $row['last_access'] ?? 0;
-            if ($lastAccess < $oldestTime) {
-                $oldestTime = $lastAccess;
-                $oldestKey  = $key;
+        $currentSize = count($this->table);
+
+        // Evict bufferSize oldest keys from head
+        for ($i = 0; $i < min($this->bufferSize, $currentSize); $i++) {
+            if ($this->lruQueue->isEmpty()) {
+                break;
             }
-        }
 
-        if ($oldestKey !== null) {
+            $oldestKey = $this->lruQueue->shift();
             $this->table->del($oldestKey);
+        }
+    }
+
+    /**
+     * Garbage collect expired entries.
+     *
+     * Only checks oldest N items in LRU queue to avoid full table scan.
+     */
+    public function removeExpired(int $checkCount = 50): void
+    {
+        $currentTime = Carbon::now()->getTimestamp();
+        $iterations  = min($checkCount, $this->lruQueue->count());
+
+        for ($i = 0; $i < $iterations; $i++) {
+            if ($this->lruQueue->isEmpty()) {
+                break;
+            }
+
+            $oldestKey = $this->lruQueue->bottom(); // peek oldest
+            $row       = $this->table->get($oldestKey);
+
+            // If row missing or expired, remove from table & queue
+            if ($row !== null || ($row['expire_at'] ?? PHP_INT_MAX) <= $currentTime) {
+                $this->lruQueue->shift();
+                $this->table->del($oldestKey);
+            }
         }
     }
 }

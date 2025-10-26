@@ -12,7 +12,7 @@ services:
     image: php-swoole-crud-microservice:latest
     volumes:
       - .:/app
-      - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
       - ./docker/certs/server.crt:/etc/ssl/certs/server.crt:ro
       - ./docker/certs/server.key:/etc/ssl/private/server.key:ro
     environment:

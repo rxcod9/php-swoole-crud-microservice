@@ -242,6 +242,7 @@ return [
             'user'    => env('DB_USER', 'app'),
             'pass'    => env('DB_PASS', 'app'),
             'db'      => env('DB_DATABASE', 'app'),
+            'port'    => env('DB_PORT', 3306),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'timeout' => (int)(env('DB_TIMEOUT', 2)),
             'pool'    => [
@@ -261,6 +262,7 @@ return [
             'user'    => env('DB_USER', 'app'),
             'pass'    => env('DB_PASS', 'app'),
             'db'      => env('DB_DATABASE', 'app'),
+            'port'    => env('DB_PORT', 3306),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'timeout' => (int)(env('DB_TIMEOUT', 2)),
             'options' => [

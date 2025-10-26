@@ -73,7 +73,7 @@ function generateUuid() {
  */
 function generateUser(index) {
     const id = generateUuid();
-    return { name: `user-${id}-${index}`, email: `user-${id}-${index}@example.com` };
+    return { name: `User ${index} ${id}`, email: `user-${index}-${id}@example.com` };
 }
 
 /**

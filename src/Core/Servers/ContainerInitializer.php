@@ -60,5 +60,6 @@ final class ContainerInitializer
     public function bindRouter(Container $container, Router $router): void
     {
         $container->singleton(RouteDispatcher::class, fn (): RouteDispatcher => new RouteDispatcher($router, $container));
+        $container->singleton(Router::class, fn (): Router => $router);
     }
 }

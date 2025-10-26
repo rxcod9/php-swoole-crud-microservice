@@ -40,7 +40,7 @@ use Throwable;
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-10-02
+ * @since     2025-10-26
  */
 final readonly class ItemRepository extends Repository
 {
@@ -71,13 +71,19 @@ final readonly class ItemRepository extends Repository
                 $stmt->bindValue(':title', $data['title'], PDO::PARAM_STR);
                 $stmt->bindValue(':price', isset($data['price']) ? (float)$data['price'] : null, PDO::PARAM_STR);
 
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('CREATE', $stmt, $data, $isExecuted);
+                $this->logSql('CREATE', $stmt, $data, $queryTimeMs, $isExecuted);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'CREATE_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $lastInsertId = $pdo->lastInsertId();
 
@@ -117,7 +123,10 @@ final readonly class ItemRepository extends Repository
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
                 // Execute the prepared statement
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
@@ -126,7 +135,10 @@ final readonly class ItemRepository extends Repository
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('FIND', $stmt, ['id' => $id], $result);
+                $this->logSql('FIND', $stmt, ['id' => $id], $queryTimeMs, $result);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
@@ -163,7 +175,10 @@ final readonly class ItemRepository extends Repository
 
                 $stmt->bindValue(':sku', $sku, PDO::PARAM_STR);
                 // Execute the prepared statement
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
@@ -172,7 +187,10 @@ final readonly class ItemRepository extends Repository
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('FIND_BY_SKU', $stmt, ['sku' => $sku], $result);
+                $this->logSql('FIND_BY_SKU', $stmt, ['sku' => $sku], $queryTimeMs, $result);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FIND_BY_SKU_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
@@ -203,12 +221,15 @@ final readonly class ItemRepository extends Repository
     public function list(PaginationParams $paginationParams): array
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($paginationParams): array {
-            $this->logListStart($pdoId, $paginationParams);
             try {
+                $this->logListStart($pdoId, $paginationParams);
                 $stmt = $this->prepareListStatement($pdo, $paginationParams);
 
                 // Execute the prepared statement
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
@@ -216,7 +237,10 @@ final readonly class ItemRepository extends Repository
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('LIST', $stmt, [], $results);
+                $this->logSql('LIST', $stmt, [], $queryTimeMs, $results);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'LIST_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole
 
@@ -333,28 +357,6 @@ final readonly class ItemRepository extends Repository
     }
 
     /**
-     * Log the start of an filterCount.
-     *
-     * @param int   $pdoId ID of the PDO connection
-     * @param PaginationParams $paginationParams  Data being used for the list
-     */
-    protected function logListStart(int $pdoId, PaginationParams $paginationParams): void
-    {
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . 'LIST',
-            sprintf(
-                'pdoId: %d Listing items with limit: %s, offset: %s, filters: %s, sortBy: %s, sortDir: %s',
-                $pdoId,
-                var_export($paginationParams->limit, true),
-                var_export($paginationParams->offset, true),
-                var_export($paginationParams->filters, true),
-                var_export($paginationParams->sortBy, true),
-                var_export($paginationParams->sortDir, true)
-            )
-        );
-    }
-
-    /**
      * Count filtered items.
      *
      * @param array<string, mixed> $filters Optional filters
@@ -364,12 +366,15 @@ final readonly class ItemRepository extends Repository
     public function filteredCount(array $filters = []): int
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId) use ($filters): int {
-            $this->logFilterCountStart($pdoId, $filters);
             try {
+                $this->logFilterCountStart($pdoId, $filters);
                 $stmt = $this->prepareFilterCountStatement($pdo, $filters);
 
                 // Execute the prepared statement
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
@@ -378,7 +383,10 @@ final readonly class ItemRepository extends Repository
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('FILTERED_COUNT', $stmt, [], $result);
+                $this->logSql('FILTERED_COUNT', $stmt, [], $queryTimeMs, $result);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 if ($result === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
@@ -425,32 +433,21 @@ final readonly class ItemRepository extends Repository
     }
 
     /**
-     * Log the start of an filterCount.
-     *
-     * @param int   $pdoId ID of the PDO connection
-     * @param array<string, mixed> $filters  Data being used for the filterCount
-     */
-    protected function logFilterCountStart(int $pdoId, array $filters): void
-    {
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . 'FILTERED_COUNT',
-            sprintf('pdoId: %d Counting items with filters: %s', $pdoId, var_export($filters, true))
-        );
-    }
-
-    /**
      * Count total items in the table.
      */
     public function count(): int
     {
         return $this->pdoPool->withConnectionAndRetry(function (PDO $pdo, int $pdoId): int {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT', 'pdoId: ' . $pdoId . ' Counting all items');
             try {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT', 'pdoId: ' . $pdoId . ' Counting all items');
                 $sql  = 'SELECT count(*) as total FROM items';
                 $stmt = $pdo->prepare($sql);
 
                 // Execute the prepared statement
-                $isExecuted = $stmt->execute();
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
@@ -459,7 +456,10 @@ final readonly class ItemRepository extends Repository
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('COUNT', $stmt, [], $result);
+                $this->logSql('COUNT', $stmt, [], $queryTimeMs, $result);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'COUNT_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 if ($result === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
@@ -494,17 +494,23 @@ final readonly class ItemRepository extends Repository
     public function update(int $id, array $data): bool
     {
         return $this->pdoPool->withConnection(function (PDO $pdo, int $pdoId) use ($id, $data): bool {
-            $this->logUpdateStart($pdoId, $id, $data);
-
             try {
-                $stmt       = $this->prepareUpdateStatement($pdo, $id, $data);
-                $isExecuted = $stmt->execute();
+                $this->logUpdateStart($pdoId, $id, $data);
+                $stmt = $this->prepareUpdateStatement($pdo, $id, $data);
+
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('UPDATE', $stmt, $data, $isExecuted);
+                $this->logSql('UPDATE', $stmt, $data, $queryTimeMs, $isExecuted);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'UPDATE_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt);
@@ -537,70 +543,6 @@ final readonly class ItemRepository extends Repository
     }
 
     /**
-     * Log the start of an update.
-     *
-     * @param int   $pdoId ID of the PDO connection
-     * @param int   $id    Item ID being updated
-     * @param array<string, mixed> $data  Data being used for the update
-     */
-    protected function logUpdateStart(int $pdoId, int $id, array $data): void
-    {
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . 'UPDATE',
-            sprintf('pdoId: %d Updating item ID: %d with data: %s', $pdoId, $id, var_export($data, true))
-        );
-    }
-
-    /**
-     * Log an exception during update.
-     *
-     * @param string    $functionName Name of the function (for logging)
-     * @param int       $pdoId        ID of the PDO connection
-     * @param Throwable $throwable    The caught exception
-     */
-    protected function logException(string $functionName, int $pdoId, Throwable $throwable): void
-    {
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . '' . $functionName . '][Exception',
-            sprintf(
-                Messages::PDO_EXCEPTION_MESSAGE,
-                $pdoId,
-                $throwable->getCode(),
-                $throwable->getMessage()
-            )
-        );
-    }
-
-    /**
-     * Clean up and log PDO statement info.
-     *
-     * @param string         $functionName Name of the function (for logging)
-     * @param int            $pdoId        ID of the PDO connection
-     * @param \PDOStatement|null $pdoStatement The PDO statement to finalize
-     */
-    protected function finalizeStatement(string $functionName, int $pdoId, ?\PDOStatement $pdoStatement): void
-    {
-        if (!$pdoStatement instanceof \PDOStatement) {
-            return;
-        }
-
-        $errorCode = $pdoStatement->errorCode();
-        $errorInfo = $pdoStatement->errorInfo();
-
-        logDebug(
-            self::TAG . ':' . __LINE__ . '] [' . $functionName,
-            sprintf(
-                Messages::PDO_EXCEPTION_FINALLY_MESSAGE,
-                $pdoId,
-                $errorCode ?? 'N/A',
-                implode(', ', $errorInfo)
-            )
-        );
-
-        $this->pdoPool->clearStatement($pdoStatement);
-    }
-
-    /**
      * Delete a item by ID.
      *
      * @param int $id Item ID
@@ -616,13 +558,20 @@ final readonly class ItemRepository extends Repository
                 $stmt = $pdo->prepare($sql);
 
                 $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-                $isExecuted = $stmt->execute();
+
+                $queryStart  = microtime(true);
+                $isExecuted  = $stmt->execute();
+                $queryTimeMs = round((microtime(true) - $queryStart) * 1000, 3);
+
                 if ($isExecuted === false) {
                     throw new StatementException(Messages::QUERY_FAILED, 500);
                 }
 
                 // ✅ Dump actual SQL and result
-                $this->logSql('DELETE', $stmt, ['id' => $id], $isExecuted);
+                $this->logSql('DELETE', $stmt, ['id' => $id], $queryTimeMs, $isExecuted);
+
+                // Log query time
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . 'DELETE_QUERY_TIME', 'pdoId: ' . $pdoId . ' Query time: ' . $queryTimeMs . ' ms');
 
                 $result = $stmt->rowCount() > 0;
                 $this->pdoPool->clearStatement($stmt); // ✅ mandatory for unbuffered or pooled Swoole

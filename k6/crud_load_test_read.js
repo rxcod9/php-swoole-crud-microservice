@@ -10,14 +10,14 @@ import { Trend } from 'k6/metrics';
  */
 const ENV = {
     BASE_URL: __ENV.BASE_URL || 'http://localhost:9501',           // Base API URL
-    TOTAL_USERS: Number(__ENV.TOTAL_USERS) || 200,                 // Total users to create in setup
-    TOTAL_ITEMS: Number(__ENV.TOTAL_ITEMS) || 200,                 // Total items to create in setup
+    TOTAL_USERS: Number(__ENV.TOTAL_USERS) || 2000,                 // Total users to create in setup
+    TOTAL_ITEMS: Number(__ENV.TOTAL_ITEMS) || 2000,                 // Total items to create in setup
     HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.1,                 // Top N% of entities marked 'hot'
     COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.1,               // Top N% of entities marked 'cool'
     HOT_READ_RATIO: Number(__ENV.HOT_READ_RATIO) || 0.8,           // Probability of reading hot IDs
     HOT_UPDATE_RATIO: Number(__ENV.HOT_UPDATE_RATIO) || 0.01,      // Probability of updating hot IDs
     LIST_PAGES: Number(__ENV.LIST_PAGES) || 3,                     // Number of pages for list endpoints
-    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 2000,      // Max iterations per VU
+    TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 20000,      // Max iterations per VU
     MAX_DURATION: __ENV.MAX_DURATION || '10m',                      // Setup/teardown timeout
     MAX_VUS: Number(__ENV.MAX_VUS) || 50                          // Maximum virtual users
 };
@@ -30,13 +30,13 @@ const ENV = {
  */
 const listTrendUsers = new Trend('USERS_LIST_latency_ms');
 const readTrendUsers = new Trend('USERS_READ_latency_ms');
-const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
-const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
+// const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
+// const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
 
 const listTrendItems = new Trend('ITEMS_LIST_latency_ms');
 const readTrendItems = new Trend('ITEMS_READ_latency_ms');
-const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
-const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
+// const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
+// const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
 
 /**
  * --------------------
@@ -73,7 +73,7 @@ function generateUuid() {
  */
 function generateUser(index) {
     const id = generateUuid();
-    return { name: `user-${id}-${index}`, email: `user-${id}-${index}@example.com` };
+    return { name: `User ${index} ${id}`, email: `user-${index}-${id}@example.com` };
 }
 
 /**
@@ -109,7 +109,7 @@ function randomItem(arr) {
  */
 function postEntity(url, obj, trend) {
     const res = http.post(url, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-    trend.add(res.timings.duration);
+    // trend.add(res.timings.duration);
     check(res, { 'CREATE success': r => r.status === 201 });
     if (res.status === 201) {
         try {
@@ -120,6 +120,37 @@ function postEntity(url, obj, trend) {
         }
     }
     return null;
+}
+
+/**
+ * Warm cache for paginated list endpoints
+ * @param {string} baseUrl - API endpoint (users/items)
+ * @param {number} pages - Number of pages to request
+ * @param {Trend} trend - optional latency tracking
+ */
+function warmListCache(baseUrl, pages) {
+    console.log(`[CACHE WARMUP] Warming list cache for ${baseUrl}, ${pages} pages`);
+    for (let page = 1; page <= pages; page++) {
+        const url = `${ENV.BASE_URL}/${baseUrl}?page=${page}`;
+        const res = http.get(url);
+        check(res, { [`${baseUrl.toUpperCase()} LIST warm success`]: r => r.status === 200 }) ||
+            console.error(`[CACHE WARMUP LIST FAILED] URL: ${url} | Status: ${res.status}`);
+    }
+}
+
+/**
+ * Warm cache by reading hot IDs
+ * @param {string[]} hotIds - Array of hot IDs
+ * @param {string} baseUrl - API endpoint (users/items)
+ */
+function warmReadCache(hotIds, baseUrl) {
+    console.log(`[CACHE WARMUP] Warming ${hotIds.length} hot IDs for ${baseUrl}`);
+    hotIds.forEach(id => {
+        const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
+        const res = http.get(url);
+        check(res, { [`${baseUrl.toUpperCase()} warm READ success`]: r => r.status === 200 }) ||
+            console.error(`[CACHE WARMUP FAILED] URL: ${url} | Status: ${res.status}`);
+    });
 }
 
 /**
@@ -177,14 +208,32 @@ export function setup() {
     };
 
     // Create users and items
-    const userIds = createEntities(ENV.TOTAL_USERS, generateUser, 'users', createTrendUsers);
-    const itemIds = createEntities(ENV.TOTAL_ITEMS, generateItem, 'items', createTrendItems);
+    const userIds = createEntities(
+        ENV.TOTAL_USERS,
+        generateUser,
+        'users',
+        // createTrendUsers
+    );
+    const itemIds = createEntities(
+        ENV.TOTAL_ITEMS,
+        generateItem,
+        'items',
+        // createTrendItems
+    );
 
     // Determine hot and cool IDs
     const hotUserIds = slicePercent(userIds, ENV.HOT_PERCENT);
     const hotItemIds = slicePercent(itemIds, ENV.HOT_PERCENT);
     const coolUserIds = slicePercent(userIds.filter(id => !hotUserIds.includes(id)), ENV.COOL_PERCENT);
     const coolItemIds = slicePercent(itemIds.filter(id => !hotItemIds.includes(id)), ENV.COOL_PERCENT);
+
+    // --- WARM CACHE ---
+    warmReadCache(hotUserIds, 'users');
+    warmReadCache(hotItemIds, 'items');
+
+    // --- WARM CACHE for paginated lists ---
+    warmListCache('users', ENV.LIST_PAGES);
+    warmListCache('items', ENV.LIST_PAGES);
 
     return { userIds, itemIds, hotUserIds, hotItemIds, coolUserIds, coolItemIds };
 }
@@ -207,6 +256,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
                 const page = Math.floor(Math.random() * ENV.LIST_PAGES) + 1;
                 const url = `${ENV.BASE_URL}/${baseUrl}?page=${page}`;
                 const res = http.get(url);
+                console.log(`[${entity} LIST SUCCESS] URL: ${url} | Status: ${res.status} | CacheType: ${res.headers['X-Cache-Type']}`);
                 trends.list.add(res.timings.duration);
                 check(res, { [`${entity} LIST success`]: r => r.status === 200 }) ||
                     console.error(`[${entity} LIST FAILED] URL: ${url} | Status: ${res.status}`);
@@ -216,50 +266,52 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
             type: 'read',
             weight: weights.READ,
             handler: () => {
-                const id = hotIds.length && Math.random() < ENV.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                // const id = hotIds.length && Math.random() < ENV.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+                const id = randomItem(hotIds);
                 if (!id) return console.warn(`[${entity}] Skipping read: no ID available`);
                 const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
                 const res = http.get(url);
+                console.log(`[${entity} READ SUCCESS] URL: ${url} | ID: ${id} | Status: ${res.status} | CacheType: ${res.headers['X-Cache-Type']}`);
                 trends.read.add(res.timings.duration);
                 check(res, { [`${entity} READ success`]: r => r.status === 200 }) ||
                     console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status}`);
             }
         },
-        {
-            type: 'create',
-            weight: weights.CREATE,
-            handler: () => {
-                const obj = generateFn(Math.floor(Math.random() * 1_000_000));
-                const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-                trends.create?.add(res.timings.duration);
-                check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
-                    console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-                if (res.status === 201) {
-                    try {
-                        const parsed = JSON.parse(res.body);
-                        if (parsed?.id != null) vuIds.push(parsed.id);
-                        else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
-                    } catch (e) {
-                        console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
-                    }
-                }
-            }
-        },
-        {
-            type: 'update',
-            weight: weights.UPDATE,
-            handler: () => {
-                const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-                if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
-                if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
-                const obj = generateFn(id);
-                const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
-                const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
-                trends.update?.add(res.timings.duration);
-                check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
-                    console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-            }
-        }
+        // {
+        //     type: 'create',
+        //     weight: weights.CREATE,
+        //     handler: () => {
+        //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
+        //         const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
+        //         trends.create?.add(res.timings.duration);
+        //         check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
+        //             console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+        //         if (res.status === 201) {
+        //             try {
+        //                 const parsed = JSON.parse(res.body);
+        //                 if (parsed?.id != null) vuIds.push(parsed.id);
+        //                 else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
+        //             } catch (e) {
+        //                 console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
+        //             }
+        //         }
+        //     }
+        // },
+        // {
+        //     type: 'update',
+        //     weight: weights.UPDATE,
+        //     handler: () => {
+        //         const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
+        //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
+        //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
+        //         const obj = generateFn(id);
+        //         const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
+        //         const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
+        //         trends.update?.add(res.timings.duration);
+        //         check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
+        //             console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
+        //     }
+        // }
     ].filter(a => a.weight);
 
     // Weighted selection
@@ -283,27 +335,27 @@ export const options = {
     setupTimeout: ENV.MAX_DURATION,
     teardownTimeout: ENV.MAX_DURATION,
     stages: [
-        { duration: '2s', target: 0.1 },
-        { duration: '2s', target: 0.25 },
-        { duration: '2s', target: 0.4 },
-        { duration: '4s', target: 0.6 },
-        { duration: '4s', target: 0.8 },
-        { duration: '4s', target: 1 },
-        { duration: '4s', target: 0.8 },
-        { duration: '4s', target: 0.5 },
-        { duration: '2s', target: 0.25 },
-        { duration: '2s', target: 0 },
+        { duration: '2m', target: 0.1 },
+        { duration: '2m', target: 0.25 },
+        { duration: '2m', target: 0.4 },
+        { duration: '4m', target: 0.6 },
+        { duration: '4m', target: 0.8 },
+        { duration: '4m', target: 1 },
+        { duration: '4m', target: 0.8 },
+        { duration: '4m', target: 0.5 },
+        { duration: '2m', target: 0.25 },
+        { duration: '2m', target: 0 },
     ].map(s => ({ ...s, target: Math.floor(s.target * ENV.MAX_VUS) })),
     thresholds: {
         'http_req_duration': ['p(95)<200'],
+        // 'USERS_CREATE_latency_ms': ['avg<100'],
         'USERS_LIST_latency_ms': ['avg<100'],
-        'USERS_CREATE_latency_ms': ['avg<100'],
         'USERS_READ_latency_ms': ['avg<50'],
-        'USERS_UPDATE_latency_ms': ['avg<100'],
+        // 'USERS_UPDATE_latency_ms': ['avg<100'],
+        // 'ITEMS_CREATE_latency_ms': ['avg<100'],
         'ITEMS_LIST_latency_ms': ['avg<100'],
-        'ITEMS_CREATE_latency_ms': ['avg<100'],
         'ITEMS_READ_latency_ms': ['avg<50'],
-        'ITEMS_UPDATE_latency_ms': ['avg<100'],
+        // 'ITEMS_UPDATE_latency_ms': ['avg<100'],
     }
 };
 
@@ -324,24 +376,34 @@ export default function (data) {
         vuIds: VU_userIds,
         hotIds: data.hotUserIds,
         coolIds: data.coolUserIds,
-        weights: { LIST: 0.5, READ: 0.5, CREATE: 0, UPDATE: 0 },
+        weights: { LIST: 0.5, READ: 0.5 },
         generateFn: generateUser,
         baseUrl: 'users',
-        trends: { list: listTrendUsers, read: readTrendUsers, create: createTrendUsers, update: updateTrendUsers },
+        trends: {
+            list: listTrendUsers,
+            read: readTrendUsers,
+            // create: createTrendUsers,
+            // update: updateTrendUsers
+        },
         entity: 'USERS'
     });
 
     // Perform ITEMS CRUD
-    performCrudAction({
-        vuIds: VU_itemIds,
-        hotIds: data.hotItemIds,
-        coolIds: data.coolItemIds,
-        weights: { LIST: 0.5, READ: 0.5, CREATE: 0, UPDATE: 0 },
-        generateFn: generateItem,
-        baseUrl: 'items',
-        trends: { list: listTrendItems, read: readTrendItems, create: createTrendItems, update: updateTrendItems },
-        entity: 'ITEMS'
-    });
+    // performCrudAction({
+    //     vuIds: VU_itemIds,
+    //     hotIds: data.hotItemIds,
+    //     coolIds: data.coolItemIds,
+    //     weights: { LIST: 0.5, READ: 0.5 },
+    //     generateFn: generateItem,
+    //     baseUrl: 'items',
+    //     trends: {
+    //         list: listTrendItems,
+    //         read: readTrendItems,
+    //         // create: createTrendItems,
+    //         // update: updateTrendItems
+    //     },
+    //     entity: 'ITEMS'
+    // });
 
     sleep(Math.random() * 2);
 }

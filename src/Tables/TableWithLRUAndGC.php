@@ -150,6 +150,8 @@ class TableWithLRUAndGC extends BaseTableProxy implements Iterator, Countable
             return null;
         }
 
+        $this->evictor->onAccess($key);
+
         // TODO: Optionally update usage counter for true LRU tracking
         // $this->timestamps->touch($this->table, $key);
 
@@ -193,6 +195,7 @@ class TableWithLRUAndGC extends BaseTableProxy implements Iterator, Countable
     public function gc(): void
     {
         $this->gc->run();
+        $this->evictor->removeExpired();
     }
 
     // --------------------------------------------------------------------------
