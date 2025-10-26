@@ -158,7 +158,7 @@ final class ItemRepositoryTest extends TestCase
      * Test deleting a item.
      */
     public function testDeleteItem(): void
-    {        
+    {
         $this->runCoroutine(function (): void {
             $deleted = $this->itemRepository->delete(1);
             $this->assertTrue($deleted, 'Expected delete() to return true');
