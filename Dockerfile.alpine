@@ -13,7 +13,7 @@ RUN apk add --no-cache \
     && mkdir -p /var/log/supervisor /app/logs
 
 # PHP extensions
-RUN docker-php-ext-install sockets opcache pdo pdo_mysql pdo_sqlite
+RUN docker-php-ext-install opcache pdo pdo_mysql pdo_sqlite
 
 # Swoole via PECL
 ARG SWOOLE_VERSION=6.0.0
