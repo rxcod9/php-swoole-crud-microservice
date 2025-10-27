@@ -106,7 +106,7 @@ class TableEvictor
             $row       = $this->table->get($oldestKey);
 
             // If row missing or expired, remove from table & queue
-            if ($row !== null || ($row['expire_at'] ?? PHP_INT_MAX) <= $currentTime) {
+            if ($row !== null && (($row['expire_at'] ?? PHP_INT_MAX) <= $currentTime)) {
                 $this->lruQueue->shift();
                 $this->table->del($oldestKey);
             }
