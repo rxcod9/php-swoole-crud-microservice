@@ -1,82 +1,83 @@
-# ----------------------------------------
-# Base stage
-# ----------------------------------------
+# ------------------------------------------------------------------------
+# Stage: base image
+# Alpine 3.20 + PHP 8.4 (CLI)
+# Verified for amd64 & arm64 architectures
+# ------------------------------------------------------------------------
 FROM php:8.4-cli-alpine AS alpine-base
 
-# Environment variable for Swoole version
-ARG SWOOLE_VERSION=6.0.0
-
-# ----------------------------------------
-# 1️⃣ Install runtime dependencies
-# ----------------------------------------
-RUN apk add --no-cache \
+# ------------------------------------------------------------------------
+# Stage: System dependencies
+# ------------------------------------------------------------------------
+RUN apk update && apk upgrade && \
+    apk del libressl libressl-dev || true && \
+    apk add --no-cache \
     bash \
     curl \
     git \
     libpq \
     libzip \
     openssl \
-    sqlite-libs \
+    sqlite \
     supervisor \
+    mariadb-connector-c \
     && mkdir -p /var/log/supervisor /app/logs
 
-# ----------------------------------------
-# 2️⃣ Install build-time dependencies
-# These are removed later to keep image small
-# ----------------------------------------
+# ------------------------------------------------------------------------
+# Stage: PHP extension build dependencies
+# ------------------------------------------------------------------------
 RUN apk add --no-cache --virtual .build-deps \
     autoconf \
     make \
     g++ \
     pkgconf \
     linux-headers \
-    libressl-dev \
+    openssl-dev \
     c-ares-dev \
     mariadb-connector-c-dev \
-    sqlite-dev
+    sqlite-dev \
+    libzip-dev \
+    && docker-php-ext-install -j$(nproc) \
+        opcache \
+        pdo \
+        pdo_mysql \
+        pdo_sqlite
 
-# ----------------------------------------
-# 3️⃣ Compile core PHP extensions
-# ----------------------------------------
-RUN docker-php-ext-install -j$(nproc) \
-    opcache \
-    pdo \
-    pdo_mysql \
-    pdo_sqlite
+# ------------------------------------------------------------------------
+# Stage: Swoole extension via PECL
+# ------------------------------------------------------------------------
+ARG SWOOLE_VERSION=6.0.0
+RUN pecl install swoole-${SWOOLE_VERSION} && \
+    docker-php-ext-enable swoole && \
+    apk del .build-deps
 
-# ----------------------------------------
-# 4️⃣ Install Swoole from PECL
-# ----------------------------------------
-RUN pecl install swoole-${SWOOLE_VERSION} \
-    && docker-php-ext-enable swoole
-
-# ----------------------------------------
-# 5️⃣ Clean build dependencies (smaller image)
-# ----------------------------------------
-RUN apk del .build-deps && rm -rf /tmp/* /usr/src/php*
-
-# ----------------------------------------
-# 6️⃣ Install Composer from official image
-# ----------------------------------------
+# ------------------------------------------------------------------------
+# Stage: Composer setup
+# ------------------------------------------------------------------------
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# ----------------------------------------
-# 7️⃣ Set working directory and install app
-# ----------------------------------------
+# ------------------------------------------------------------------------
+# Stage: Application setup
+# ------------------------------------------------------------------------
 WORKDIR /app
-
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --prefer-dist
+RUN composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
 
+# Copy all source files and supervisor config
 COPY . .
-
-# ----------------------------------------
-# 8️⃣ Supervisor for process management
-# ----------------------------------------
 COPY docker/supervisord.conf /etc/supervisor/conf.d/swoole.conf
 
-# ----------------------------------------
-# 9️⃣ Ports and startup command
-# ----------------------------------------
+# ------------------------------------------------------------------------
+# Stage: Runtime configuration
+# ------------------------------------------------------------------------
 EXPOSE 9501 9310 9502
+
+# Environment setup for production
+ENV APP_ENV=production \
+    APP_DEBUG=0 \
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS=0 \
+    PHP_OPCACHE_MAX_ACCELERATED_FILES=20000 \
+    PHP_OPCACHE_MEMORY_CONSUMPTION=256 \
+    PHP_OPCACHE_INTERNED_STRINGS_BUFFER=16
+
+# Default CMD: start supervisord -> swoole worker
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/swoole.conf"]
