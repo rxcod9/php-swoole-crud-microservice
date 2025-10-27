@@ -16,10 +16,10 @@ RUN apk update && apk upgrade && \
     git \
     libpq \
     libzip \
+    mariadb-connector-c \
     openssl \
     sqlite \
     supervisor \
-    mariadb-connector-c \
     && mkdir -p /var/log/supervisor /app/logs
 
 # ------------------------------------------------------------------------
@@ -27,15 +27,16 @@ RUN apk update && apk upgrade && \
 # ------------------------------------------------------------------------
 RUN apk add --no-cache --virtual .build-deps \
     autoconf \
-    make \
-    g++ \
-    pkgconf \
-    linux-headers \
-    openssl-dev \
+    brotli-dev \
     c-ares-dev \
-    mariadb-connector-c-dev \
-    sqlite-dev \
+    g++ \
     libzip-dev \
+    linux-headers \
+    make \
+    mariadb-connector-c-dev \
+    openssl-dev \
+    pkgconf \
+    sqlite-dev \
     && docker-php-ext-install -j$(nproc) \
         opcache \
         pdo \
