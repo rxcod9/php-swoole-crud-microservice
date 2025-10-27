@@ -1,3 +1,4 @@
+# ------------------------------------------------------------------------
 # Dockerfile for PHP Swoole CRUD Microservice
 #
 # This Dockerfile builds a PHP 8.4 CLI image with Swoole, Redis, Xdebug, Opcache, and other required extensions.
@@ -10,6 +11,14 @@
 # Usage:
 #   docker build -t php-swoole-crud-microservice .
 #   docker run -p 9501:9501 php-swoole-crud-microservice
+#
+# NOTE: This file is optimized to use BuildKit cache mounts and a dedicated cache scope
+#       in CI so that cache for Debian-based image is isolated from other flavors.
+# ------------------------------------------------------------------------
+
+# Use BuildKit syntax features (for --mount=type=cache)
+# make sure DOCKER_BUILDKIT=1 in local dev or CI
+# syntax=docker/dockerfile:1.4
 
 # ================= Base Stage =================
 # Contains common runtime dependencies
@@ -30,7 +39,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/* \
     # Create supervisor log directory
-    && mkdir -p /var/log/supervisor
+    && mkdir -p /var/log/supervisor /app/logs
 
 # ================= Build Stage =================
 FROM base AS build
@@ -40,14 +49,21 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     build-essential \
     pkg-config \
+    git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # --- PHP extensions ---
-RUN docker-php-ext-install sockets opcache pdo pdo_mysql pdo_sqlite
+# Use a cache mount for PHP extension sources to avoid re-downloading/building unchanged sources
+# Cache target is unique for Debian flavor: /usr/src/php/ext-debian
+RUN --mount=type=cache,target=/usr/src/php/ext-debian \
+    docker-php-ext-install sockets opcache pdo pdo_mysql pdo_sqlite
 
 # --- Build Swoole from source with caching ---
 ARG SWOOLE_VERSION=6.0.0
-RUN --mount=type=cache,target=/tmp/swoole-build \
+# Use a dedicated cache mount for the swoole build to speed up rebuilds for this flavor.
+# The cache target path is unique (swoole-build-debian) to avoid sharing with other flavors.
+RUN --mount=type=cache,target=/tmp/swoole-build-debian \
     git clone -b v${SWOOLE_VERSION} https://github.com/swoole/swoole-src.git /usr/src/swoole \
  && cd /usr/src/swoole \
  && phpize \
@@ -56,7 +72,8 @@ RUN --mount=type=cache,target=/tmp/swoole-build \
  && docker-php-ext-enable swoole opcache
 
 # --- PECL extensions with caching ---
-RUN --mount=type=cache,target=/tmp/pecl \
+# Dedicated cache target for PECL build artifacts for Debian flavor.
+RUN --mount=type=cache,target=/tmp/pecl-debian \
     pecl install redis xdebug \
  && docker-php-ext-enable redis xdebug
 
@@ -73,9 +90,11 @@ WORKDIR /app
 # --- Copy only composer files first for caching ---
 COPY composer.json composer.lock ./
 
-# --- Install application dependencies with caching ---
-RUN --mount=type=cache,target=/root/.composer/cache \
-    composer install --no-dev --optimize-autoloader --prefer-dist
+# --- Install application dependencies with composer cache (Debian-specific composer cache) ---
+# Composer cache mount target is unique: /root/.composer/cache-debian
+# This avoids sharing composer caches with the Alpine build.
+RUN --mount=type=cache,target=/root/.composer/cache-debian \
+    composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
 
 # --- Ensure logs directory exists ---
 RUN mkdir -p /app/logs

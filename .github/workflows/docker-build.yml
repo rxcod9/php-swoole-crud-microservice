@@ -44,7 +44,6 @@ jobs:
 
       # --------------------------
       # Extract Docker metadata
-      # This automatically generates tags & labels
       # --------------------------
       - name: Extract Docker metadata
         id: meta
@@ -65,36 +64,99 @@ jobs:
             latest
 
       # --------------------------
-      # Build and Push multi-arch Docker image
+      # Build Debian-based image (uses cache scope 'debian')
       # --------------------------
-      - name: Build and Push Docker image
+      - name: Build Debian image (multi-arch) - build only
+        id: build_debian
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha,scope=debian
+          cache-to: type=gha,scope=debian,mode=max
+          outputs: type=local,dest=./dist/debian  # optional local export for inspection
+
+      # --------------------------
+      # Sanity test Debian image (run a container from the built image)
+      # Note: we use the built local result to run tests; this pattern avoids pushing a broken image.
+      # --------------------------
+      - name: Sanity test Debian build
+        if: always()
+        run: |
+          # load local image tar if outputs were generated; fallback: build a temp image
+          echo "Sanity testing Debian image build artifacts"
+          # Build a temporary tag (using the Dockerfile) and run checks to validate extensions
+          docker buildx build --load --file ./Dockerfile --tag rxcod9/php-swoole-crud-microservice:debian-test .
+          docker run --rm rxcod9/php-swoole-crud-microservice:debian-test php -v
+          docker run --rm rxcod9/php-swoole-crud-microservice:debian-test php -m | grep -E 'swoole|redis|pdo_mysql|pdo_sqlite' || (echo "Required extensions missing" && exit 1)
+
+      # --------------------------
+      # Push Debian image (only if tests pass)
+      # --------------------------
+      - name: Push Debian image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha,scope=debian
+          cache-to: type=gha,scope=debian,mode=max
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       # --------------------------
-      # Build and Push alpine Docker image
+      # Build Alpine-based image (uses cache scope 'alpine')
       # --------------------------
-      - name: Build and Push Alpine Docker image
+      - name: Build Alpine image (multi-arch) - build only
+        id: build_alpine
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.alpine
+          push: false
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha,scope=alpine
+          cache-to: type=gha,scope=alpine,mode=max
+          outputs: type=local,dest=./dist/alpine
+
+      # --------------------------
+      # Sanity test Alpine image
+      # --------------------------
+      - name: Sanity test Alpine build
+        if: always()
+        run: |
+          echo "Sanity testing Alpine image build artifacts"
+          docker buildx build --load --file ./Dockerfile.alpine --tag rxcod9/php-swoole-crud-microservice:alpine-test .
+          docker run --rm rxcod9/php-swoole-crud-microservice:alpine-test php -v
+          docker run --rm rxcod9/php-swoole-crud-microservice:alpine-test php -m | grep -E 'swoole|redis|pdo_mysql|pdo_sqlite' || (echo "Required extensions missing" && exit 1)
+
+      # --------------------------
+      # Push Alpine image (only if tests pass)
+      # --------------------------
+      - name: Push Alpine image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.alpine
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=gha,scope=alpine
+          cache-to: type=gha,scope=alpine,mode=max
           tags: |
             rxcod9/php-swoole-crud-microservice:alpine-${{ steps.meta.outputs.version }}
             rxcod9/php-swoole-crud-microservice:alpine-latest
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       # --------------------------
       # Show resulting image tags (debugging)

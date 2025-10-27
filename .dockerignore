@@ -1,0 +1,117 @@
+/vendor/
+/.php-cs-fixer.cache
+/.phpunit.result.cache
+/.phpmd.result-cache.php
+/.idea/
+/build/
+ab*.log
+*.log
+
+# vscode
+.vscode/*
+!.vscode/launch.json
+phpmd.csv
+.phpunit.cache
+database.sqlite
+tests/logs/
+tests/coverage/
+.php-cs-fixer.cache
+
+# Node / Frontend artifacts
+node_modules/
+dist/
+build/
+
+# PHP artifacts
+# composer.lock
+
+# Cache and temp files
+*.cache
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# PHPUnit / test artifacts
+.phpunit.result.cache
+
+# SQLite local dev DB
+
+# IDE / Editor
+.idea/
+.vscode/
+*.iml
+
+# Docker
+docker-compose.override.yml
+.env.local
+.rector_cache
+supervisord.pid
+testing.db
+
+.git
+node_modules
+vendor/
+tests/
+docs/
+.env
+*.md
+Dockerfile
+docker-compose.yml
+
+# -----------------------------------------------------------------------------
+# Core version control / OS junk
+# -----------------------------------------------------------------------------
+.git
+.gitignore
+.DS_Store
+.vscode/
+.rector_cache/
+.phpunit.cache/
+.phpunit.result.cache
+.php-cs-fixer.cache
+logs/
+
+# -----------------------------------------------------------------------------
+# Development / QA / Static analysis tools
+# -----------------------------------------------------------------------------
+# phpmd.xml
+phpmd.csv
+# phpcs.xml
+# rector.php
+# phpstan.neon
+sonar-project.properties
+# phpunit.xml
+renovate.json
+renovate.json5
+# tools/
+# tests/
+# scripts/
+grafana/
+k6/
+
+# -----------------------------------------------------------------------------
+# Docs / Misc
+# -----------------------------------------------------------------------------
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+UPGRADING.md
+cover.png
+docs/
+build/
+# Keep build if you actually have compiled assets (then comment above)
+
+# -----------------------------------------------------------------------------
+# Composer / Node / cache
+# -----------------------------------------------------------------------------
+vendor/
+node_modules/
+composer.phar
+
+# -----------------------------------------------------------------------------
+# Env files / secrets
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!*.dist
