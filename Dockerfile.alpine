@@ -1,6 +1,14 @@
+# ----------------------------------------
+# Base stage
+# ----------------------------------------
 FROM php:8.4-cli-alpine AS alpine-base
 
-# Minimal dependencies
+# Environment variable for Swoole version
+ARG SWOOLE_VERSION=6.0.0
+
+# ----------------------------------------
+# 1️⃣ Install runtime dependencies
+# ----------------------------------------
 RUN apk add --no-cache \
     bash \
     curl \
@@ -8,37 +16,67 @@ RUN apk add --no-cache \
     libpq \
     libzip \
     openssl \
-    sqlite \
+    sqlite-libs \
     supervisor \
     && mkdir -p /var/log/supervisor /app/logs
 
-# PHP extensions
-RUN docker-php-ext-install opcache pdo pdo_mysql pdo_sqlite
-
-# Swoole via PECL
-ARG SWOOLE_VERSION=6.0.0
-RUN apk add --no-cache --virtual \
-    .build-deps \
+# ----------------------------------------
+# 2️⃣ Install build-time dependencies
+# These are removed later to keep image small
+# ----------------------------------------
+RUN apk add --no-cache --virtual .build-deps \
     autoconf \
-    g++ \
     make \
-    pkgconfig \
+    g++ \
+    pkgconf \
     linux-headers \
     libressl-dev \
     c-ares-dev \
-    && pecl install swoole-${SWOOLE_VERSION} \
-    && docker-php-ext-enable swoole \
-    && apk del .build-deps
+    mariadb-connector-c-dev \
+    sqlite-dev
 
-# Composer
+# ----------------------------------------
+# 3️⃣ Compile core PHP extensions
+# ----------------------------------------
+RUN docker-php-ext-install -j$(nproc) \
+    opcache \
+    pdo \
+    pdo_mysql \
+    pdo_sqlite
+
+# ----------------------------------------
+# 4️⃣ Install Swoole from PECL
+# ----------------------------------------
+RUN pecl install swoole-${SWOOLE_VERSION} \
+    && docker-php-ext-enable swoole
+
+# ----------------------------------------
+# 5️⃣ Clean build dependencies (smaller image)
+# ----------------------------------------
+RUN apk del .build-deps && rm -rf /tmp/* /usr/src/php*
+
+# ----------------------------------------
+# 6️⃣ Install Composer from official image
+# ----------------------------------------
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# ----------------------------------------
+# 7️⃣ Set working directory and install app
+# ----------------------------------------
 WORKDIR /app
+
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --prefer-dist
 
 COPY . .
+
+# ----------------------------------------
+# 8️⃣ Supervisor for process management
+# ----------------------------------------
 COPY docker/supervisord.conf /etc/supervisor/conf.d/swoole.conf
 
+# ----------------------------------------
+# 9️⃣ Ports and startup command
+# ----------------------------------------
 EXPOSE 9501 9310 9502
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/swoole.conf"]
