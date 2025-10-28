@@ -11,11 +11,12 @@
 
 declare(strict_types=1);
 
+define('VENDOR_AUTOLOAD_PATH', __DIR__ . '/vendor/autoload.php');
 /**
  * Directories to preload.
  */
 $dirs = [
-    __DIR__ . '/vendor/autoload.php',
+    VENDOR_AUTOLOAD_PATH,
     __DIR__ . '/src',
     __DIR__ . '/app',
 ];
@@ -23,8 +24,8 @@ $dirs = [
 /**
  * --- Step 1: Load Composer Autoloader ---
  */
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(VENDOR_AUTOLOAD_PATH)) {
+    require_once VENDOR_AUTOLOAD_PATH;
 }
 
 /**

@@ -39,6 +39,9 @@ services:
     command: php public/metrics-server.php
     ports:
       - "${METRICS_PORT:-9310}:${METRICS_PORT:-9310}"
+    depends_on:                           # Wait for App
+      app:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${METRICS_PORT:-9310}"]
       interval: 30s

@@ -9,17 +9,25 @@ use PhpParser\Node;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\Trait_;
-use PhpParser\Node\Stmt\Namespace_;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 
 /**
- * Adds or merges class-level PHPDoc.
- * Sets correct @category and @package based on namespace.
+ * Rector rule to add or merge class-level PHPDoc.
+ * Ensures consistent @category and @package tags based on namespace.
+ *
+ * @category  RectorRules
+ * @package   RectorRules
+ * @license   MIT
  */
 final class AddClassDocRector extends AbstractRector
 {
+    /**
+     * Cached composer.json metadata.
+     *
+     * @var array<string, mixed>
+     */
     private array $composerMeta = [];
 
     public function __construct()
@@ -33,6 +41,9 @@ final class AddClassDocRector extends AbstractRector
         }
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
@@ -50,11 +61,14 @@ CODE,
 /**
  * Class UserService
  *
- * Handles all user operations
+ * Handles all user operations.
  *
  * @category  Services
  * @package   App\Services
- * @var ?int $size
+ * @author    Example <user@example.com>
+ * @license   MIT
+ * @version   1.0.0
+ * @since     2025-10-28
  */
 class UserService
 {
@@ -67,52 +81,202 @@ CODE
         );
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getNodeTypes(): array
     {
         return [Class_::class, Interface_::class, Trait_::class];
     }
 
+    /**
+     * Adds or updates the class-level PHPDoc with metadata and composer info.
+     *
+     * @param Node&Class_|Interface_|Trait_ $node
+     * @return Node|null
+     */
     public function refactor(Node $node): ?Node
     {
-        $filePath     = $this->file->getFilePath();
-        $license            = $this->composerMeta['license'] ?? '';
-        $version            = $this->composerMeta['version'] ?? '1.0.0';
-        $authors            = $this->composerMeta['authors'] ?? [];
-        $authorStr          = $this->getAuthorsString($authors);
-        $copyrightStr       = "Copyright (c) " . date('Y');
-        $generated          = date('Y-m-d');
+        $filePath   = $this->file->getFilePath();
+        $license    = $this->composerMeta['license'] ?? '';
+        $version    = $this->composerMeta['version'] ?? '1.0.0';
+        $authors    = $this->composerMeta['authors'] ?? [];
+        $authorStr  = $this->getAuthorsString($authors);
+        $copyright  = 'Copyright (c) ' . date('Y');
+        $generated  = date('Y-m-d');
 
-        // Dynamically compute namespace from file content
-        $namespace = $this->resolveNamespaceFromFile($filePath);
-        $category  = $this->computeCategoryFromNamespace($namespace);
+        $namespace  = $this->resolveNamespaceFromFile($filePath);
+        $category   = $this->computeCategoryFromNamespace($namespace);
+        $className  = $node->name?->toString() ?? 'AnonymousClass';
+        $desc       = $this->generateDescriptionFromClassName($className);
 
-
-        $className = $node->name?->toString() ?? 'AnonymousClass';
-        $description = $this->generateDescriptionFromClassName($className);
-
-        $classDoc = <<<PHPDOC
+        $newDoc = <<<PHPDOC
 /**
  * Class {$className}
  *
- * {$description}
+ * {$desc}
  *
  * @category  {$category}
  * @package   {$namespace}
  * @author    {$authorStr}
- * @copyright {$copyrightStr}
+ * @copyright {$copyright}
  * @license   {$license}
  * @version   {$version}
  * @since     {$generated}
  */
 PHPDOC;
 
-        $existingDoc = $node->getDocComment();
-        $mergedDoc   = $this->mergeDocComment($existingDoc, $classDoc);
-
+        $mergedDoc = $this->mergeDocComment($node->getDocComment(), $newDoc);
         $node->setDocComment($mergedDoc);
 
         return $node;
     }
+
+    /**
+     * Merge an existing DocBlock with a generated one.
+     *
+     * @param Doc|null $existing
+     * @param string   $newDoc
+     * @return Doc
+     */
+    private function mergeDocComment(?Doc $existing, string $newDoc): Doc
+    {
+        $indent       = $this->extractIndent($existing);
+        [$existingDesc, $existingTags] = $this->parseDoc($existing?->getText() ?? '');
+        [$newDesc, $newTags]           = $this->parseDoc($newDoc);
+
+        [$finalDesc, $finalTags] = $this->mergeDocParts($existingDesc, $existingTags, $newDesc, $newTags);
+
+        $merged = $this->buildDocBlock($finalDesc, $finalTags, $indent);
+        return new Doc($merged);
+    }
+
+    /**
+     * Extracts indentation from existing doc comment.
+     *
+     * @param Doc|null $doc
+     * @return string
+     */
+    private function extractIndent(?Doc $doc): string
+    {
+        if ($doc && preg_match('/^(\s*)\/\*\*/', $doc->getText(), $matches)) {
+            return $matches[1];
+        }
+        return '    '; // Default indent (4 spaces)
+    }
+
+    /**
+     * Parse a DocBlock string into description and tags.
+     *
+     * @param string $doc
+     * @return array{array<int, string>, array<string, array<int, string>>}
+     */
+    private function parseDoc(string $doc): array
+    {
+        $lines = preg_split('/\R/', trim($doc, "/* \n\t"));
+        $desc  = [];
+        $tags  = [];
+
+        foreach ($lines as $line) {
+            $line = trim(ltrim($line, "* \t"));
+            if ($line === '') {
+                continue;
+            }
+
+            if (str_starts_with($line, '@')) {
+                if (preg_match('/^@+(\S+)\s*(.*)$/', $line, $m)) {
+                    $tag = $m[1];
+                    $val = $m[2] ?? '';
+                    $tags[$tag][] = $val;
+                }
+            } else {
+                $desc[] = $line;
+            }
+        }
+
+        return [$desc, $tags];
+    }
+
+    /**
+     * Merge description and tags from both existing and new docs.
+     *
+     * @param array<int, string> $existingDesc
+     * @param array<string, array<int, string>> $existingTags
+     * @param array<int, string> $newDesc
+     * @param array<string, array<int, string>> $newTags
+     * @return array{array<int, string>, array<string, array<int, string>>}
+     */
+    private function mergeDocParts(
+        array $existingDesc,
+        array $existingTags,
+        array $newDesc,
+        array $newTags
+    ): array {
+        $finalDesc = $existingDesc ?: $newDesc;
+        $finalTags = $existingTags;
+
+        foreach ($newTags as $tag => $values) {
+            if (!isset($finalTags[$tag])) {
+                $finalTags[$tag] = $values;
+            }
+        }
+
+        return [$finalDesc, $finalTags];
+    }
+
+    /**
+     * Build a formatted PHPDoc block.
+     *
+     * @param array<int, string> $desc
+     * @param array<string, array<int, string>> $tags
+     * @param string $indent
+     * @return string
+     */
+    private function buildDocBlock(array $desc, array $tags, string $indent): string
+    {
+        $tagOrder = [
+            'category', 'package', 'author', 'copyright',
+            'license', 'version', 'since', 'link', 'var', 'method'
+        ];
+
+        $allTags   = array_merge(array_keys($tags), $tagOrder);
+        $maxTagLen = max(array_map('strlen', $allTags));
+        $doc       = "{$indent}/**\n";
+
+        foreach ($desc as $line) {
+            $doc .= "{$indent} * {$line}\n";
+        }
+
+        if ($desc && $tags) {
+            $doc .= "{$indent} *\n";
+        }
+
+        foreach ($tagOrder as $tag) {
+            if (!isset($tags[$tag])) {
+                continue;
+            }
+            foreach ($tags[$tag] as $val) {
+                $pad = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
+                $doc .= "{$indent} * @{$tag}{$pad}{$val}\n";
+            }
+            unset($tags[$tag]);
+        }
+
+        // Append any unlisted tags
+        foreach ($tags as $tag => $vals) {
+            foreach ($vals as $val) {
+                $pad = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
+                $doc .= "{$indent} * @{$tag}{$pad}{$val}\n";
+            }
+        }
+
+        $doc .= "{$indent} */";
+        return $doc;
+    }
+
+    // ------------------------------------------------------------------------
+    // Existing helper methods (unchanged)
+    // ------------------------------------------------------------------------
 
     private function getAuthorsString(array $authors): string
     {
@@ -126,7 +290,6 @@ PHPDOC;
 
     private function computeCategoryFromNamespace(string $namespace): string
     {
-        // Use second segment of namespace if exists, otherwise fallback to "General"
         $parts = explode('\\', $namespace);
         return $parts[1] ?? 'General';
     }
@@ -134,10 +297,7 @@ PHPDOC;
     private function resolveNamespaceFromFile(string $filePath): string
     {
         $content = file_get_contents($filePath);
-        if (preg_match('/^namespace\s+([^\s;]+);/m', $content, $matches)) {
-            return $matches[1];
-        }
-        return 'Global';
+        return preg_match('/^namespace\s+([^\s;]+);/m', $content, $m) ? $m[1] : 'Global';
     }
 
     private function generateDescriptionFromClassName(string $className): string
@@ -145,115 +305,6 @@ PHPDOC;
         $className = preg_replace('/(Service|Manager|Repository|Handler|Processor)$/', '', $className);
         $words = preg_split('/(?=[A-Z])/', $className, -1, PREG_SPLIT_NO_EMPTY);
         $entity = $words ? strtolower(implode(' ', $words)) : strtolower($className);
-        return 'Handles all ' . $entity . ' operations.';
-    }
-
-    private function resolveNamespace(Node\Stmt\Class_|Node\Stmt\Interface_|Node\Stmt\Trait_ $class): string
-    {
-        $namespace = $class->getAttribute('parent');
-        while ($namespace && !$namespace instanceof Namespace_) {
-            $namespace = $namespace->getAttribute('parent');
-        }
-        return $namespace instanceof Namespace_ ? $namespace->name?->toString() ?? '' : '';
-    }
-
-    private function mergeDocComment(?Doc $existing, string $newDoc): Doc
-    {
-        $tagOrder = [
-            'category',
-            'package',
-            'author',
-            'copyright',
-            'license',
-            'version',
-            'since',
-            'link',
-            'var',      // class properties
-            'method',   // class methods
-        ];
-
-        // Determine indentation from existing doc or default 4 spaces
-        $indent = '    ';
-        if ($existing !== null) {
-            if (preg_match('/^(\s*)\/\*\*/', $existing->getText(), $matches)) {
-                $indent = $matches[1];
-            }
-        }
-
-        $parseDoc = function (string $doc): array {
-            $lines = preg_split('/\R/', trim($doc, "/* \n\t"));
-            $desc = [];
-            $tags = [];
-            foreach ($lines as $line) {
-                $line = trim(ltrim($line, "* \t"));
-                if ($line === '') {
-                    continue;
-                }
-
-                if (str_starts_with($line, '@')) {
-                    // Remove extra @ symbols and extract tag/value
-                    preg_match('/^@+(\S+)\s*(.*)$/', $line, $matches);
-                    $tag = $matches[1] ?? '';
-                    $value = $matches[2] ?? '';
-                    if ($tag) {
-                        $tags[$tag][] = $value;
-                    }
-                } else {
-                    $desc[] = $line;
-                }
-            }
-            return [$desc, $tags];
-        };
-
-        [$existingDesc, $existingTags] = $parseDoc($existing?->getText() ?? '');
-        [$newDesc, $newTags] = $parseDoc($newDoc);
-
-        // Preserve existing description
-        $finalDesc = $existingDesc ?: $newDesc;
-
-        // Merge tags: keep existing, add missing from new
-        $finalTags = $existingTags;
-        foreach ($newTags as $tag => $values) {
-            if (!isset($finalTags[$tag])) {
-                $finalTags[$tag] = $values;
-            }
-        }
-
-        // Compute max tag length for alignment
-        $allTags = array_merge(array_keys($finalTags), $tagOrder);
-        $maxTagLen = max(array_map('strlen', $allTags));
-
-        // Rebuild doc
-        $merged = "{$indent}/**\n";
-
-        foreach ($finalDesc as $line) {
-            $merged .= "{$indent} * {$line}\n";
-        }
-
-        if ($finalDesc && $finalTags) {
-            $merged .= "{$indent} *\n";
-        }
-
-        // Append tags in PHPCS order with aligned values
-        foreach ($tagOrder as $tag) {
-            if (!isset($finalTags[$tag])) continue;
-            foreach ($finalTags[$tag] as $value) {
-                $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
-                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
-            }
-            unset($finalTags[$tag]);
-        }
-
-        // Append any remaining tags
-        foreach ($finalTags as $tag => $values) {
-            foreach ($values as $value) {
-                $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
-                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
-            }
-        }
-
-        $merged .= "{$indent} */";
-
-        return new Doc($merged);
+        return "Handles all {$entity} operations.";
     }
 }

@@ -25,6 +25,9 @@ use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 
+/**
+ * Rector Rule: Adds file-level PHPDoc with metadata above declare(strict_types=1)
+ */
 final class AddFileDocBeforeDeclareRector extends AbstractRector
 {
     private array $composerMeta = [];
@@ -88,6 +91,12 @@ CODE
         return [Declare_::class];
     }
 
+    /**
+     * Refactor the file by injecting a file-level PHPDoc before declare(strict_types=1)
+     *
+     * @param Node $node
+     * @return Node|null
+     */
     public function refactor(Node $node): ?Node
     {
         if (!$node instanceof Declare_) {
@@ -97,48 +106,70 @@ CODE
         $filePath     = $this->file->getFilePath();
         $relativePath = str_replace(getcwd() . DIRECTORY_SEPARATOR, '', $filePath);
 
-        $projectName        = $this->composerMeta['name'] ?? 'Unknown Project';
-        $projectDescription = $this->composerMeta['description'] ?? '';
-        $license            = $this->composerMeta['license'] ?? '';
-        $version            = $this->composerMeta['version'] ?? '1.0.0';
-        $authors            = $this->composerMeta['authors'] ?? [];
-        $authorStr          = $this->getAuthorsString($authors);
-        $copyrightStr       = "Copyright (c) " . date('Y');
-        $generated          = date('Y-m-d');
-        $link               = "https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/" . $relativePath;
+        $meta = $this->buildMetadata($filePath, $relativePath);
 
-        $namespace = $this->resolveNamespaceFromFile($filePath);
-        $category  = $this->computeCategoryFromNamespace($namespace);
+        // Create new file-level doc
+        $fileDoc = $this->buildFileDoc($meta, $relativePath);
 
-        $fileDoc = <<<PHPDOC
-/**
- * {$relativePath}
- *
- * Project: {$projectName}
- * Description: {$projectDescription}
- *
- * PHP version 8.4
- *
- * @category  {$category}
- * @package   {$namespace}
- * @author    {$authorStr}
- * @copyright {$copyrightStr}
- * @license   {$license}
- * @version   {$version}
- * @since     {$generated}
- * @link      {$link}
- */
-PHPDOC;
-
+        // Merge existing doc (if any)
         $existingDoc = $node->getDocComment();
         $mergedDoc   = $this->mergeDocComment($existingDoc, $fileDoc);
 
-        // Ensure correct whitespace before declare
+        // Insert before declare(strict_types=1)
         $node->setAttribute('comments', [$mergedDoc]);
-
         return $node;
     }
 
+    /**
+     * Build project metadata from composer.json and file path
+     */
+    private function buildMetadata(string $filePath, string $relativePath): array
+    {
+        $namespace = $this->resolveNamespaceFromFile($filePath);
+
+        return [
+            'project'     => $this->composerMeta['name'] ?? 'Unknown Project',
+            'description' => $this->composerMeta['description'] ?? '',
+            'license'     => $this->composerMeta['license'] ?? 'MIT',
+            'version'     => $this->composerMeta['version'] ?? '1.0.0',
+            'authors'     => $this->getAuthorsString($this->composerMeta['authors'] ?? []),
+            'category'    => $this->computeCategoryFromNamespace($namespace),
+            'namespace'   => $namespace,
+            'copyright'   => "Copyright (c) " . date('Y'),
+            'since'       => date('Y-m-d'),
+            'link'        => "https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/" . $relativePath,
+        ];
+    }
+
+    /**
+     * Generate the base PHPDoc string for the file.
+     */
+    private function buildFileDoc(array $meta, string $relativePath): string
+    {
+        return <<<PHPDOC
+/**
+ * {$relativePath}
+ *
+ * Project: {$meta['project']}
+ * Description: {$meta['description']}
+ *
+ * PHP version 8.4
+ *
+ * @category  {$meta['category']}
+ * @package   {$meta['namespace']}
+ * @author    {$meta['authors']}
+ * @copyright {$meta['copyright']}
+ * @license   {$meta['license']}
+ * @version   {$meta['version']}
+ * @since     {$meta['since']}
+ * @link      {$meta['link']}
+ */
+PHPDOC;
+    }
+
+    /**
+     * Convert authors array to formatted string
+     */
     private function getAuthorsString(array $authors): string
     {
         $lines = [];
@@ -164,96 +195,110 @@ PHPDOC;
         return 'Global';
     }
 
+    /**
+     * Merges existing and new doc comments while preserving order and formatting.
+     */
     private function mergeDocComment(?Doc $existing, string $newDoc): Doc
     {
-        $tagOrder = [
-            'category',
-            'package',
-            'author',
-            'copyright',
-            'license',
-            'version',
-            'since',
-            'link',
-        ];
+        $tagOrder = ['category', 'package', 'author', 'copyright', 'license', 'version', 'since', 'link'];
+        $indent   = $this->detectIndent($existing);
 
-        // Determine indentation from existing doc or default 4 spaces
-        $indent = '    ';
-        if ($existing !== null) {
-            if (preg_match('/^(\s*)\/\*\*/', $existing->getText(), $matches)) {
-                $indent = $matches[1];
-            }
-        }
+        [$existingDesc, $existingTags] = $this->parseDoc($existing?->getText() ?? '');
+        [$newDesc, $newTags]           = $this->parseDoc($newDoc);
 
-        $parseDoc = function (string $doc): array {
-            $lines = preg_split('/\R/', trim($doc, "/* \n\t"));
-            $desc = [];
-            $tags = [];
-            foreach ($lines as $line) {
-                $line = trim(ltrim($line, "* \t"));
-                if ($line === '') continue;
-
-                if (str_starts_with($line, '@')) {
-                    preg_match('/^@+(\S+)\s*(.*)$/', $line, $matches);
-                    $tag = strtolower($matches[1] ?? '');
-                    $value = $matches[2] ?? '';
-                    if ($tag) {
-                        $tags[$tag][] = $value;
-                    }
-                } else {
-                    $desc[] = $line;
-                }
-            }
-            return [$desc, $tags];
-        };
-
-        [$existingDesc, $existingTags] = $parseDoc($existing?->getText() ?? '');
-        [$newDesc, $newTags] = $parseDoc($newDoc);
-
-        // Preserve existing description
         $finalDesc = $existingDesc ?: $newDesc;
+        $finalTags = $this->mergeTags($existingTags, $newTags);
 
-        // Merge tags: keep existing, add missing from new
-        $finalTags = $existingTags;
-        foreach ($newTags as $tag => $values) {
-            if (!isset($finalTags[$tag])) {
-                $finalTags[$tag] = $values;
+        return new Doc($this->formatDoc($finalDesc, $finalTags, $tagOrder, $indent));
+    }
+
+    /**
+     * Detects indentation from an existing docblock or defaults to 4 spaces.
+     */
+    private function detectIndent(?Doc $doc): string
+    {
+        if ($doc && preg_match('/^(\s*)\/\*\*/', $doc->getText(), $matches)) {
+            return $matches[1];
+        }
+        return '    ';
+    }
+
+    /**
+     * Parses a PHPDoc block into description lines and tags.
+     */
+    private function parseDoc(string $doc): array
+    {
+        $lines = preg_split('/\R/', trim($doc, "/* \n\t"));
+        $desc  = [];
+        $tags  = [];
+
+        foreach ($lines as $line) {
+            $line = trim(ltrim($line, "* \t"));
+            if ($line === '') {
+                continue;
+            }
+            if (str_starts_with($line, '@')) {
+                if (preg_match('/^@+(\S+)\s*(.*)$/', $line, $matches)) {
+                    $tag = strtolower($matches[1]);
+                    $value = $matches[2] ?? '';
+                    $tags[$tag][] = $value;
+                }
+            } else {
+                $desc[] = $line;
             }
         }
 
-        // Compute max tag length for alignment
-        $allTags = array_merge(array_keys($finalTags), $tagOrder);
+        return [$desc, $tags];
+    }
+
+    /**
+     * Merge new tags with existing tags, without overriding existing ones.
+     */
+    private function mergeTags(array $existingTags, array $newTags): array
+    {
+        foreach ($newTags as $tag => $values) {
+            if (!isset($existingTags[$tag])) {
+                $existingTags[$tag] = $values;
+            }
+        }
+        return $existingTags;
+    }
+
+    /**
+     * Format the final docblock text with proper alignment and tag ordering.
+     */
+    private function formatDoc(array $desc, array $tags, array $order, string $indent): string
+    {
+        $allTags = array_merge(array_keys($tags), $order);
         $maxTagLen = max(array_map('strlen', $allTags));
 
-        // Rebuild doc
-        $merged = "{$indent}/**\n";
-        foreach ($finalDesc as $line) {
-            $merged .= "{$indent} * {$line}\n";
-        }
-        if ($finalDesc && $finalTags) {
-            $merged .= "{$indent} *\n";
+        $out = "{$indent}/**\n";
+        foreach ($desc as $line) {
+            $out .= "{$indent} * {$line}\n";
         }
 
-        // Append tags in PHPCS order with aligned values
-        foreach ($tagOrder as $tag) {
-            if (!isset($finalTags[$tag])) continue;
-            foreach ($finalTags[$tag] as $value) {
+        if ($desc && $tags) {
+            $out .= "{$indent} *\n";
+        }
+
+        // Ordered tags
+        foreach ($order as $tag) {
+            if (!isset($tags[$tag])) continue;
+            foreach ($tags[$tag] as $value) {
                 $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
-                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
+                $out .= "{$indent} * @{$tag}{$padding}{$value}\n";
             }
-            unset($finalTags[$tag]);
+            unset($tags[$tag]);
         }
 
-        // Append any remaining tags
-        foreach ($finalTags as $tag => $values) {
+        // Unordered remaining tags
+        foreach ($tags as $tag => $values) {
             foreach ($values as $value) {
                 $padding = str_repeat(' ', $maxTagLen - strlen($tag) + 1);
-                $merged .= "{$indent} * @{$tag}{$padding}{$value}\n";
+                $out .= "{$indent} * @{$tag}{$padding}{$value}\n";
             }
         }
 
-        $merged .= "{$indent} */";
-
-        return new Doc($merged);
+        return "{$out}{$indent} */";
     }
 }

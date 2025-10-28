@@ -48,9 +48,9 @@ FROM base AS build
 RUN apt-get update && apt-get install -y \
     autoconf \
     build-essential \
-    pkg-config \
-    git \
     ca-certificates \
+    git \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # --- PHP extensions ---
@@ -67,7 +67,7 @@ RUN --mount=type=cache,target=/tmp/swoole-build-debian \
     git clone -b v${SWOOLE_VERSION} https://github.com/swoole/swoole-src.git /usr/src/swoole \
  && cd /usr/src/swoole \
  && phpize \
- && ./configure --enable-openssl --enable-sockets --enable-swoole-curl --enable-cares --enable-mysqlnd \
+ && ./configure --enable-openssl --enable-sockets --enable-swoole-curl --enable-cares --enable-mysqlnd --enable-http2 \
  && make -j$(nproc) && make install \
  && docker-php-ext-enable swoole opcache
 

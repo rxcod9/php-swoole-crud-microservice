@@ -55,15 +55,30 @@ let globalExecutions = 0;
  */
 
 /**
- * Generate UUIDv4-like string
- * @returns {string} uuid
+ * Generates a UUID (version 4)
+ * Example: 123e4567-e89b-12d3-a456-426614174000
+ *
+ * @returns {string} UUID v4
  */
 function generateUuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.floor(Math.random() * 16); // ensure integer
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    let template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+
+    // Replace 'x' placeholders
+    template = template.replaceAll('x', () => {
+        // sonarjs:S2245 -- not security-sensitive
+        const r = Math.floor(Math.random() * 16);
+        return r.toString(16);
+    });
+
+    // Replace 'y' placeholders
+    template = template.replaceAll('y', () => {
+        // sonarjs:S2245 -- not security-sensitive
+        const r = Math.floor(Math.random() * 16);
+        const v = (r & 0x3) | 0x8; // UUID variant bits
         return v.toString(16);
     });
+
+    return template;
 }
 
 /**
@@ -86,6 +101,7 @@ function generateItem(index) {
     return {
         sku: `sku-item-${index}-${id}`,
         title: `Item ${index} ${id}`,
+        // sonarjs:S2245 -- not security-sensitive
         price: Math.floor(Math.random() * 100)
     };
 }
@@ -97,6 +113,7 @@ function generateItem(index) {
  */
 function randomItem(arr) {
     if (!arr || arr.length === 0) return null;
+    // sonarjs:S2245 -- not security-sensitive
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -246,6 +263,7 @@ export function setup() {
  * @param {Object} options 
  */
 function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUrl, trends, entity }) {
+    // sonarjs:S2245 -- not security-sensitive
     const r = Math.random();
 
     const actions = [
@@ -253,6 +271,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
             type: 'list',
             weight: weights.LIST,
             handler: () => {
+                // sonarjs:S2245 -- not security-sensitive
                 const page = Math.floor(Math.random() * ENV.LIST_PAGES) + 1;
                 const url = `${ENV.BASE_URL}/${baseUrl}?page=${page}`;
                 const res = http.get(url);
@@ -266,6 +285,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
             type: 'read',
             weight: weights.READ,
             handler: () => {
+                // sonarjs:S2245 -- not security-sensitive
                 // const id = hotIds.length && Math.random() < ENV.HOT_READ_RATIO ? randomItem(hotIds) : randomItem(vuIds);
                 const id = randomItem(hotIds);
                 if (!id) return console.warn(`[${entity}] Skipping read: no ID available`);
@@ -281,6 +301,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
         //     type: 'create',
         //     weight: weights.CREATE,
         //     handler: () => {
+        // sonarjs:S2245 -- not security-sensitive
         //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
         //         const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
         //         trends.create?.add(res.timings.duration);
@@ -301,6 +322,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
         //     type: 'update',
         //     weight: weights.UPDATE,
         //     handler: () => {
+        // sonarjs:S2245 -- not security-sensitive
         //         const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
         //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
         //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
@@ -405,6 +427,7 @@ export default function (data) {
     //     entity: 'ITEMS'
     // });
 
+    // sonarjs:S2245 -- not security-sensitive
     sleep(Math.random() * 2);
 }
 
