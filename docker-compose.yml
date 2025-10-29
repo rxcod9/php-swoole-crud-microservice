@@ -9,7 +9,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: php-swoole-crud-microservice:latest
+    image: php-swoole-crud-microservice:v1.0.24
     volumes:
       - .:/app
       - ./docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
@@ -77,7 +77,7 @@ services:
     build:
       context: ./docker/mysql-exporter
       dockerfile: Dockerfile
-    # image: prom/mysqld-exporter:latest
+    # image: prom/mysqld-exporter:v0.17.2
     container_name: mysqld_exporter
     environment:
       MYSQL_EXPORTER_USER: ${MYSQL_EXPORTER_USER}
@@ -94,7 +94,7 @@ services:
 
   # Redis exporter for Prometheus
   redis-exporter:
-    image: oliver006/redis_exporter:latest
+    image: oliver006/redis_exporter:v1.62.0
     container_name: redis_exporter
     environment:
       # Connect to Redis instance (with password)
@@ -105,7 +105,7 @@ services:
 
   # Prometheus monitoring service
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.0
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
@@ -119,7 +119,7 @@ services:
 
   # Grafana dashboard service
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.2
     container_name: grafana
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
@@ -166,7 +166,7 @@ services:
 
   # Swagger UI for API documentation
   swagger-ui:
-    image: swaggerapi/swagger-ui:latest
+    image: swaggerapi/swagger-ui:v5.17.14
     container_name: swagger_ui
     environment:
       SWAGGER_JSON: ${SWAGGER_JSON_PATH:-/app/swagger.json}
