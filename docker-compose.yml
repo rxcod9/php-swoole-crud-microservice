@@ -37,6 +37,8 @@ services:
   metrics:
     build: .
     command: php public/metrics-server.php
+    volumes:
+      - .:/app
     ports:
       - "${METRICS_PORT:-9310}:${METRICS_PORT:-9310}"
     depends_on:                           # Wait for App

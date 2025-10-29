@@ -4,7 +4,21 @@ A high-performance **PHP CRUD microservice** built with **Swoole**, featuring **
 
 By 🐼 [Ramakant Gangwar](https://github.com/rxcod9)
 
-![Screenshot](https://raw.githubusercontent.com/rxcod9/php-swoole-crud-microservice/main/cover.png)
+
+# ⚙️ Swagger / OpenAPI
+![Swagger](docs/images/swagger.webp)
+
+# ⚡️ Performance
+![Performance](docs/images/performance.webp)
+
+# ❤️ Health
+![Performance](docs/images/health.webp)
+
+# 📊 Grafana Dashboards
+![Grafana1](docs/images/grafana1.webp)
+![Grafana2](docs/images/grafana2.webp)
+![Grafana3](docs/images/grafana3.webp)
+
 
 [![Latest Version](https://img.shields.io/github/v/release/rxcod9/php-swoole-crud-microservice?style=flat-square)](https://github.com/rxcod9/php-swoole-crud-microservice/releases)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rxcod9/php-swoole-crud-microservice/run-tests.yml?branch=main&label=tests)
