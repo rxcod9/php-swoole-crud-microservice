@@ -11,7 +11,6 @@ import { Trend } from 'k6/metrics';
 const ENV = {
     BASE_URL: __ENV.BASE_URL || 'http://localhost:9501',           // Base API URL
     TOTAL_USERS: Number(__ENV.TOTAL_USERS) || 200,                 // Total users to create in setup
-    TOTAL_ITEMS: Number(__ENV.TOTAL_ITEMS) || 200,                 // Total items to create in setup
     HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.1,                 // Top N% of entities marked 'hot'
     COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.1,               // Top N% of entities marked 'cool'
     HOT_READ_RATIO: Number(__ENV.HOT_READ_RATIO) || 0.8,           // Probability of reading hot IDs
@@ -30,13 +29,6 @@ const ENV = {
  */
 const listTrendUsers = new Trend('USERS_LIST_latency_ms');
 const readTrendUsers = new Trend('USERS_READ_latency_ms');
-// const createTrendUsers = new Trend('USERS_CREATE_latency_ms');
-// const updateTrendUsers = new Trend('USERS_UPDATE_latency_ms');
-
-const listTrendItems = new Trend('ITEMS_LIST_latency_ms');
-const readTrendItems = new Trend('ITEMS_READ_latency_ms');
-// const createTrendItems = new Trend('ITEMS_CREATE_latency_ms');
-// const updateTrendItems = new Trend('ITEMS_UPDATE_latency_ms');
 
 /**
  * --------------------
@@ -45,7 +37,6 @@ const readTrendItems = new Trend('ITEMS_READ_latency_ms');
  * Track IDs per VU and execution count
  */
 let VU_userIds = [];
-let VU_itemIds = [];
 let globalExecutions = 0;
 
 /**
@@ -92,21 +83,6 @@ function generateUser(index) {
 }
 
 /**
- * Generate random item object
- * @param {number} index - Index for uniqueness
- * @returns {{sku: string, title: string, price: number}}
- */
-function generateItem(index) {
-    const id = generateUuid();
-    return {
-        sku: `sku-item-${index}-${id}`,
-        title: `Item ${index} ${id}`,
-        // sonarjs:S2245 -- not security-sensitive
-        price: Math.floor(Math.random() * 100)
-    };
-}
-
-/**
  * Get random element from array
  * @param {Array} arr 
  * @returns any
@@ -126,7 +102,6 @@ function randomItem(arr) {
  */
 function postEntity(url, obj, trend) {
     const res = http.post(url, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-    // trend.add(res.timings.duration);
     check(res, { 'CREATE success': r => r.status === 201 });
     if (res.status === 201) {
         try {
@@ -141,7 +116,7 @@ function postEntity(url, obj, trend) {
 
 /**
  * Warm cache for paginated list endpoints
- * @param {string} baseUrl - API endpoint (users/items)
+ * @param {string} baseUrl - API endpoint (users)
  * @param {number} pages - Number of pages to request
  * @param {Trend} trend - optional latency tracking
  */
@@ -158,7 +133,7 @@ function warmListCache(baseUrl, pages) {
 /**
  * Warm cache by reading hot IDs
  * @param {string[]} hotIds - Array of hot IDs
- * @param {string} baseUrl - API endpoint (users/items)
+ * @param {string} baseUrl - API endpoint (users)
  */
 function warmReadCache(hotIds, baseUrl) {
     console.log(`[CACHE WARMUP] Warming ${hotIds.length} hot IDs for ${baseUrl}`);
@@ -189,7 +164,6 @@ k6 script environment variables:
 
 BASE_URL            - Base API URL (default: http://localhost:9501)
 TOTAL_USERS         - Number of users to create (default: 200)
-TOTAL_ITEMS         - Number of items to create (default: 200)
 HOT_PERCENT         - Percentage of hot entities (default: 0.1)
 COOL_PERCENT        - Percentage of cool entities (default: 0.1)
 HOT_READ_RATIO      - Chance of reading hot IDs (default: 0.8)
@@ -205,7 +179,7 @@ MAX_VUS             - Maximum virtual users (default: 100)
  * --------------------
  * SETUP
  * --------------------
- * Create initial users and items, determine hot/cool IDs
+ * Create initial users, determine hot/cool IDs
  * @returns {Object} setup data
  */
 export function setup() {
@@ -224,35 +198,29 @@ export function setup() {
         return ids;
     };
 
-    // Create users and items
+    // Create users
     const userIds = createEntities(
         ENV.TOTAL_USERS,
         generateUser,
         'users',
         // createTrendUsers
     );
-    const itemIds = createEntities(
-        ENV.TOTAL_ITEMS,
-        generateItem,
-        'items',
-        // createTrendItems
-    );
 
     // Determine hot and cool IDs
     const hotUserIds = slicePercent(userIds, ENV.HOT_PERCENT);
-    const hotItemIds = slicePercent(itemIds, ENV.HOT_PERCENT);
     const coolUserIds = slicePercent(userIds.filter(id => !hotUserIds.includes(id)), ENV.COOL_PERCENT);
-    const coolItemIds = slicePercent(itemIds.filter(id => !hotItemIds.includes(id)), ENV.COOL_PERCENT);
 
     // --- WARM CACHE ---
     warmReadCache(hotUserIds, 'users');
-    warmReadCache(hotItemIds, 'items');
 
     // --- WARM CACHE for paginated lists ---
     warmListCache('users', ENV.LIST_PAGES);
-    warmListCache('items', ENV.LIST_PAGES);
 
-    return { userIds, itemIds, hotUserIds, hotItemIds, coolUserIds, coolItemIds };
+    return {
+        userIds,
+        hotUserIds,
+        coolUserIds
+    };
 }
 
 /**
@@ -262,7 +230,14 @@ export function setup() {
  * Weighted random selection of CRUD operations per entity
  * @param {Object} options 
  */
-function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUrl, trends, entity }) {
+function performCrudAction({
+    vuIds,
+    hotIds,
+    weights,
+    baseUrl,
+    trends,
+    entity
+}) {
     // sonarjs:S2245 -- not security-sensitive
     const r = Math.random();
 
@@ -296,44 +271,7 @@ function performCrudAction({ vuIds, hotIds, coolIds, weights, generateFn, baseUr
                 check(res, { [`${entity} READ success`]: r => r.status === 200 }) ||
                     console.error(`[${entity} READ FAILED] URL: ${url} | ID: ${id} | Status: ${res.status}`);
             }
-        },
-        // {
-        //     type: 'create',
-        //     weight: weights.CREATE,
-        //     handler: () => {
-        // sonarjs:S2245 -- not security-sensitive
-        //         const obj = generateFn(Math.floor(Math.random() * 1_000_000));
-        //         const res = http.post(`${ENV.BASE_URL}/${baseUrl}`, JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } });
-        //         trends.create?.add(res.timings.duration);
-        //         check(res, { [`${entity} CREATE success`]: r => r.status === 201 }) ||
-        //             console.error(`[${entity} CREATE FAILED] URL: ${baseUrl} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-        //         if (res.status === 201) {
-        //             try {
-        //                 const parsed = JSON.parse(res.body);
-        //                 if (parsed?.id != null) vuIds.push(parsed.id);
-        //                 else console.warn(`[${entity} CREATE WARNING] Response missing 'id': ${res.body}`);
-        //             } catch (e) {
-        //                 console.error(`[${entity} CREATE PARSE ERROR] Response: ${res.body}`, e);
-        //             }
-        //         }
-        //     }
-        // },
-        // {
-        //     type: 'update',
-        //     weight: weights.UPDATE,
-        //     handler: () => {
-        // sonarjs:S2245 -- not security-sensitive
-        //         const id = hotIds.length && Math.random() < ENV.HOT_UPDATE_RATIO ? randomItem(hotIds) : randomItem(vuIds);
-        //         if (!id) return console.warn(`[${entity}] Skipping update: no ID available`);
-        //         if (coolIds.includes(id)) return console.warn(`[${entity}] Skipping update: cool ID`);
-        //         const obj = generateFn(id);
-        //         const url = `${ENV.BASE_URL}/${baseUrl}/${id}`;
-        //         const res = http.put(url, JSON.stringify({ ...obj, updated: true }), { headers: { 'Content-Type': 'application/json' } });
-        //         trends.update?.add(res.timings.duration);
-        //         check(res, { [`${entity} UPDATE success`]: r => r.status === 200 }) ||
-        //             console.error(`[${entity} UPDATE FAILED] URL: ${url} | Payload: ${JSON.stringify(obj)} | Status: ${res.status}`);
-        //     }
-        // }
+        }
     ].filter(a => a.weight);
 
     // Weighted selection
@@ -370,14 +308,8 @@ export const options = {
     ].map(s => ({ ...s, target: Math.floor(s.target * ENV.MAX_VUS) })),
     thresholds: {
         'http_req_duration': ['p(95)<200'],
-        // 'USERS_CREATE_latency_ms': ['avg<100'],
         'USERS_LIST_latency_ms': ['avg<100'],
         'USERS_READ_latency_ms': ['avg<50'],
-        // 'USERS_UPDATE_latency_ms': ['avg<100'],
-        // 'ITEMS_CREATE_latency_ms': ['avg<100'],
-        'ITEMS_LIST_latency_ms': ['avg<100'],
-        'ITEMS_READ_latency_ms': ['avg<50'],
-        // 'ITEMS_UPDATE_latency_ms': ['avg<100'],
     }
 };
 
@@ -391,13 +323,11 @@ export default function (data) {
     globalExecutions++;
 
     if (VU_userIds.length === 0) VU_userIds = data.userIds.slice();
-    if (VU_itemIds.length === 0) VU_itemIds = data.itemIds.slice();
 
     // Perform USERS CRUD
     performCrudAction({
         vuIds: VU_userIds,
         hotIds: data.hotUserIds,
-        coolIds: data.coolUserIds,
         weights: { LIST: 0.5, READ: 0.5 },
         generateFn: generateUser,
         baseUrl: 'users',
@@ -410,23 +340,6 @@ export default function (data) {
         entity: 'USERS'
     });
 
-    // Perform ITEMS CRUD
-    // performCrudAction({
-    //     vuIds: VU_itemIds,
-    //     hotIds: data.hotItemIds,
-    //     coolIds: data.coolItemIds,
-    //     weights: { LIST: 0.5, READ: 0.5 },
-    //     generateFn: generateItem,
-    //     baseUrl: 'items',
-    //     trends: {
-    //         list: listTrendItems,
-    //         read: readTrendItems,
-    //         // create: createTrendItems,
-    //         // update: updateTrendItems
-    //     },
-    //     entity: 'ITEMS'
-    // });
-
     // sonarjs:S2245 -- not security-sensitive
     sleep(Math.random() * 2);
 }
@@ -435,11 +348,10 @@ export default function (data) {
  * --------------------
  * TEARDOWN
  * --------------------
- * Cleanup all created users and items
+ * Cleanup all created users
  * @param {Object} data 
  */
 export function teardown(data) {
-    console.log(`Cleaning up users and items`);
+    console.log(`Cleaning up users`);
     for (let id of data.userIds) http.del(`${ENV.BASE_URL}/users/${id}`);
-    for (let id of data.itemIds) http.del(`${ENV.BASE_URL}/items/${id}`);
 }
