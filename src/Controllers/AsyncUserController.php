@@ -202,7 +202,7 @@ final class AsyncUserController extends Controller
     {
         $start = microtime(true);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
-        $data = $this->request->getPostParams();
+        $data        = $this->request->getPostParams();
         $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'PostParams loaded'));
 
