@@ -60,6 +60,7 @@ final readonly class TaskDispatcher
      * injects the task if supported, and invokes the method with parameters.
      *
      * @param string            $class     Action in the format 'Task@method'
+     * @param string $id Id
      * @param array<int, mixed> $arguments Parameters to pass to the method
      * @param Task              $task      Request object
      *
@@ -68,7 +69,7 @@ final readonly class TaskDispatcher
      *
      * @return bool Response from the task method
      */
-    public function dispatch(string $class, array $arguments, Task $task): bool
+    public function dispatch(string $class, string $id, array $arguments, Task $task): bool
     {
         if (!class_exists($class)) {
             throw new TaskNotFoundException(sprintf('Task class %s does not exist.', $class));
@@ -83,10 +84,11 @@ final readonly class TaskDispatcher
         $instance = $this->container->get($class);
 
         try {
-            $result = $this->handle($instance, $arguments);
+            $result = $this->handle($instance, $id, $arguments);
 
             $task->finish([
                 'class'     => $class,
+                'id'        => $id,
                 'arguments' => $arguments,
                 'result'    => $result,
             ]);
@@ -94,10 +96,11 @@ final readonly class TaskDispatcher
             return true;
         } catch (Throwable $throwable) {
             if (method_exists($instance, 'error')) {
-                $result = $instance->error($throwable, ...$arguments);
+                $result = $instance->error($throwable, $id, ...$arguments);
 
                 $task->finish([
                     'class'     => $class,
+                    'id'        => $id,
                     'arguments' => $arguments,
                     'result'    => $result,
                 ]);
@@ -108,6 +111,7 @@ final readonly class TaskDispatcher
 
             $task->finish([
                 'class'     => $class,
+                'id'        => $id,
                 'arguments' => $arguments,
                 'error'     => $throwable->getMessage(),
             ]);
@@ -120,14 +124,15 @@ final readonly class TaskDispatcher
      * Invoke the handle method or __invoke() of the task instance.
      *
      * @param TaskInterface $task Task instance
+     * @param string $id Id
      * @param array<int, mixed> $arguments Arguments to pass to the method
      *
      * @return mixed Response from the task method
      *
      * @throws TaskContractViolationException If the task does not have a handle method or is not invokable
      */
-    private function handle(TaskInterface $task, array $arguments): mixed
+    private function handle(TaskInterface $task, string $id, array $arguments): mixed
     {
-        return $task->handle(...$arguments);
+        return $task->handle($id, ...$arguments);
     }
 }

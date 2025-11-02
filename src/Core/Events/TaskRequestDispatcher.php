@@ -51,10 +51,12 @@ final readonly class TaskRequestDispatcher
     {
         $data           = $task->data;
         $class          = $data['class'] ?? null;
+        $id             = $data['id'] ?? bin2hex(random_bytes(8));
         $arguments      = $data['arguments'] ?? null;
         $taskDispatcher = new TaskDispatcher($this->container);
         return $taskDispatcher->dispatch(
             $class,
+            $id,
             $arguments,
             $task
         );

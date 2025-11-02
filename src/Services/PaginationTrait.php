@@ -39,7 +39,7 @@ trait PaginationTrait
      * Return the repository instance.
      *
      */
-    abstract protected function getRepository(): Repository;
+    abstract public function getRepository(): Repository;
 
     /**
      * List records with optional filters, sorting, and pagination.
@@ -54,7 +54,10 @@ trait PaginationTrait
 
         $total         = $repo->count();
         $filtersCount  = count($paginationParams->filters);
-        $filteredTotal = $total === 0 ? 0 : ($filtersCount > 0 ? $repo->filteredCount($paginationParams->filters) : $total);
+        $filteredTotal = $total;
+        if ($total !== 0 && $filtersCount > 0) {
+            $filteredTotal = $repo->filteredCount($paginationParams->filters);
+        }
 
         if ($filteredTotal === 0) {
             return [[], $this->buildPaginationMetadata($total, 0, $paginationParams->limit, $paginationParams->offset)];

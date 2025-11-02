@@ -7,7 +7,7 @@
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { ENV, printUsage } from '../lib/env.js';
-import { generateUser, generateItem, postEntity, slicePercent } from '../lib/utils.js';
+import { generateUser, generateItem, postEntity, slicePercent, getEntities, getEntity } from '../lib/utils.js';
 import { METRICS_REGISTRY, buildThresholds } from '../lib/metrics.js';
 import { performCrudAction } from '../lib/crud.js';
 
@@ -31,22 +31,66 @@ export function setup() {
             console.error("generators not found for " + entity);
             continue;
         }
-        const trend = METRICS_REGISTRY[entity]?.create;
-        const ids = [];
-
-        for (let i = 0; i < ENV.TOTAL_ENTITIES; i++) {
-            const id = postEntity(`${ENV.BASE_URL}/${entity}`, generateFn(i), trend);
-            if (id) ids.push(id);
-        }
-
-        setupData[entity] = {
-            ids,
-            hot: slicePercent(ids.slice(0, ids.length / 2), ENV.HOT_PERCENT),
-            cool: slicePercent(ids.slice(ids.length / 2), ENV.COOL_PERCENT),
-        };
+        setupData[entity] = setupEntity(entity, generateFn);
     }
 
     return setupData;
+}
+
+/**
+ * Creates initial entity for each entity type.
+ *
+ * @returns { ids: string[], hot: string[], cool: string[] }
+ */
+function setupEntity(entity, generateFn) {
+    const trendCreate = METRICS_REGISTRY[entity]?.create;
+    const trendList = METRICS_REGISTRY[entity]?.list;
+    const trendRead = METRICS_REGISTRY[entity]?.read;
+    const ids = [];
+
+    for (let i = 0; i < ENV.TOTAL_ENTITIES; i++) {
+        postEntity(entity, `${ENV.BASE_URL}/${entity}`, generateFn(i), trendCreate, 204);
+    }
+
+    // Sleep for few seconds to cought up with async operations completions
+    sleep(10); // sleeps 30 second
+    
+    // Now fetch lists
+    for (let i = 1; i <= 10; i++) {
+        const response = getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&limiit=100&sortDirection=DESC`, trendList);
+        const records = response.data;
+        console.log("records", typeof records);
+        if (Array.isArray(records)) {
+            for (const rec of records) {
+                const id = rec?.id ?? rec?._id ?? null;
+                if (id && !ids.includes(id)) {
+                    ids.push(id); // push safely, prevent duplicates
+                }
+            }
+        }
+    }
+
+    const hotIds = slicePercent(ids.slice(0, ids.length / 2), ENV.HOT_PERCENT);
+    const coolIds = slicePercent(ids.slice(ids.length / 2), ENV.COOL_PERCENT);
+    console.log('ids', ids);
+    console.log('hotIds', hotIds);
+    console.log('coolIds', coolIds);
+
+    // Warm List Cache
+    for (let i = 1; i <= 3; i++) {
+        getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&sortDirection=DESC`, trendList);
+    }
+
+    // Warm Read Cache
+    for (const hotId of hotIds) {   
+        getEntity(entity, `${ENV.BASE_URL}/${entity}/${hotId}`, trendRead);
+    }
+
+    return {
+        ids,
+        hot: hotIds,
+        cool: coolIds,
+    };
 }
 
 /**
@@ -56,9 +100,9 @@ export const options = {
     setupTimeout: ENV.MAX_DURATION,
     teardownTimeout: ENV.MAX_DURATION,
     stages: [
-        { duration: '5s', target: Math.floor(ENV.MAX_VUS / 2) },
-        { duration: '10s', target: ENV.MAX_VUS },
-        { duration: '5s', target: 0 }
+        { duration: '30s', target: Math.floor(ENV.MAX_VUS / 2) },
+        { duration: '1m', target: ENV.MAX_VUS },
+        { duration: '30s', target: Math.floor(ENV.MAX_VUS / 2) }
     ],
     thresholds: buildThresholds()
 };

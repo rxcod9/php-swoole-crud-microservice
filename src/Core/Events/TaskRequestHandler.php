@@ -66,38 +66,37 @@ final readonly class TaskRequestHandler
             $workerReadyChecker = new WorkerReadyChecker();
             $workerReadyChecker->wait();
 
-            $taskId = bin2hex(random_bytes(8));
-            $start  = microtime(true);
+            $start = microtime(true);
 
-            // Metrics setup
-            $redisPool = $this->container->get(RedisPool::class);
-            $redis     = $redisPool->get();
-            defer(fn () => $redisPool->put($redis));
+            // // Metrics setup
+            // $redisPool = $this->container->get(RedisPool::class);
+            // $redis     = $redisPool->get();
+            // defer(fn () => $redisPool->put($redis));
 
-            $metrics = $this->container->get(Metrics::class);
-            $reg     = $metrics->getCollectorRegistry($redis);
-            $counter = $reg->getOrRegisterCounter(
-                'task_requests_total',
-                'Tasks',
-                'Total Task requests',
-                ['class', 'status']
-            );
-            $hist = $reg->getOrRegisterHistogram(
-                'task_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['class']
-            );
+            // $metrics = $this->container->get(Metrics::class);
+            // $reg     = $metrics->getCollectorRegistry($redis);
+            // $counter = $reg->getOrRegisterCounter(
+            //     'task_requests_total',
+            //     'Tasks',
+            //     'Total Task requests',
+            //     ['class', 'status']
+            // );
+            // $hist = $reg->getOrRegisterHistogram(
+            //     'task_request_seconds',
+            //     'Latency',
+            //     'HTTP request latency',
+            //     ['class']
+            // );
 
             $taskRequestDispatcher = new Dispatcher($this->container);
             $status                = $taskRequestDispatcher->dispatch($task);
-            // Metrics and async logging
-            $dur = microtime(true) - $start;
 
+            // Metrics and async logging
+            $dur   = microtime(true) - $start;
             $data  = $task->data;
             $class = $data['class'] ?? null;
-            $counter->inc([$class, (string)$status]);
-            $hist->observe($dur, [$class]);
+            // $counter->inc([$class, (string)$status]);
+            // $hist->observe($dur, [$class]);
 
             return $status;
         } catch (Throwable $throwable) {

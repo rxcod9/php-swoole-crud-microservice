@@ -40,7 +40,7 @@ export const ENV = {
     BASE_URL: __ENV.BASE_URL || 'http://localhost:9501',
 
     // Allow comma-separated entities (e.g., users,items,orders)
-    ENTITIES: parseList(__ENV.ENTITIES, ['users', 'items']),
+    ENTITIES: parseList(__ENV.ENTITIES, ['users', 'items', 'async-users']),
 
     // Allow comma-separated CRUD operations (e.g., list,read,create,update,delete)
     CRUD: parseList(__ENV.CRUD, ['list', 'read', 'create', 'update']),
@@ -49,7 +49,7 @@ export const ENV = {
     HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.1,
     COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.1,
     TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 2000,
-    MAX_VUS: Number(__ENV.MAX_VUS) || 50,
+    MAX_VUS: Number(__ENV.MAX_VUS) || 200,
     MAX_DURATION: __ENV.MAX_DURATION || '10m'
 };
 

@@ -24,6 +24,7 @@ use App\Core\Http\Response;
 use App\Core\Metrics;
 use App\Core\Pools\RedisPool;
 use App\Core\Router;
+use Swoole\Coroutine;
 
 /**
  * Class MetricsMiddleware
@@ -60,26 +61,34 @@ final class MetricsMiddleware implements MiddlewareInterface
 
         $next($request, $response); // call next middleware
 
-        $dur   = microtime(true) - $start;
-        $redis = $this->redisPool->get();
-        defer(fn () => $this->redisPool->put($redis));
-
-        $collectorRegistry = $this->metrics
-            ->getCollectorRegistry($redis);
-        $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-        $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
-
+        $dur    = microtime(true) - $start;
+        $method = $request->getMethod();
         $path   = $request->getPath();
         $status = $response->getStatus();
 
-        [$route] = $this->router->getRouteByPath(
-            $request->getMethod(),
-            $path
-        );
-
-        if ($route !== null && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            $counter->inc([$request->getMethod(), $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->getMethod(), $route['path']]);
+        // Ignore health/metrics endpoints
+        if (in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            return;
         }
+
+        // Resolve route for consistent labels
+        [$route] = $this->router->getRouteByPath($method, $path);
+        if ($route === null) {
+            return;
+        }
+
+        // ✅ Offload metrics collection to a coroutine
+        Coroutine::create(function () use ($method, $route, $status, $dur): void {
+            $redis = $this->redisPool->get();
+            defer(fn () => $this->redisPool->put($redis));
+
+            $collectorRegistry = $this->metrics
+                ->getCollectorRegistry($redis);
+            $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
+            $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
+
+            $counter->inc([$method, $route['path'], (string) $status]);
+            $histogram->observe($dur, [$method, $route['path']]);
+        });
     }
 }

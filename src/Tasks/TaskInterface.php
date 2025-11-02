@@ -34,9 +34,10 @@ namespace App\Tasks;
 interface TaskInterface
 {
     /**
-     * Handles logging of the provided payload.
+     * Handles task.
      *
+     * @param string $id id
      * @param mixed ...$arguments Arguments to process
      */
-    public function handle(mixed ...$arguments): mixed;
+    public function handle(string $id, mixed ...$arguments): mixed;
 }

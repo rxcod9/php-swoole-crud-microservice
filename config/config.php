@@ -151,13 +151,6 @@ return [
             'http_compression' => true,
 
             /**
-             * Ssl alpn protocols.
-             *
-             * @var string
-             */
-            'ssl_alpn_protocols' => 'h2,http/1.1',  // critical for HTTP/2
-
-            /**
              * Enable HTTP POST parsing.
              *
              * @var bool
@@ -344,5 +337,10 @@ return [
     'rateLimit' => [
         'throttle' => env('RATE_LIMIT_THROTTLE', 100),
         'skip_ip_patterns' => env('RATE_LIMIT_SKIP_IP_PATTERN', '/^(127\.0\.0\.1|::1|172\.\d{1,3}\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})$/'),
+    ],
+
+    'async' => [
+        'channel_capacity' => (int) env('ASYNC_CHANNEL_CAPACITY', 1024),
+        // 'channel_workers' => (int) env('ASYNC_CHANNEL_WORKERS', 4),
     ]
 ];

@@ -79,7 +79,7 @@ final readonly class ItemService
      *
      * @return ItemRepository The repository instance.
      */
-    protected function getRepository(): ItemRepository
+    public function getRepository(): ItemRepository
     {
         return $this->itemRepository;
     }

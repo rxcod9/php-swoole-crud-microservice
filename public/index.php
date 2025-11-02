@@ -86,6 +86,14 @@ $router->get('/users/email/{email}', 'UserController@showByEmail');    // Show a
 $router->put('/users/{id}', 'UserController@update');  // Update a specific user.
 $router->delete('/users/{id}', 'UserController@destroy'); // Delete a specific user.
 
+// Users Async CRUD routes.
+$router->post('/async-users', 'AsyncUserController@create');      // Create a new user async.
+$router->get('/async-users', 'UserController@index');        // List all users.
+$router->get('/async-users/{id}', 'UserController@show');    // Show a specific user.
+$router->get('/async-users/email/{email}', 'UserController@showByEmail');    // Show a specific user by email.
+$router->put('/async-users/{id}', 'AsyncUserController@update');  // Update a specific user async.
+$router->delete('/async-users/{id}', 'AsyncUserController@destroy'); // Delete a specific user async.
+
 // Items CRUD routes.
 $router->post('/items', 'ItemController@create');      // Create a new item.
 $router->get('/items', 'ItemController@index');        // List all items.

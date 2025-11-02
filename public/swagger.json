@@ -12,6 +12,184 @@
         }
     ],
     "paths": {
+        "/async-users": {
+            "post": {
+                "tags": [
+                    "AsyncUsers"
+                ],
+                "summary": "Create user async",
+                "description": "Create a new user.\nExpects JSON body with user data.",
+                "operationId": "a80ac6075b45bf046562d54fb0eaea08",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "description": "Descriptive status message explaining the current state or outcome of the async request.",
+                                            "type": "string"
+                                        },
+                                        "jobId": {
+                                            "description": "Unique identifier assigned to the asynchronous job or task for tracking and polling.",
+                                            "type": "string"
+                                        },
+                                        "result": {
+                                            "description": "Optional numeric result or status code returned once the async job has completed.",
+                                            "type": "integer",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/async-users/{id}": {
+            "put": {
+                "tags": [
+                    "AsyncUsers"
+                ],
+                "summary": "Update user async",
+                "description": "Update a user by ID.\nExpects JSON body with updated user data.",
+                "operationId": "0b1763968caa2c3a0bc05c3c35d3ba65",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "description": "Descriptive status message explaining the current state or outcome of the async request.",
+                                            "type": "string"
+                                        },
+                                        "jobId": {
+                                            "description": "Unique identifier assigned to the asynchronous job or task for tracking and polling.",
+                                            "type": "string"
+                                        },
+                                        "result": {
+                                            "description": "Optional numeric result or status code returned once the async job has completed.",
+                                            "type": "integer",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource %s not found."
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "AsyncUsers"
+                ],
+                "summary": "Delete user async",
+                "description": "Delete a user by ID.",
+                "operationId": "a4bc6f60570fc7548334262d615f954a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "description": "Descriptive status message explaining the current state or outcome of the async request.",
+                                            "type": "string"
+                                        },
+                                        "jobId": {
+                                            "description": "Unique identifier assigned to the asynchronous job or task for tracking and polling.",
+                                            "type": "string"
+                                        },
+                                        "result": {
+                                            "description": "Optional numeric result or status code returned once the async job has completed.",
+                                            "type": "integer",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource %s not found."
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "tags": [
@@ -833,18 +1011,50 @@
             }
         }
     },
+    "components": {
+        "schemas": {
+            "IndexController": {
+                "description": "Class IndexController\nHandles all user-related operations such as creation, update,\ndeletion, and retrieval. Integrates with external services and\nlogs critical operations.\nProject: rxcod9/php-swoole-crud-microservice\nDescription: PHP Swoole CRUD Microservice",
+                "x-tagGroups": [
+                    {
+                        "name": "Home",
+                        "tags": [
+                            "Home"
+                        ]
+                    },
+                    {
+                        "name": "Users",
+                        "tags": [
+                            "Users",
+                            "AsyncUsers"
+                        ]
+                    },
+                    {
+                        "name": "Items",
+                        "tags": [
+                            "Items"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
     "tags": [
         {
             "name": "Home",
-            "description": "Home"
-        },
-        {
-            "name": "Items",
-            "description": "Items"
+            "description": "Root endpoints providing API metadata, health status, and basic navigation."
         },
         {
             "name": "Users",
-            "description": "Users"
+            "description": "Endpoints for managing user entities \u2014 create, read, update, and delete operations."
+        },
+        {
+            "name": "AsyncUsers",
+            "description": "Asynchronous user operations handled via Swoole tasks or background workers."
+        },
+        {
+            "name": "Items",
+            "description": "Endpoints for managing item inventory, pricing, and stock lifecycle."
         }
     ]
 }

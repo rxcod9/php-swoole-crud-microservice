@@ -124,12 +124,12 @@ final class RedisPool
     {
         try {
             // ---------------------------------------
-            // Step 1: Initialize Redis instance
+            // Step : Initialize Redis instance
             // ---------------------------------------
             $redis = $this->initializeRedisConnection();
 
             // ---------------------------------------
-            // Step 2: Authenticate and Select DB
+            // Step: Authenticate and Select DB
             // ---------------------------------------
             $this->configureRedisConnection($redis);
 
@@ -177,7 +177,10 @@ final class RedisPool
         $port  = $this->conf['port'] ?? 6379;
 
         // Attempt connection
+        $start     = microtime(true);
         $connected = $redis->connect($host, $port);
+        $timeMs    = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[REDIS] [%s] => Operation time: %f ms', 'connect', $timeMs));
 
         if (!$connected) {
             throw new RedisConnectionFailedException(
@@ -266,6 +269,10 @@ final class RedisPool
             return $this->make();
         }
 
+        $available = $this->channel->length();
+        $used      = $this->created - $available;
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[GET] Redis connection fetched from pool (used: %d, available: %d)', $used, $available));
+
         return $conn;
     }
 
@@ -284,7 +291,9 @@ final class RedisPool
                 throw new ChannelException('Unable to push to channel' . PHP_EOL);
             }
 
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, '[PUT] Redis connection returned to pool');
+            $available = $this->channel->length();
+            $used      = $this->created - $available;
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[PUT] Redis connection returned to pool (used: %d, available: %d)', $used, $available));
             return;
         }
 

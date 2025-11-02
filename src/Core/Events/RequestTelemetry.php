@@ -49,39 +49,39 @@ final class RequestTelemetry
 
     public function collect(RequestContext $requestContext): void
     {
-        try {
-            $path    = $requestContext->exchange()->request()->getPath();
-            [$route] = $this->router->getRouteByPath(
-                $requestContext->exchange()->request()->getMethod(),
-                $path
-            );
-            if ($route === null || in_array($path, ['/health', '/metrics'], true)) {
-                return;
-            }
+        // try {
+        //     $path    = $requestContext->exchange()->request()->getPath();
+        //     [$route] = $this->router->getRouteByPath(
+        //         $requestContext->exchange()->request()->getMethod(),
+        //         $path
+        //     );
+        //     if ($route === null || in_array($path, ['/health', '/metrics'], true)) {
+        //         return;
+        //     }
 
-            $redis = $this->redisPool->get();
-            defer(fn () => $this->redisPool->put($redis));
+        //     $redis = $this->redisPool->get();
+        //     defer(fn () => $this->redisPool->put($redis));
 
-            $reg = $this->metrics->getCollectorRegistry($redis);
+        //     $reg = $this->metrics->getCollectorRegistry($redis);
 
-            $counter = $reg->getOrRegisterCounter(
-                'http_requests_total',
-                'Requests',
-                'Total HTTP requests',
-                ['method', 'path', 'status']
-            );
+        //     $counter = $reg->getOrRegisterCounter(
+        //         'http_requests_total',
+        //         'Requests',
+        //         'Total HTTP requests',
+        //         ['method', 'path', 'status']
+        //     );
 
-            $histogram = $reg->getOrRegisterHistogram(
-                'http_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['method', 'path']
-            );
+        //     $histogram = $reg->getOrRegisterHistogram(
+        //         'http_request_seconds',
+        //         'Latency',
+        //         'HTTP request latency',
+        //         ['method', 'path']
+        //     );
 
-            $counter->inc([$requestContext->exchange()->request()->getMethod(), $route['path'], (string)$requestContext->exchange()->response()->getStatus()]);
-            $histogram->observe($requestContext->duration(), [$requestContext->exchange()->request()->getMethod(), $route['path']]);
-        } catch (Throwable $throwable) {
-            logDebug('RequestTelemetry', 'Metrics logging failed: ' . $throwable->getMessage());
-        }
+        //     $counter->inc([$requestContext->exchange()->request()->getMethod(), $route['path'], (string)$requestContext->exchange()->response()->getStatus()]);
+        //     $histogram->observe($requestContext->duration(), [$requestContext->exchange()->request()->getMethod(), $route['path']]);
+        // } catch (Throwable $throwable) {
+        //     logDebug('RequestTelemetry', 'Metrics logging failed: ' . $throwable->getMessage());
+        // }
     }
 }

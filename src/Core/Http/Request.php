@@ -180,7 +180,7 @@ class Request
      */
     public function getPostParams(): array
     {
-        return $this->httpRequest->post ?? [];
+        return $this->httpRequest->post ?? $this->getJsonBody();
     }
 
     /**
