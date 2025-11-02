@@ -13,11 +13,11 @@ import { recordTrendAndCheck, secureRandomInt } from './utils.js';
  * @param {string[]} vuIds
  * @param {string[]} coolIds
  * @param {boolean} preferHot
- * @returns {string|undefined}
+ * @returns {string|null}
  */
 function selectTargetId(hotIds, vuIds, coolIds, preferHot = true) {
     const pool = preferHot && hotIds.length ? hotIds : vuIds;
-    if (!pool.length) return undefined;
+    if (!pool.length) return null;
 
     for (let i = 0; i < 3; i++) { // try a few times
         const id = pool[secureRandomInt(0, pool.length)];
@@ -25,7 +25,8 @@ function selectTargetId(hotIds, vuIds, coolIds, preferHot = true) {
     }
 
     // fallback to any id
-    return vuIds.length ? vuIds[secureRandomInt(0, vuIds.length)] : undefined;
+    // return vuIds.length ? vuIds[secureRandomInt(0, vuIds.length)] : null;
+    return null;
 }
 
 /**
@@ -153,7 +154,7 @@ function executeUpdate(baseUrl, entity, context, idSets) {
     const { generateFn, trends, contentType = 'json' } = context;
     const { vuIds, hotIds, coolIds } = idSets;
 
-    const id = selectTargetId(hotIds, vuIds, coolIds, true);
+    const id = selectTargetId(hotIds, vuIds, coolIds, false);
     if (!id) {
         console.log("Skipping update no id");
         return;

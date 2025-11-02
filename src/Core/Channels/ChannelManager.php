@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace App\Core\Channels;
 
+use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 use Swoole\Http\Server;
 
@@ -48,7 +49,7 @@ final class ChannelManager
     public function __construct(
         private readonly Server $server,
         private readonly int $workerId,
-        int $capacity = 100
+        int $capacity = 1024
     ) {
         $this->channel = new Channel($capacity);
     }
@@ -72,10 +73,30 @@ final class ChannelManager
         $this->running = true;
 
         go(function () use ($handler): void {
+            // Assign random sleep range per worker to avoid synchronization
+            $baseSleep = 0.1; // minimum base sleep in seconds
+            $randRange = 0.3; // add up to +0.3s jitter
+            $workerSleep = $baseSleep + mt_rand(0, (int) ($randRange * 1000)) / 1000;
+
+            logDebug(self::TAG, sprintf(
+                "[Worker %d] Random sleep interval: %.3fs\n",
+                $this->workerId,
+                $workerSleep
+            ));
+
             while ($this->running) {
                 $task = $this->channel->pop(1.0); // wait max 1 sec
 
+                logDebug(self::TAG, sprintf(
+                    "[Worker %d] TaskChannel length: %s\n",
+                    $this->workerId,
+                    $this->channel->length()
+                ));
+
                 if ($task === false) {
+                    // Add jitter here too for idle workers
+                    $workerSleep = min($workerSleep * 1.5, 2.0); // exponential backoff up to 2s
+                    Coroutine::sleep($workerSleep);
                     continue;
                 }
 
@@ -88,6 +109,10 @@ final class ChannelManager
                         $e->getMessage()
                     ));
                 }
+
+                // Add jitter here too for idle workers
+                $workerSleep = $baseSleep + mt_rand(0, (int) ($randRange * 1000)) / 1000;
+                Coroutine::sleep($workerSleep);
             }
         });
     }

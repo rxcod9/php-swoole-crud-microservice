@@ -63,8 +63,6 @@ final class ChannelConsumer
             } catch (Throwable) {
                 // Handle Error
             }
-
-            Coroutine::sleep(0.2);
         });
     }
 }
