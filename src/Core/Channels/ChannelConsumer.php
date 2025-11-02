@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace App\Core\Channels;
 
 use App\Core\Events\ChannelTaskRequestDispatcher;
-use Swoole\Coroutine;
 use Throwable;
 
 /**

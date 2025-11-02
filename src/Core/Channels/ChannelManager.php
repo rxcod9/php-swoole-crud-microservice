@@ -74,8 +74,8 @@ final class ChannelManager
 
         go(function () use ($handler): void {
             // Assign random sleep range per worker to avoid synchronization
-            $baseSleep = 0.1; // minimum base sleep in seconds
-            $randRange = 0.3; // add up to +0.3s jitter
+            $baseSleep   = 0.1; // minimum base sleep in seconds
+            $randRange   = 0.3; // add up to +0.3s jitter
             $workerSleep = $baseSleep + mt_rand(0, (int) ($randRange * 1000)) / 1000;
 
             logDebug(self::TAG, sprintf(
