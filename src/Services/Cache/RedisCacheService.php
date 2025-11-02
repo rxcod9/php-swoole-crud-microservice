@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace App\Services\Cache;
 
 use App\Core\Pools\RedisPool;
+use Redis;
+use Throwable;
 
 /**
  * RedisCacheService
@@ -56,8 +58,8 @@ final readonly class RedisCacheService
      */
     public function __construct(
         private RedisPool $redisPool,
-        private int $recordTtl = 300,
-        private int $listTtl = 120
+        private int $recordTtl = 5 * 60 * 10,
+        private int $listTtl = 2 * 60 * 10
     ) {
         // Empty Constructor
     }
@@ -70,10 +72,15 @@ final readonly class RedisCacheService
      */
     public function get(string $key): mixed
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        return $redis->get($key);
+            return $redis->get($key);
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
+        }
     }
 
     /**
@@ -85,10 +92,15 @@ final readonly class RedisCacheService
      */
     public function set(string $key, mixed $data, ?int $localTtl = null): void
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        $redis->setex($key, $localTtl ?? $this->recordTtl, $data);
+            $redis->setex($key, $localTtl ?? $this->recordTtl, $data);
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
+        }
     }
 
     /**
@@ -102,15 +114,20 @@ final readonly class RedisCacheService
      */
     public function incrBy(string $key, int $increment, ?int $localTtl = null): int
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        $count = $redis->incrBy($key, $increment);
-        if ($count === $increment) {
-            $redis->expire($key, $localTtl ?? $this->recordTtl);
+            $count = $redis->incrBy($key, $increment);
+            if ($count === $increment) {
+                $redis->expire($key, $localTtl ?? $this->recordTtl);
+            }
+
+            return $count;
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
         }
-
-        return $count;
     }
 
     /**
@@ -162,11 +179,16 @@ final readonly class RedisCacheService
      */
     public function invalidateRecordByColumn(string $entity, string $column, int|string $value): void
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        $key = $this->recordKeyByColumn($entity, $column, $value);
-        $redis->del($key);
+            $key = $this->recordKeyByColumn($entity, $column, $value);
+            $redis->del($key);
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
+        }
     }
 
     /**
@@ -236,18 +258,20 @@ final readonly class RedisCacheService
      */
     public function getList(string $entity, array $query): mixed
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
-
         $version = $this->getListVersion($entity);
         $key     = $this->listKey($entity, $query, $version);
 
         try {
-            $data = $redis->get($key);
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
+            $data  = $redis->get($key);
         } catch (\Throwable $throwable) {
             // Log error but do not throw, as cache failure should not break functionality
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Redis getList error: ' . $throwable->getMessage());
             return null;
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
         }
 
         return ($data === null || $data === false) ? null : json_decode($data, true);
@@ -264,13 +288,17 @@ final readonly class RedisCacheService
      */
     public function setList(string $entity, array $query, mixed $data, ?int $localTtl = null): void
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
-
         $version = $this->getListVersion($entity);
         $key     = $this->listKey($entity, $query, $version);
 
-        $redis->setex($key, $localTtl ?? $this->listTtl, json_encode($data));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
+            $redis->setex($key, $localTtl ?? $this->listTtl, json_encode($data));
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
+        }
     }
 
     /**
@@ -282,12 +310,17 @@ final readonly class RedisCacheService
     public function invalidateLists(string $entity): void
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Invalidating lists for entity: ' . $entity);
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for entity: ' . $entity);
-        $result = $redis->incr($entity . ':version');
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for entity: ' . $entity . ' result:' . var_export($result, true));
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Incrementing version for entity: ' . $entity);
+            $result = $redis->incr($entity . ':version');
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'Version incremented for entity: ' . $entity . ' result:' . var_export($result, true));
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
+        }
     }
 
     /**
@@ -299,17 +332,22 @@ final readonly class RedisCacheService
      */
     private function getListVersion(string $entity): int
     {
-        $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
-        defer(fn () => $this->redisPool->put($redis));
+        try {
+            $redis = $this->redisPool->get(); // returns Swoole\Coroutine\Redis
 
-        $versionKey = $entity . ':version';
-        $version    = $redis->get($versionKey);
+            $versionKey = $entity . ':version';
+            $version    = $redis->get($versionKey);
 
-        if ($version === false || $version === null) {
-            return 1;
+            if ($version === false || $version === null) {
+                return 1;
+            }
+
+            return (int)$version;
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
         }
-
-        return (int)$version;
     }
 
     /**
@@ -334,41 +372,80 @@ final readonly class RedisCacheService
     /**
      * Garbage collect old list versions for multiple entities in one scan.
      *
+     * Scans Redis for keys matching pattern "*:list:v*", determines their entity and version,
+     * and deletes any versions older than `$keepVersions` behind the current.
+     *
      * @param string[] $entities
      * @param int      $keepVersions Number of recent versions to keep
      */
     public function gcOldListVersions(array $entities, int $keepVersions = 2): void
     {
-        $redis = $this->redisPool->get();
-        defer(fn () => $this->redisPool->put($redis));
-
         $versions = $this->getCurrentVersions($entities);
+        if ($versions === []) {
+            return;
+        }
 
-        $cursor = 0;
-        do {
-            $keys = $redis->scan($cursor, '*:list:v*', 100);
-            if (!is_array($keys)) {
-                // ensure cursor continues correctly
-                continue;
-            }
+        $redis = null;
 
-            if ($keys === []) {
-                // ensure cursor continues correctly
-                continue;
-            }
+        try {
+            $redis  = $this->redisPool->get();
+            $cursor = 0;
 
-            foreach ($keys as $key) {
-                $entity = $this->findEntityForKey($key, $entities);
-                if ($entity === null) {
+            do {
+                $keys = $this->scanKeys($redis, $cursor);
+                if ($keys === []) {
                     continue;
                 }
 
-                $version = $this->extractVersionFromKey($key);
-                if ($version <= ($versions[$entity] - $keepVersions)) {
-                    $redis->del($key);
+                foreach ($keys as $key) {
+                    $this->maybeDeleteOldVersion($redis, $key, $entities, $versions, $keepVersions);
                 }
+            } while ($cursor !== 0);
+        } catch (Throwable $throwable) {
+            logDebug('RedisCacheService::gcOldListVersions failed', $throwable->getMessage());
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
             }
-        } while ($cursor !== 0);
+        }
+    }
+
+    /**
+     * Wrapper around Redis SCAN to handle edge cases cleanly.
+     *
+     * @return string[] List of scanned keys.
+     */
+    private function scanKeys(Redis $redis, int &$cursor): array
+    {
+        $keys = $redis->scan($cursor, '*:list:v*', 100);
+        return is_array($keys) ? $keys : [];
+    }
+
+    /**
+     * Check if a Redis key belongs to a known entity and is safe to delete based on versioning.
+     *
+     * @param string[] $entities
+     * @param array<string, int> $versions
+     */
+    private function maybeDeleteOldVersion(
+        Redis $redis,
+        string $key,
+        array $entities,
+        array $versions,
+        int $keepVersions
+    ): void {
+        $entity = $this->findEntityForKey($key, $entities);
+        if ($entity === null) {
+            return;
+        }
+
+        $version = $this->extractVersionFromKey($key);
+        $latest  = $versions[$entity] ?? 0;
+
+        // Delete old list versions beyond the keep threshold
+        if ($version <= ($latest - $keepVersions)) {
+            $redis->del($key);
+        }
     }
 
     /**

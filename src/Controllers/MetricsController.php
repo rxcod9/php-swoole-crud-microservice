@@ -73,8 +73,7 @@ final class MetricsController extends Controller
     public function check(): array
     {
         try {
-            $redis = $this->redisPool->get();
-            defer(fn () => $this->redisPool->put($redis));
+            $redis            = $this->redisPool->get();
             $renderTextFormat = new RenderTextFormat();
             $metrics          = $renderTextFormat->render(
                 $this->metrics
@@ -86,6 +85,10 @@ final class MetricsController extends Controller
         } catch (Throwable $throwable) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
             return $this->text(Messages::ERROR_INTERNAL_ERROR, 500, RenderTextFormat::MIME_TYPE);
+        } finally {
+            if (isset($redis)) {
+                $this->redisPool->put($redis);
+            }
         }
     }
 }

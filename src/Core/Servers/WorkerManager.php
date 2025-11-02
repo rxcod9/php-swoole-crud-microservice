@@ -47,7 +47,7 @@ final class WorkerManager
     public function handleStop(int $workerId): void
     {
         echo "[WorkerStop] Worker #{$workerId} stopped\n";
-        $this->workerStartHandler->clearTimers($workerId);
+        $this->workerStartHandler->clear($workerId);
         $this->disableWorker($workerId, $this->healthTable);
     }
 
@@ -58,7 +58,7 @@ final class WorkerManager
         int $signal
     ): void {
         echo sprintf('[WorkerError] Worker #%d (PID: %d) crashed. Exit: %d, Signal: %d%s', $workerId, $pid, $exit, $signal, PHP_EOL);
-        $this->workerStartHandler->clearTimers($workerId);
+        $this->workerStartHandler->clear($workerId);
         $this->disableWorker($workerId, $this->healthTable);
     }
 

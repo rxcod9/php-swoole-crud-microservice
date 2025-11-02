@@ -325,20 +325,25 @@ final class RedisPool
      */
     public function command(string $cmd, array $args = []): mixed
     {
-        /** @var \Redis $redis */
-        $redis = $this->get();
-        // Ensure connection is returned after use
-        defer(fn () => $this->put($redis));
+        try {
+            $cmd = strtolower($cmd);
 
-        $cmd = strtolower($cmd);
+            /** @var Redis $redis */
+            $redis = $this->get();
 
-        // Check method exists
-        if (!method_exists($redis, $cmd)) {
-            throw new UnsupportedRedisCommandException('Unsupported Redis command: ' . $cmd);
+            // Check method exists
+            if (!method_exists($redis, $cmd)) {
+                throw new UnsupportedRedisCommandException('Unsupported Redis command: ' . $cmd);
+            }
+
+            // Execute the command dynamically
+            return call_user_func_array([$redis, $cmd], $args);
+        } finally {
+            // Ensure connection is returned after use
+            if (isset($redis)) {
+                $this->put($redis);
+            }
         }
-
-        // Execute the command dynamically
-        return call_user_func_array([$redis, $cmd], $args);
     }
 
     /**

@@ -19,13 +19,13 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Channels\ChannelManager;
 use App\Core\Controller;
 use App\Core\Messages;
 use App\Tasks\User\CreateUserTask;
 use App\Tasks\User\DeleteUserTask;
 use App\Tasks\User\UpdateUserTask;
 use OpenApi\Attributes as OA;
-use Swoole\Http\Server;
 
 /**
  * RESTful User resource controller
@@ -47,7 +47,7 @@ final class AsyncUserController extends Controller
      * Inject UserService for business logic operations.
      */
     public function __construct(
-        private readonly Server $server,
+        private readonly ChannelManager $channelManager
     ) {
         // Empty Constructor
     }
@@ -103,23 +103,24 @@ final class AsyncUserController extends Controller
     )]
     public function create(): array
     {
-        $start       = microtime(true);
-        $data        = $this->request->getPostParams();
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'PostParams loaded'));
+        $start  = microtime(true);
+        $data   = $this->request->getPostParams();
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'PostParams loaded'));
 
         // Dispatch async user creation task
         $id = bin2hex(random_bytes(8));
 
-        $result = $this->server->task([
+        $result = $this->channelManager->push([
             'class'     => CreateUserTask::class,
             'id'        => $id,
             'arguments' => [__FUNCTION__, $data],
         ]);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'server->task called'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
 
+        // check if unable to push
         if ($result === false) {
             return $this->json([
                 'message' => Messages::ERROR_INTERNAL_ERROR,
@@ -134,8 +135,8 @@ final class AsyncUserController extends Controller
             'result'  => $result,
         ], 202);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'response sent'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'response sent'));
         return $response;
     }
 
@@ -201,22 +202,23 @@ final class AsyncUserController extends Controller
     {
         $start = microtime(true);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
-        $data        = $this->request->getPostParams();
+        $data = $this->request->getPostParams();
         $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'PostParams loaded'));
 
         // Dispatch async user creation task
         $id = bin2hex(random_bytes(8));
 
-        $result = $this->server->task([
+        $result = $this->channelManager->push([
             'class'     => UpdateUserTask::class,
             'id'        => $id,
             'arguments' => [__FUNCTION__, $params, $data],
         ]);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'server->task called'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
 
+        // check if unable to push
         if ($result === false) {
             return $this->json([
                 'message' => Messages::ERROR_INTERNAL_ERROR,
@@ -231,8 +233,8 @@ final class AsyncUserController extends Controller
             'result'  => $result,
         ], 202);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'response sent'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'response sent'));
         return $response;
     }
 
@@ -292,15 +294,16 @@ final class AsyncUserController extends Controller
         // Dispatch async user creation task
         $id = bin2hex(random_bytes(8));
 
-        $result = $this->server->task([
+        $result = $this->channelManager->push([
             'class'     => DeleteUserTask::class,
             'id'        => $id,
             'arguments' => [__FUNCTION__, $params],
         ]);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'server->task called'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
 
+        // check if unable to push
         if ($result === false) {
             return $this->json([
                 'message' => Messages::ERROR_INTERNAL_ERROR,
@@ -315,8 +318,8 @@ final class AsyncUserController extends Controller
             'result'  => $result,
         ], 202);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[SQL] [%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'response sent'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'response sent'));
         return $response;
     }
 }

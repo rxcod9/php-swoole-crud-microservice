@@ -68,56 +68,118 @@ final readonly class TaskDispatcher
      * @throws TaskContractViolationException         If the task or handle method does not exist
      *
      * @return bool Response from the task method
+     *
+     * @SuppressWarnings("PHPMD.ExcessiveMethodLength")
      */
-    public function dispatch(string $class, string $id, array $arguments, Task $task): bool
+    /**
+     * Dispatch a task class.
+     *
+     * @param string $class     The fully qualified class name of the task.
+     * @param string $id        Task identifier.
+     * @param array<int, mixed> $arguments Parameters to pass to the handler.
+     * @param Task   $task      The task instance being processed.
+     *
+     * @return bool True if successfully executed, false otherwise.
+     * @throws TaskNotFoundException
+     * @throws TaskContractViolationException
+     */
+    public function dispatch(
+        string $class,
+        string $id,
+        array $arguments,
+        Task $task
+    ): bool {
+        $instance = $this->resolveTask($class);
+
+        try {
+            $result = $this->handle($instance, $id, $arguments);
+            $this->finalizeSuccess($task, $class, $id, $arguments, $result);
+            return true;
+        } catch (Throwable $throwable) {
+            return $this->handleFailure($instance, $task, $class, $id, $arguments, $throwable);
+        }
+    }
+
+    /**
+     * Resolve a task instance from the container and validate it.
+     */
+    private function resolveTask(string $class): TaskInterface
     {
         if (!class_exists($class)) {
             throw new TaskNotFoundException(sprintf('Task class %s does not exist.', $class));
         }
 
-        // check interface
         $reflectionClass = new ReflectionClass($class);
         if (!$reflectionClass->implementsInterface(TaskInterface::class)) {
-            throw new TaskContractViolationException(sprintf('Implement TaskInterface in your Task class %s.', $class));
+            throw new TaskContractViolationException(
+                sprintf('Implement TaskInterface in your Task class %s.', $class)
+            );
         }
 
-        $instance = $this->container->get($class);
+        return $this->container->get($class);
+    }
 
-        try {
-            $result = $this->handle($instance, $id, $arguments);
+    /**
+     * Finalize successful task execution.
+     *
+     * @param array<int, mixed> $arguments Arguments
+     */
+    private function finalizeSuccess(
+        Task $task,
+        string $class,
+        string $id,
+        array $arguments,
+        mixed $result
+    ): void {
+        $task->finish([
+            'class'     => $class,
+            'id'        => $id,
+            'arguments' => $arguments,
+            'result'    => $result,
+        ]);
+    }
 
-            $task->finish([
-                'class'     => $class,
-                'id'        => $id,
-                'arguments' => $arguments,
-                'result'    => $result,
-            ]);
-
-            return true;
-        } catch (Throwable $throwable) {
-            if (method_exists($instance, 'error')) {
+    /**
+     * Handle failure path — calls custom error() if available, else logs error.
+     *
+     * @param array<int, mixed> $arguments Arguments
+     */
+    private function handleFailure(
+        object $instance,
+        Task $task,
+        string $class,
+        string $id,
+        array $arguments,
+        Throwable $throwable
+    ): bool {
+        if (method_exists($instance, 'error')) {
+            try {
                 $result = $instance->error($throwable, $id, ...$arguments);
+                $this->finalizeSuccess($task, $class, $id, $arguments, $result);
+                return true;
+            } catch (Throwable $throwable) {
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage());
 
                 $task->finish([
                     'class'     => $class,
                     'id'        => $id,
                     'arguments' => $arguments,
-                    'result'    => $result,
+                    'error'     => $throwable->getMessage(),
                 ]);
                 return true;
             }
-
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
-
-            $task->finish([
-                'class'     => $class,
-                'id'        => $id,
-                'arguments' => $arguments,
-                'error'     => $throwable->getMessage(),
-            ]);
-
-            return false;
         }
+
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage());
+
+        $task->finish([
+            'class'     => $class,
+            'id'        => $id,
+            'arguments' => $arguments,
+            'error'     => $throwable->getMessage(),
+        ]);
+
+        return false;
     }
 
     /**

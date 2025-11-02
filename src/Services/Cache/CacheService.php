@@ -77,7 +77,7 @@ final readonly class CacheService
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS'); // logged internally
             // warm local cache for faster next access
             try {
-                $this->tableCacheService->set($key, $value, 120);
+                $this->tableCacheService->set($key, $value, 2 * 60 * 10);
             } catch (Throwable $e) {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }

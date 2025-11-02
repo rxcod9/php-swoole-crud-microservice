@@ -19,12 +19,12 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
+use App\Core\Channels\ChannelManager;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
 use App\Core\Metrics;
-use App\Core\Pools\RedisPool;
 use App\Core\Router;
-use Swoole\Coroutine;
+use App\Tasks\MetricsTask;
 
 /**
  * Class MetricsMiddleware
@@ -44,10 +44,11 @@ use Swoole\Coroutine;
  */
 final class MetricsMiddleware implements MiddlewareInterface
 {
+    public const TAG = 'MetricsMiddleware';
+
     public function __construct(
-        private readonly RedisPool $redisPool,
-        private readonly Metrics $metrics,
-        private readonly Router $router
+        private readonly Router $router,
+        private readonly ChannelManager $channelManager
     ) {
         // Empty Constructor
     }
@@ -77,18 +78,20 @@ final class MetricsMiddleware implements MiddlewareInterface
             return;
         }
 
-        // ✅ Offload metrics collection to a coroutine
-        Coroutine::create(function () use ($method, $route, $status, $dur): void {
-            $redis = $this->redisPool->get();
-            defer(fn () => $this->redisPool->put($redis));
+        // Dispatch async user creation task
+        $id     = bin2hex(random_bytes(8));
+        $result = $this->channelManager->push([
+            'class'     => MetricsTask::class,
+            'id'        => $id,
+            'arguments' => [$method, $route['path'], $status, $dur],
+        ]);
 
-            $collectorRegistry = $this->metrics
-                ->getCollectorRegistry($redis);
-            $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-            $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
+        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'channelManager->push called'));
 
-            $counter->inc([$method, $route['path'], (string) $status]);
-            $histogram->observe($dur, [$method, $route['path']]);
-        });
+        // check if unable to push
+        if ($result === false) {
+            // Log warning
+        }
     }
 }

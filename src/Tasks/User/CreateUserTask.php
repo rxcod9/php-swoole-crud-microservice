@@ -52,6 +52,7 @@ final class CreateUserTask extends Task
      * Create a new user.
      * Expects JSON body with user data.
      *
+     * @param array<string, mixed> $data
      * @return int Created user id
      */
     public function create(array $data): int

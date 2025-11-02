@@ -58,7 +58,7 @@ final class EventRegistrar
             $container->get(CacheService::class)
         );
 
-        $workerStartHandler = new WorkerStartHandler($tableManager->healthTable, $poolFacade);
+        $workerStartHandler = new WorkerStartHandler($container, $tableManager->healthTable, $poolFacade);
         $workerManager      = new WorkerManager($workerStartHandler, $tableManager->healthTable);
 
         $server->on('WorkerStart', $workerStartHandler);

@@ -53,6 +53,7 @@ final class UpdateUserTask extends Task
      * Expects JSON body with updated user data.
      *
      * @param array<string, string|null> $params Route parameters
+     * @param array<string, mixed> $data
      *
      * @return bool Whether Updated
      */
@@ -64,13 +65,6 @@ final class UpdateUserTask extends Task
         ], JSON_PRETTY_PRINT));
 
         $id = (int)$params['id'];
-
-        // No need in async
-        // [$user] = $this->cacheService->getRecord('users', $id);
-        // if ($user === null) {
-        //     // Calling find to validate if entiry exists
-        //     $this->userService->find($id);
-        // }
 
         $updated = $this->userService->getRepository()->update((int)$params['id'], $data);
 

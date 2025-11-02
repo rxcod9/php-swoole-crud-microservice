@@ -58,8 +58,8 @@ final readonly class TableCacheService
      */
     public function __construct(
         private TableWithLRUAndGC $tableWithLRUAndGC,
-        private int $recordTtl = 300,
-        private int $listTtl = 120,
+        private int $recordTtl = 5 * 60 * 10,
+        private int $listTtl = 2 * 60 * 10
     ) {
         // Empty Constructor
     }

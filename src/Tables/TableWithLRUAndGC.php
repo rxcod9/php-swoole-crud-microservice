@@ -97,7 +97,7 @@ class TableWithLRUAndGC extends BaseTableProxy implements Iterator, Countable
      */
     public function __construct(
         int $maxSize = 1024,
-        private readonly int $ttl = 120,
+        private readonly int $ttl = 2 * 60 * 10,
         int $bufferSize = 10
     ) {
         // Initialize Swoole Table with typed columns

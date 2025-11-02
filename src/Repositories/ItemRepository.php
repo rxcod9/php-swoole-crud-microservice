@@ -529,8 +529,11 @@ final readonly class ItemRepository extends Repository
      *
      * @param array<string, mixed> $data
      */
-    private function prepareUpdateStatement(PDO $pdo, int $id, array $data): \PDOStatement
-    {
+    private function prepareUpdateStatement(
+        PDO $pdo,
+        int $id,
+        array $data
+    ): PDOStatement {
         $sql  = 'UPDATE items SET sku=:sku, title=:title, price=:price WHERE id=:id';
         $stmt = $pdo->prepare($sql);
 
