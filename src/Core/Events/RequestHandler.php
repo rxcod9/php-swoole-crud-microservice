@@ -49,8 +49,7 @@ final readonly class RequestHandler
         private Container $container,
         private GlobalMiddlewareRegistrar $globalMiddlewareRegistrar,
         private RouteDispatcher $routeDispatcher,
-        private HttpExceptionHandler $httpExceptionHandler,
-        private RequestTelemetry $requestTelemetry
+        private HttpExceptionHandler $httpExceptionHandler
     ) {
         // Empty Constructor
     }
@@ -73,7 +72,7 @@ final readonly class RequestHandler
         } catch (Throwable $throwable) {
             $this->httpExceptionHandler->handle($requestContext, $throwable);
         } finally {
-            $this->requestTelemetry->collect($requestContext);
+            $this->container->get(RequestTelemetry::class)->collect($requestContext);
         }
     }
 }

@@ -119,7 +119,7 @@ trait Retryable
         $tag       = defined(static::class . '::TAG') ? constant(static::class . '::TAG') : static::class;
 
         logDebug($tag . ':' . __LINE__ . '][' . $method, sprintf('[%s] #%d in %.2f seconds...', $label, $attempt + 1, $backoffUs / 1_000_000));
-        Coroutine::sleep($backoffUs / 1_000_000);
+        Coroutine::sleep($backoffUs / 1000000);
     }
 
     /**

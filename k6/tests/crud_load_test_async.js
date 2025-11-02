@@ -7,7 +7,7 @@
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { ENV, printUsage } from '../lib/env.js';
-import { generateUser, generateItem, postEntity, slicePercent, getEntities, getEntity } from '../lib/utils.js';
+import { generateUser, generateItem, postEntity, slicePercent, getEntities, getEntity, secureRandomFloat } from '../lib/utils.js';
 import { METRICS_REGISTRY, buildThresholds } from '../lib/metrics.js';
 import { performCrudAction } from '../lib/crud.js';
 
@@ -136,7 +136,7 @@ export default function (data) {
         });
     }
 
-    sleep(Math.random() * 2);
+    sleep(secureRandomFloat(0, 1) * 2);
 }
 
 /**
