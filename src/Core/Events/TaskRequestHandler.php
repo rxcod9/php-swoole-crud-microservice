@@ -87,7 +87,6 @@ final readonly class TaskRequestHandler
      * Save Metrics
      *
      * @param array<string, mixed> $data
-     * @param bool $status
      */
     public function saveMetrics(float $start, array $data, bool $status): void
     {
