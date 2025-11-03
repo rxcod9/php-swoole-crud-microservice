@@ -17,15 +17,15 @@ import { check } from 'k6';
  */
 export function secureRandomInt(min, max) {
     if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        throw new Error('Both min and max must be integers.');
+        throw new TypeError('Both min and max must be integers.');
     }
     if (max <= min) {
-        throw new Error(`Invalid range: max (${max}) must be greater than min (${min}).`);
+        throw new RangeError(`Invalid range: max (${max}) must be greater than min (${min}).`);
     }
 
     const range = max - min;
     if (range > 0xffffffff) {
-        throw new Error('Range too large; must be less than 2^32.');
+        throw new RangeError('Range too large; must be less than 2^32.');
     }
 
     const array = new Uint32Array(1);
@@ -131,51 +131,72 @@ export function slicePercent(arr, percent) {
 
 /**
  * Recursively encodes a JavaScript object to `application/x-www-form-urlencoded`.
- * Supports nested objects and arrays in PHP/Laravel-style format.
  *
- * Examples:
- *   encodeFormData({ user: { name: 'John', age: 30 } })
- *   → "user[name]=John&user[age]=30"
+ * Supports nested objects and arrays:
+ *   encodeFormData({ user: { name: 'John' } })
+ *   → "user[name]=John"
  *
  *   encodeFormData({ tags: ['a', 'b'] })
  *   → "tags[]=a&tags[]=b"
  *
- * @param {Record<string, any>} data
- * @param {string} [parentKey]
- * @returns {string}
+ * @param {Record<string, any>} data - Input object
+ * @param {string} [parentKey] - Internal recursion prefix
+ * @returns {string} Encoded query string
+ * @throws {TypeError} When data is not a plain object
  */
 export function encodeFormData(data, parentKey = '') {
-    const pairs = [];
+  if (!isEncodableObject(data)) {
+    throw new TypeError('encodeFormData: Input must be a plain object or array.');
+  }
 
-    for (const [key, value] of Object.entries(data)) {
-        if (value === undefined || value === null) continue;
+  const pairs = [];
 
-        // build full key path (supports nested object syntax)
-        const fullKey = parentKey
-            ? Array.isArray(data)
-                ? `${parentKey}[]`
-                : `${parentKey}[${key}]`
-            : key;
+  for (const [key, value] of Object.entries(data)) {
+    if (value == null) continue; // skip null/undefined
 
-        if (typeof value === 'object' && !Array.isArray(value)) {
-            // nested object → recurse
-            pairs.push(encodeFormData(value, fullKey));
-        } else if (Array.isArray(value)) {
-            // nested array → recurse
-            for (const item of value) {
-                if (typeof item === 'object') {
-                    pairs.push(encodeFormData(item, `${fullKey}[]`));
-                } else {
-                    pairs.push(`${encodeURIComponent(fullKey)}=${encodeURIComponent(item)}`);
-                }
-            }
-        } else {
-            // primitive value
-            pairs.push(`${encodeURIComponent(fullKey)}=${encodeURIComponent(value)}`);
-        }
+    const fullKey = getFullKey(parentKey, key, data);
+
+    if (isEncodableObject(value)) {
+      // recurse for nested objects or arrays
+      pairs.push(encodeFormData(value, fullKey));
+    } else {
+      // primitive value
+      pairs.push(encodePair(fullKey, value));
     }
+  }
 
-    return pairs.join('&');
+  return pairs.join('&');
+}
+
+/**
+ * Builds a properly encoded key=value pair.
+ * @param {string} key
+ * @param {any} value
+ * @returns {string}
+ */
+function encodePair(key, value) {
+  return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+}
+
+/**
+ * Returns the nested key path according to Laravel-style conventions.
+ * @param {string} parent
+ * @param {string} key
+ * @param {any} context
+ * @returns {string}
+ */
+function getFullKey(parent, key, context) {
+  if (!parent) return key;
+  return Array.isArray(context) ? `${parent}[]` : `${parent}[${key}]`;
+}
+
+/**
+ * Determines if the value is a plain object or array that can be recursively encoded.
+ * @param {any} value
+ * @returns {boolean}
+ */
+function isEncodableObject(value) {
+  return typeof value === 'object' && value !== null;
 }
 
 /**

@@ -22,7 +22,7 @@ namespace App\Core\Events;
 use App\Core\Channels\ChannelManager;
 use App\Core\Events\Request\RequestContext;
 use App\Core\Router;
-use App\Tasks\MetricsTask;
+use App\Tasks\HttpMetricsTask;
 use Throwable;
 
 /**
@@ -67,7 +67,7 @@ final class RequestTelemetry
             // Dispatch async user creation task
             $id     = $requestContext->meta()->id();
             $result = $this->channelManager->push([
-                'class'     => MetricsTask::class,
+                'class'     => HttpMetricsTask::class,
                 'id'        => $id,
                 'arguments' => [$method, $route['path'], $status, $dur],
             ]);
@@ -78,6 +78,7 @@ final class RequestTelemetry
             // check if unable to push
             if ($result === false) {
                 // Log warning
+                logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push failed'));
             }
         } catch (Throwable $throwable) {
             logDebug('RequestTelemetry', 'Metrics logging failed: ' . $throwable->getMessage());

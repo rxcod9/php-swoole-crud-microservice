@@ -1,7 +1,7 @@
 <?php
 
 /**
- * src/Tasks/MetricsTask.php
+ * src/Tasks/TaskMetricsTask.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
@@ -13,7 +13,7 @@
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
- * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tasks/MetricsTask.php
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Tasks/TaskMetricsTask.php
  */
 declare(strict_types=1);
 
@@ -23,7 +23,7 @@ use App\Core\Metrics;
 use App\Core\Pools\RedisPool;
 
 /**
- * MetricsTask handles logging of request payloads to a file.
+ * TaskMetricsTask handles logging of request payloads to a file.
  * This class uses Monolog to write log entries to /app/logs/access.log.
  *
  * @category  Tasks
@@ -34,9 +34,9 @@ use App\Core\Pools\RedisPool;
  * @version   1.0.0
  * @since     2025-10-02
  */
-final class MetricsTask implements TaskInterface
+final class TaskMetricsTask implements TaskInterface
 {
-    public const TAG = 'MetricsTask';
+    public const TAG = 'TaskMetricsTask';
 
     /**
      * Inject UserService for business logic operations.
@@ -57,18 +57,18 @@ final class MetricsTask implements TaskInterface
      */
     public function handle(string $id, mixed ...$arguments): mixed
     {
-        [$method, $path, $status, $dur] = $arguments;
+        [$class, $status, $dur] = $arguments;
 
         try {
             $redis = $this->redisPool->get();
 
             $collectorRegistry = $this->metrics
                 ->getCollectorRegistry($redis);
-            $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-            $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
+            $counter   = $collectorRegistry->getOrRegisterCounter('task_requests_total', 'Tasks', 'Total Task requests', ['class', 'status']);
+            $histogram = $collectorRegistry->getOrRegisterHistogram('task_request_seconds', 'Latency', 'Task request latency', ['class']);
 
-            $counter->inc([$method, $path, (string) $status]);
-            $histogram->observe($dur, [$method, $path]);
+            $counter->inc([$class, (string) $status]);
+            $histogram->observe($dur, [$class]);
         } finally {
             if (isset($redis)) {
                 $this->redisPool->put($redis);

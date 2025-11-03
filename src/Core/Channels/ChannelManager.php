@@ -87,11 +87,13 @@ final class ChannelManager
             while ($this->running) {
                 $task = $this->channel->pop(1.0); // wait max 1 sec
 
-                logDebug(self::TAG, sprintf(
-                    "[Worker %d] TaskChannel length: %s\n",
-                    $this->workerId,
-                    $this->channel->length()
-                ));
+                if ($this->channel->length() > 0) {
+                    logDebug(self::TAG, sprintf(
+                        "[Worker %d] TaskChannel length: %s\n",
+                        $this->workerId,
+                        $this->channel->length()
+                    ));
+                }
 
                 if ($task === false) {
                     // Add jitter here too for idle workers

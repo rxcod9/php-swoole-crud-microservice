@@ -24,7 +24,7 @@ use App\Core\Http\Request;
 use App\Core\Http\Response;
 use App\Core\Metrics;
 use App\Core\Router;
-use App\Tasks\MetricsTask;
+use App\Tasks\HttpMetricsTask;
 
 /**
  * Class MetricsMiddleware
@@ -81,17 +81,18 @@ final class MetricsMiddleware implements MiddlewareInterface
         // Dispatch async user creation task
         $id     = bin2hex(random_bytes(8));
         $result = $this->channelManager->push([
-            'class'     => MetricsTask::class,
+            'class'     => HttpMetricsTask::class,
             'id'        => $id,
             'arguments' => [$method, $route['path'], $status, $dur],
         ]);
 
-        $queryTimeMs = round((microtime(true) - $start) * 1000, 3);
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $queryTimeMs, 'channelManager->push called'));
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
 
         // check if unable to push
         if ($result === false) {
             // Log warning
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push failed'));
         }
     }
 }
