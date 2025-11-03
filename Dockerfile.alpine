@@ -49,7 +49,6 @@ RUN apk add --no-cache --virtual .build-deps \
 # Cache target is /usr/src/php/ext-alpine (keeps it separate from Debian)
 RUN --mount=type=cache,target=/usr/src/php/ext-alpine \
     docker-php-ext-install -j$(nproc) \
-        sockets
         opcache \
         pdo \
         pdo_mysql \
