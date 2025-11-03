@@ -76,7 +76,7 @@ final class ChannelManager
             // Assign random sleep range per worker to avoid synchronization
             $baseSleep   = 0.1; // minimum base sleep in seconds
             $randRange   = 0.3; // add up to +0.3s jitter
-            $workerSleep = $baseSleep + mt_rand(0, (int) ($randRange * 1000)) / 1000;
+            $workerSleep = $baseSleep + random_int(0, (int) ($randRange * 1000)) / 1000;
 
             logDebug(self::TAG, sprintf(
                 "[Worker %d] Random sleep interval: %.3fs\n",
@@ -111,7 +111,7 @@ final class ChannelManager
                 }
 
                 // Add jitter here too for idle workers
-                $workerSleep = $baseSleep + mt_rand(0, (int) ($randRange * 1000)) / 1000;
+                $workerSleep = $baseSleep + random_int(0, (int) ($randRange * 1000)) / 1000;
                 Coroutine::sleep($workerSleep);
             }
         });
