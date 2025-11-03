@@ -77,7 +77,7 @@ final class ItemController extends Controller
     )]
     public function create(): array
     {
-        $data = $this->request->getJsonBody();
+        $data = $this->request->getPostParams();
         $item = $this->itemService->create($data);
         return $this->json($item, 201);
     }
@@ -358,7 +358,7 @@ final class ItemController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
-        $data = $this->request->getJsonBody();
+        $data = $this->request->getPostParams();
         // Calling find to validate if entiry exists
         $this->itemService->find($id);
         $item = $this->itemService->update($id, $data);

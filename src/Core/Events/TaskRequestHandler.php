@@ -19,10 +19,12 @@ declare(strict_types=1);
 
 namespace App\Core\Events;
 
+use App\Core\Channels\ChannelManager;
 use App\Core\Container;
 use App\Core\Events\TaskRequestDispatcher as Dispatcher;
 use App\Core\Metrics;
-use App\Core\Pools\RedisPool;
+use App\Tasks\HttpMetricsTask;
+use App\Tasks\TaskMetricsTask;
 use Swoole\Http\Server;
 use Swoole\Server\Task;
 use Throwable;
@@ -66,38 +68,12 @@ final readonly class TaskRequestHandler
             $workerReadyChecker = new WorkerReadyChecker();
             $workerReadyChecker->wait();
 
-            $taskId = bin2hex(random_bytes(8));
-            $start  = microtime(true);
-
-            // Metrics setup
-            $redisPool = $this->container->get(RedisPool::class);
-            $redis     = $redisPool->get();
-            defer(fn () => $redisPool->put($redis));
-
-            $metrics = $this->container->get(Metrics::class);
-            $reg     = $metrics->getCollectorRegistry($redis);
-            $counter = $reg->getOrRegisterCounter(
-                'task_requests_total',
-                'Tasks',
-                'Total Task requests',
-                ['class', 'status']
-            );
-            $hist = $reg->getOrRegisterHistogram(
-                'task_request_seconds',
-                'Latency',
-                'HTTP request latency',
-                ['class']
-            );
+            $start = microtime(true);
 
             $taskRequestDispatcher = new Dispatcher($this->container);
             $status                = $taskRequestDispatcher->dispatch($task);
-            // Metrics and async logging
-            $dur = microtime(true) - $start;
 
-            $data  = $task->data;
-            $class = $data['class'] ?? null;
-            $counter->inc([$class, (string)$status]);
-            $hist->observe($dur, [$class]);
+            $this->saveMetrics($start, $task->data, $status);
 
             return $status;
         } catch (Throwable $throwable) {
@@ -105,5 +81,46 @@ final readonly class TaskRequestHandler
         }
 
         return false;
+    }
+
+    /**
+     * Save Metrics
+     *
+     * @param array<string, mixed> $data
+     */
+    public function saveMetrics(float $start, array $data, bool $status): void
+    {
+        // Metrics and async logging
+        $dur   = microtime(true) - $start;
+        $class = $data['class'] ?? null;
+        $id    = $data['id'] ?? bin2hex(random_bytes(8));
+
+        if ($class === TaskMetricsTask::class || $class === HttpMetricsTask::class) {
+            // Skip recursion
+            return;
+        }
+
+        $channelManager = $this->container->get(ChannelManager::class);
+        // if (!$channelManager) {
+        //     logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => %s', __FUNCTION__, 'channelManager not present.'));
+        //     return;
+        // }
+
+        $start = microtime(true);
+        // Dispatch async user creation task
+        $result = $channelManager->push([
+            'class'     => TaskMetricsTask::class,
+            'id'        => $id,
+            'arguments' => [$class, $status, $dur],
+        ]);
+
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
+
+        // check if unable to push
+        if ($result === false) {
+            // Log warning
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push failed'));
+        }
     }
 }

@@ -82,7 +82,7 @@ final readonly class UserService
      *
      * @return UserRepository The repository instance.
      */
-    protected function getRepository(): UserRepository
+    public function getRepository(): UserRepository
     {
         return $this->userRepository;
     }

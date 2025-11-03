@@ -7,68 +7,89 @@ import http from 'k6/http';
 import { check } from 'k6';
 
 /**
- * Secure random integer generator using crypto.getRandomValues.
- * Fully compliant with Sonar rule S2245 (no Math.random()).
+ * Securely generate a uniform random integer between min (inclusive) and max (exclusive).
+ * Uses rejection sampling to avoid modulo bias.
  *
- * @param {number} min - Minimum value (inclusive)
- * @param {number} max - Maximum value (exclusive)
- * @returns {number} Secure random integer between min and max - 1
+ * @param {number} min - Minimum integer (inclusive)
+ * @param {number} max - Maximum integer (exclusive)
+ * @returns {number} A cryptographically secure random integer
+ * @throws {Error} If invalid range
  */
 export function secureRandomInt(min, max) {
-  if (max < min) {
-    throw new Error(`Invalid range: max (${max}) must be greater than min (${min})`);
-  }
+    if (!Number.isInteger(min) || !Number.isInteger(max)) {
+        throw new TypeError('Both min and max must be integers.');
+    }
+    if (max <= min) {
+        throw new RangeError(`Invalid range: max (${max}) must be greater than min (${min}).`);
+    }
 
-  // Generate a 32-bit unsigned random integer
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
+    const range = max - min;
+    if (range > 0xffffffff) {
+        throw new RangeError('Range too large; must be less than 2^32.');
+    }
 
-  // Normalize to [0, 1)
-  const normalized = array[0] / 0xffffffff;
+    const array = new Uint32Array(1);
+    const maxUnbiased = Math.floor(0xffffffff / range) * range;
 
-  // Scale to the requested range
-  const value = Math.floor(normalized * (max - min) + min);
-
-  return value;
+    while (true) {
+        crypto.getRandomValues(array);
+        const random32 = array[0];
+        if (random32 < maxUnbiased) {
+            return min + (random32 % range);
+        }
+        // retry if biased sample
+    }
 }
 
 /**
- * Secure random float generator using crypto.getRandomValues.
- * Replaces Math.random() for Sonar S2245 compliance.
+ * Securely generate a random float between min (inclusive) and max (exclusive).
+ * High precision, uniform distribution, Sonar S2245 compliant.
  *
- * @param {number} min - Minimum value (inclusive)
- * @param {number} max - Maximum value (exclusive)
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
  * @param {number} [decimals=2] - Number of decimal places
- * @returns {number} Secure random float between min and max
+ * @returns {number} A cryptographically secure random float
  */
 export function secureRandomFloat(min, max, decimals = 2) {
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
+    const array = new Uint32Array(2);
+    crypto.getRandomValues(array);
 
-  // Scale down to [0, 1)
-  const normalized = array[0] / 0xffffffff;
+    // Combine two 32-bit integers to improve precision
+    const high = array[0] / 0x100000000;
+    const low = array[1] / 0x100000000;
 
-  // Scale to [min, max)
-  const value = min + normalized * (max - min);
+    const normalized = (high + low) % 1; // uniform [0,1)
+    const value = min + normalized * (max - min);
 
-  // Round to given decimals
-  return Number(value.toFixed(decimals));
+    return Number(value.toFixed(decimals));
 }
 
-
 /**
- * Generate a UUID (Version 4).
+ * Generate a UUID (Version 4) using crypto.randomUUID if available, else fallback.
  *
- * @returns {string} Randomly generated UUID v4
+ * @returns {string} RFC 4122-compliant UUID v4
  */
 export function generateUuid() {
-    const template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
-    return template.replace(/[xy]/g, c => {
-        // Non-secure random for performance (acceptable for load testing)
-        const r = secureRandomInt(0, 16); // replaces Math.random()
-        const v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
+    if (typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    // Manual fallback using secure random bytes
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+
+    // Version and variant bits
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = [...bytes].map(b => b.toString(16).padStart(2, '0'));
+    return [
+        hex.slice(0, 4).join(''),
+        hex.slice(4, 6).join(''),
+        hex.slice(6, 8).join(''),
+        hex.slice(8, 10).join(''),
+        hex.slice(10, 16).join(''),
+    ].join('-');
 }
 
 /**
@@ -109,6 +130,104 @@ export function slicePercent(arr, percent) {
 }
 
 /**
+ * Recursively encodes a JavaScript object to `application/x-www-form-urlencoded`.
+ *
+ * Supports nested objects and arrays:
+ *   encodeFormData({ user: { name: 'John' } })
+ *   → "user[name]=John"
+ *
+ *   encodeFormData({ tags: ['a', 'b'] })
+ *   → "tags[]=a&tags[]=b"
+ *
+ * @param {Record<string, any>} data - Input object
+ * @param {string} [parentKey] - Internal recursion prefix
+ * @returns {string} Encoded query string
+ * @throws {TypeError} When data is not a plain object
+ */
+export function encodeFormData(data, parentKey = '') {
+  if (!isEncodableObject(data)) {
+    throw new TypeError('encodeFormData: Input must be a plain object or array.');
+  }
+
+  const pairs = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (value == null) continue; // skip null/undefined
+
+    const fullKey = getFullKey(parentKey, key, data);
+
+    if (isEncodableObject(value)) {
+      // recurse for nested objects or arrays
+      pairs.push(encodeFormData(value, fullKey));
+    } else {
+      // primitive value
+      pairs.push(encodePair(fullKey, value));
+    }
+  }
+
+  return pairs.join('&');
+}
+
+/**
+ * Builds a properly encoded key=value pair.
+ * @param {string} key
+ * @param {any} value
+ * @returns {string}
+ */
+function encodePair(key, value) {
+  return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+}
+
+/**
+ * Returns the nested key path according to Laravel-style conventions.
+ * @param {string} parent
+ * @param {string} key
+ * @param {any} context
+ * @returns {string}
+ */
+function getFullKey(parent, key, context) {
+  if (!parent) return key;
+  return Array.isArray(context) ? `${parent}[]` : `${parent}[${key}]`;
+}
+
+/**
+ * Determines if the value is a plain object or array that can be recursively encoded.
+ * @param {any} value
+ * @returns {boolean}
+ */
+function isEncodableObject(value) {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Helper: Records duration metrics and performs success check.
+ * @param {import('k6/http').Response} res
+ * @param {string} entity
+ * @param {string} op
+ * @param {import('k6/metrics').Trend} trend
+ * @param {(number|number[])[]} expected
+ */
+export function recordTrendAndCheck(res, entity, op, trend, expected) {
+    if (trend)  {
+        trend.add(res.timings.duration);
+    }
+    const expectedStatuses = Array.isArray(expected) ? expected.flat() : [expected];
+    console.log("expectedStatuses", expectedStatuses);
+    console.log("res.status", res.status);
+    if(expectedStatuses.includes(res.status)) {
+        console.log("Passed expectedStatuses", expectedStatuses);
+        console.log("Passed r.status", res.status);
+    } else {
+        console.log("Failed expectedStatuses", expectedStatuses);
+        console.log("Failed r.status", res.status);
+    }
+    check(res, {
+        [`${toUpperSnake(entity)} ${op.toUpperCase()} success`]: r =>
+            expectedStatuses.includes(r.status),
+    });
+}
+
+/**
  * Perform a POST to create an entity.
  *
  * @param {string} url - Endpoint URL
@@ -116,13 +235,50 @@ export function slicePercent(arr, percent) {
  * @param {import('k6/metrics').Trend} trend - Trend to record latency
  * @returns {string|null} Created entity ID
  */
-export function postEntity(url, obj, trend) {
+export function postEntity(entity, url, obj, trend) {
     const res = http.post(url, JSON.stringify(obj), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
     });
+    recordTrendAndCheck(res, entity, "create", trend, [200, 201, 202]);
 
-    trend.add(res.timings.duration);
-    check(res, { 'POST success': r => r.status === 201 });
+    if (res.status === 201) {
+        try {
+            const parsed = JSON.parse(res.body);
+            return parsed?.id || null;
+        } catch {
+            // ignore malformed response
+        }
+    }
+}
+
+/**
+ * Perform a GET to list entities.
+ *
+ * @param {string} url - Endpoint URL
+ * @param {import('k6/metrics').Trend} trend - Trend to record latency
+ * @returns {string|null} Created entity ID
+ */
+export function getEntities(entity, url, trend) {
+    const res = http.get(url);
+    recordTrendAndCheck(res, entity, "list", trend, 200);
+
+    try {
+        return JSON.parse(res.body) || [];
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Perform a GET to read entity.
+ *
+ * @param {string} url - Endpoint URL
+ * @param {import('k6/metrics').Trend} trend - Trend to record latency
+ * @returns {string|null} Created entity ID
+ */
+export function getEntity(entity, url, trend) {
+    const res = http.get(`${url}`);
+    recordTrendAndCheck(res, entity, "read", trend, 200);
 
     try {
         const parsed = JSON.parse(res.body);
@@ -130,4 +286,22 @@ export function postEntity(url, obj, trend) {
     } catch {
         return null;
     }
+}
+
+/**
+ * Converts a given string to UPPER_SNAKE_CASE.
+ *
+ * Examples:
+ *  - "users"        -> "USERS"
+ *  - "async-users"  -> "ASYNC_USERS"
+ *  - "asyncItems"   -> "ASYNC_ITEMS"
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+export function toUpperSnake(str) {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1_$2') // handle camelCase → snake
+    .replace(/[-\s]+/g, '_')             // handle kebab-case / spaces → underscore
+    .toUpperCase();
 }

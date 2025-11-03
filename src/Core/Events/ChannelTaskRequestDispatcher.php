@@ -1,7 +1,7 @@
 <?php
 
 /**
- * src/Core/Events/TaskRequestDispatcher.php
+ * src/Core/Events/ChannelTaskRequestDispatcher.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
  * PHP version 8.4
@@ -13,18 +13,17 @@
  * @license   MIT
  * @version   1.0.0
  * @since     2025-10-02
- * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/TaskRequestDispatcher.php
+ * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Events/ChannelTaskRequestDispatcher.php
  */
 declare(strict_types=1);
 
 namespace App\Core\Events;
 
+use App\Core\ChannelTaskDispatcher;
 use App\Core\Container;
-use App\Core\TaskDispatcher;
-use Swoole\Server\Task;
 
 /**
- * Class TaskRequestDispatcher
+ * Class ChannelTaskRequestDispatcher
  * Handles all user-related operations such as creation, update,
  * deletion, and retrieval. Integrates with external services and
  * logs critical operations.
@@ -39,7 +38,7 @@ use Swoole\Server\Task;
  * @version   1.0.0
  * @since     2025-10-02
  */
-final readonly class TaskRequestDispatcher
+final readonly class ChannelTaskRequestDispatcher
 {
     public function __construct(
         private Container $container
@@ -47,18 +46,20 @@ final readonly class TaskRequestDispatcher
         // Empty Constructor
     }
 
-    public function dispatch(Task $task): bool
+    /**
+     * @SuppressWarnings("PHPMD.LongVariable")
+     * @param array<string, mixed> $task Task
+     */
+    public function dispatch(array $task): mixed
     {
-        $data           = $task->data;
-        $class          = $data['class'] ?? null;
-        $id             = $data['id'] ?? bin2hex(random_bytes(8));
-        $arguments      = $data['arguments'] ?? null;
-        $taskDispatcher = new TaskDispatcher($this->container);
-        return $taskDispatcher->dispatch(
+        $class                 = $task['class'] ?? null;
+        $id                    = $task['id'] ?? bin2hex(random_bytes(8));
+        $arguments             = $task['arguments'] ?? null;
+        $channelTaskDispatcher = new ChannelTaskDispatcher($this->container);
+        return $channelTaskDispatcher->dispatch(
             $class,
             $id,
-            $arguments,
-            $task
+            $arguments
         );
     }
 }

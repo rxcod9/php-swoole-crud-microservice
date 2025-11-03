@@ -498,8 +498,13 @@ final readonly class UserRepository extends Repository
      *
      * @param array<string, mixed> $data
      */
-    private function prepareUpdateStatement(PDO $pdo, int $id, array $data): \PDOStatement
-    {
+    private function prepareUpdateStatement(
+        PDO $pdo,
+        int $id,
+        array $data
+    ): PDOStatement {
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'data ' . json_encode($data, JSON_PRETTY_PRINT));
+
         $sql  = 'UPDATE users SET email=:email, name=:name WHERE id=:id';
         $stmt = $pdo->prepare($sql);
 

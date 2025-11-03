@@ -55,7 +55,8 @@ final class TaskFinishHandler
             return false;
         }
 
-        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Task %d finished:  %s -> {', $taskId, $class) . json_encode($data) . '}' . PHP_EOL);
+        // logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Task %d finished:  %s -> {', $taskId, $class) . json_encode($data) . '}' . PHP_EOL);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('Task %d finished:  %s -> {', $taskId, $class) . '}' . PHP_EOL);
 
         // @TODO call TaskListener for chaining
         return true;

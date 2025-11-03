@@ -47,6 +47,40 @@ use OpenApi\Attributes as OA;
     url: 'http://localhost:9501',
     description: 'Local dev server'
 )]
+#[OA\Tag(
+    name: 'Home',
+    description: 'Root endpoints providing API metadata, health status, and basic navigation.'
+)]
+#[OA\Tag(
+    name: 'Users',
+    description: 'Endpoints for managing user entities — create, read, update, and delete operations.'
+)]
+#[OA\Tag(
+    name: 'AsyncUsers',
+    description: 'Asynchronous user operations handled via Swoole tasks or background workers.'
+)]
+#[OA\Tag(
+    name: 'Items',
+    description: 'Endpoints for managing item inventory, pricing, and stock lifecycle.'
+)]
+#[OA\Schema(
+    x: [
+        'tagGroups' => [
+            [
+                'name' => 'Home',
+                'tags' => ['Home'],
+            ],
+            [
+                'name' => 'Users',
+                'tags' => ['Users', 'AsyncUsers'],
+            ],
+            [
+                'name' => 'Items',
+                'tags' => ['Items'],
+            ],
+        ],
+    ]
+)]
 
 final class IndexController extends Controller
 {

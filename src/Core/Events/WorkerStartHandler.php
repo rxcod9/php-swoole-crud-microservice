@@ -19,6 +19,9 @@ declare(strict_types=1);
 
 namespace App\Core\Events;
 
+use App\Core\Channels\ChannelConsumer;
+use App\Core\Channels\ChannelManager;
+use App\Core\Container;
 use App\Core\Contexts\AppContext;
 use App\Core\Pools\PoolFacade;
 use App\Exceptions\CacheSetException;
@@ -48,7 +51,11 @@ final class WorkerStartHandler
     /** @var array<int, array<int>> Keeps track of timers per worker */
     private array $workerTimers = [];
 
+    /** @var array<int, ChannelManager> Keeps track of channel managers per worker */
+    private array $channels = [];
+
     public function __construct(
+        private readonly Container $container,
         private readonly Table $table,
         private readonly PoolFacade $poolFacade
     ) {
@@ -74,7 +81,7 @@ final class WorkerStartHandler
 
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, "Worker {$workerId} with PID {$pid} ready\n");
 
-        $this->startTimers($workerId, $pid);
+        $this->start($server, $workerId, $pid);
     }
 
     private function initializeWorkerRow(int $workerId, int $pid): void
@@ -90,6 +97,12 @@ final class WorkerStartHandler
         }
     }
 
+    private function start(Server $server, int $workerId, int $pid): void
+    {
+        $this->startTimers($workerId, $pid);
+        $this->startChannels($server, $workerId);
+    }
+
     /**
      * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      * @SuppressWarnings("PHPMD.StaticAccess")
@@ -100,10 +113,31 @@ final class WorkerStartHandler
         $this->workerTimers[$workerId] = [$timerId];
     }
 
+    private function startChannels(Server $server, int $workerId): void
+    {
+        // initialize per-worker channel
+        $channelManager            = new ChannelManager($server, $workerId);
+        $this->channels[$workerId] = $channelManager;
+
+        // start consumer
+        $channelConsumer = new ChannelConsumer($channelManager, new ChannelTaskRequestDispatcher($this->container));
+        $channelConsumer->start();
+
+        // Register per-worker channel manager and consumer in container
+        $this->container->singleton(ChannelManager::class, fn (): \App\Core\Channels\ChannelManager => $channelManager);
+        $this->container->singleton(ChannelConsumer::class, fn (): \App\Core\Channels\ChannelConsumer => $channelConsumer);
+    }
+
+    public function clear(int $workerId): void
+    {
+        $this->clearTimers($workerId);
+        $this->clearChannels($workerId);
+    }
+
     /**
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
-    public function clearTimers(int $workerId): void
+    private function clearTimers(int $workerId): void
     {
         if (!isset($this->workerTimers[$workerId])) {
             return;
@@ -114,6 +148,14 @@ final class WorkerStartHandler
         }
 
         unset($this->workerTimers[$workerId]);
+    }
+
+    private function clearChannels(int $workerId): void
+    {
+        if (isset($this->channels[$workerId])) {
+            $this->channels[$workerId]->stop();
+            unset($this->channels[$workerId]);
+        }
     }
 
     private function handleTick(mixed $timerId, int $workerId, int $pid): void

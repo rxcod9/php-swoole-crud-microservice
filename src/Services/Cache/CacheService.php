@@ -67,15 +67,17 @@ final readonly class CacheService
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
         if ($value !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: TABLE'); // logged internally
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
         $value = $this->redisCacheService->get($key);
         if ($value !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS'); // logged internally
             // warm local cache for faster next access
             try {
-                $this->tableCacheService->set($key, $value, 120);
+                $this->tableCacheService->set($key, $value, 2 * 60 * 10);
             } catch (Throwable $e) {
                 logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $e->getMessage()); // logged internally
             }
@@ -83,6 +85,7 @@ final readonly class CacheService
             return [$value, RedisCacheService::CACHE_TYPE];
         }
 
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE MISS'); // logged internally
         return [$value, null];
     }
 
@@ -98,11 +101,13 @@ final readonly class CacheService
     {
         // Write-through both caches
         try {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE SET: TABLE'); // logged internally
             $this->tableCacheService->set($key, $data, $localTtl);
         } catch (Throwable $throwable) {
             logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__ . '][Exception', $throwable->getMessage()); // logged internally
         }
 
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE SET: REDIS'); // logged internally
         $this->redisCacheService->set($key, $data, $localTtl);
     }
 
@@ -163,12 +168,14 @@ final readonly class CacheService
         // 1. Check local table cache first
         $data = $this->tableCacheService->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: TABLE'); // logged internally
             return [$data, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
         $data = $this->redisCacheService->getRecordByColumn($entity, $column, $value);
         if ($data !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS'); // logged internally
             // warm local cache for faster next access
             try {
                 $this->tableCacheService->setRecordByColumn(CacheRecordParams::fromArray([
@@ -282,11 +289,13 @@ final readonly class CacheService
     {
         $value = $this->tableCacheService->getList($entity, $query);
         if ($value !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: TABLE'); // logged internally
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         $value = $this->redisCacheService->getList($entity, $query);
         if ($value !== null) {
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS'); // logged internally
             try {
                 $this->tableCacheService->setList($entity, $query, $value);
             } catch (Throwable $e) {

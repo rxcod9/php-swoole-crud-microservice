@@ -24,7 +24,6 @@ use App\Core\Events\{
     GlobalMiddlewareRegistrar,
     HttpExceptionHandler,
     RequestHandler,
-    RequestTelemetry,
     RouteDispatcher,
     TaskFinishHandler,
     TaskRequestHandler,
@@ -58,7 +57,7 @@ final class EventRegistrar
             $container->get(CacheService::class)
         );
 
-        $workerStartHandler = new WorkerStartHandler($tableManager->healthTable, $poolFacade);
+        $workerStartHandler = new WorkerStartHandler($container, $tableManager->healthTable, $poolFacade);
         $workerManager      = new WorkerManager($workerStartHandler, $tableManager->healthTable);
 
         $server->on('WorkerStart', $workerStartHandler);
@@ -73,8 +72,7 @@ final class EventRegistrar
             $container,
             $container->get(GlobalMiddlewareRegistrar::class),
             $container->get(RouteDispatcher::class),
-            $container->get(HttpExceptionHandler::class),
-            $container->get(RequestTelemetry::class)
+            $container->get(HttpExceptionHandler::class)
         );
 
         $server->on('request', $requestHandler);

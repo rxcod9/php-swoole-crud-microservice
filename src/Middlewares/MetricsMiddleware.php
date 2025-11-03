@@ -19,11 +19,12 @@ declare(strict_types=1);
 
 namespace App\Middlewares;
 
+use App\Core\Channels\ChannelManager;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
 use App\Core\Metrics;
-use App\Core\Pools\RedisPool;
 use App\Core\Router;
+use App\Tasks\HttpMetricsTask;
 
 /**
  * Class MetricsMiddleware
@@ -43,10 +44,11 @@ use App\Core\Router;
  */
 final class MetricsMiddleware implements MiddlewareInterface
 {
+    public const TAG = 'MetricsMiddleware';
+
     public function __construct(
-        private readonly RedisPool $redisPool,
-        private readonly Metrics $metrics,
-        private readonly Router $router
+        private readonly Router $router,
+        private readonly ChannelManager $channelManager
     ) {
         // Empty Constructor
     }
@@ -60,26 +62,37 @@ final class MetricsMiddleware implements MiddlewareInterface
 
         $next($request, $response); // call next middleware
 
-        $dur   = microtime(true) - $start;
-        $redis = $this->redisPool->get();
-        defer(fn () => $this->redisPool->put($redis));
-
-        $collectorRegistry = $this->metrics
-            ->getCollectorRegistry($redis);
-        $counter   = $collectorRegistry->getOrRegisterCounter('http_requests_total', 'Requests', 'Total HTTP requests', ['method', 'path', 'status']);
-        $histogram = $collectorRegistry->getOrRegisterHistogram('http_request_seconds', 'Latency', 'HTTP request latency', ['method', 'path']);
-
+        $dur    = microtime(true) - $start;
+        $method = $request->getMethod();
         $path   = $request->getPath();
         $status = $response->getStatus();
 
-        [$route] = $this->router->getRouteByPath(
-            $request->getMethod(),
-            $path
-        );
+        // Ignore health/metrics endpoints
+        if (in_array($path, ['/health', '/health.html', '/metrics'], true)) {
+            return;
+        }
 
-        if ($route !== null && !in_array($path, ['/health', '/health.html', '/metrics'], true)) {
-            $counter->inc([$request->getMethod(), $route['path'], (string) $status]);
-            $histogram->observe($dur, [$request->getMethod(), $route['path']]);
+        // Resolve route for consistent labels
+        [$route] = $this->router->getRouteByPath($method, $path);
+        if ($route === null) {
+            return;
+        }
+
+        // Dispatch async user creation task
+        $id     = bin2hex(random_bytes(8));
+        $result = $this->channelManager->push([
+            'class'     => HttpMetricsTask::class,
+            'id'        => $id,
+            'arguments' => [$method, $route['path'], $status, $dur],
+        ]);
+
+        $timeMs = round((microtime(true) - $start) * 1000, 3);
+        logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push called'));
+
+        // check if unable to push
+        if ($result === false) {
+            // Log warning
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => Time: %f ms %s', __FUNCTION__, $timeMs, 'channelManager->push failed'));
         }
     }
 }

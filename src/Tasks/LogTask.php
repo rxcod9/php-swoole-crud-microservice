@@ -43,9 +43,9 @@ final class LogTask implements TaskInterface
      *
      * @return mixed Always returns true on successful logging
      */
-    public function handle(mixed ...$arguments): mixed
+    public function handle(string $id, mixed ...$arguments): mixed
     {
-        [$level, $data] = $arguments;
+        [$level, $message] = $arguments;
 
         static $log = null;
         if (!$log) {
@@ -56,8 +56,8 @@ final class LogTask implements TaskInterface
 
         $log->log(
             $level,
-            'request',
-            $data
+            'request [' . $id . ']',
+            $message
         );
 
         return true;

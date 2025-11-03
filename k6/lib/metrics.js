@@ -6,6 +6,7 @@
 
 import { Trend } from 'k6/metrics';
 import { ENV } from './env.js';
+import { toUpperSnake } from './utils.js';
 
 /**
  * Registry for all metrics, grouped by entity and operation.
@@ -21,16 +22,16 @@ import { ENV } from './env.js';
 export const METRICS_REGISTRY = {};
 
 // Ensure fallbacks to safe defaults if ENV misfires.
-const entities = Array.isArray(ENV.ENTITIES) ? ENV.ENTITIES : ['users', 'items'];
+const entities = Array.isArray(ENV.ENTITIES) ? ENV.ENTITIES : ['users', 'items', 'async-users'];
 const crudOps = Array.isArray(ENV.CRUD) ? ENV.CRUD : ['list', 'read', 'create', 'update'];
 
 for (const entity of entities) {
-    const upper = entity.toUpperCase();
+    const upperSnake = toUpperSnake(entity);
     METRICS_REGISTRY[entity] = {};
 
     for (const op of crudOps) {
         const opUpper = op.toUpperCase();
-        const metricName = `${upper}_${opUpper}_latency_ms`;
+        const metricName = `${upperSnake}_${opUpper}_latency_ms`;
 
         // Each Trend metric tracks latency for specific entity and CRUD operation.
         METRICS_REGISTRY[entity][op] = new Trend(metricName);
@@ -60,7 +61,7 @@ export function buildThresholds() {
 
     for (const entity of Object.keys(METRICS_REGISTRY)) {
         for (const op of Object.keys(METRICS_REGISTRY[entity])) {
-            const metric = `${entity.toUpperCase()}_${op.toUpperCase()}_latency_ms`;
+            const metric = `${toUpperSnake(entity)}_${op.toUpperCase()}_latency_ms`;
             thresholds[metric] = defaultRules[op] || ['avg<200'];
         }
     }

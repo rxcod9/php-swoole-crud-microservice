@@ -55,6 +55,6 @@ final class RequestLogger
         $server->task([
             'class'     => LogTask::class,
             'arguments' => [$level, $data],
-        ]);
+        ], -1); // Push and forget
     }
 }

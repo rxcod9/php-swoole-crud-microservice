@@ -80,7 +80,7 @@ final class UserController extends Controller
     )]
     public function create(): array
     {
-        $data = $this->request->getJsonBody();
+        $data = $this->request->getPostParams();
         $user = $this->userService->create($data);
 
         // Invalidate cache
@@ -409,7 +409,7 @@ final class UserController extends Controller
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
-        $data = $this->request->getJsonBody();
+        $data = $this->request->getPostParams();
 
         [$user] = $this->cacheService->getRecord('users', $id);
         if ($user === null) {
