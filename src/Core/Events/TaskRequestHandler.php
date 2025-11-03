@@ -85,7 +85,9 @@ final readonly class TaskRequestHandler
 
     /**
      * Save Metrics
-     * @param mixed $status
+     *
+     * @param array<string, mixed> $data
+     * @param bool $status
      */
     public function saveMetrics(float $start, array $data, bool $status): void
     {
@@ -100,10 +102,10 @@ final readonly class TaskRequestHandler
         }
 
         $channelManager = $this->container->get(ChannelManager::class);
-        if (!$channelManager) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => %s', __FUNCTION__, 'channelManager not present.'));
-            return;
-        }
+        // if (!$channelManager) {
+        //     logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, sprintf('[%s] => %s', __FUNCTION__, 'channelManager not present.'));
+        //     return;
+        // }
 
         $start = microtime(true);
         // Dispatch async user creation task

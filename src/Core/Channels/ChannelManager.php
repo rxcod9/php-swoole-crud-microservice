@@ -58,6 +58,8 @@ final class ChannelManager
      * Start consuming tasks in coroutine context.
      *
      * @param callable $handler  Function to process each task
+     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function startConsumer(callable $handler): void
     {
