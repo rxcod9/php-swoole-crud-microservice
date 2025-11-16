@@ -70,6 +70,7 @@ $router = new Router();
 
 // Home route.
 $router->get('/', 'IndexController@index');
+$router->get('/opcache-status', 'IndexController@opcacheStatus');
 
 // Health check route.
 $router->get('/health', 'HealthController@check');

@@ -95,6 +95,10 @@ final readonly class TaskRequestHandler
         $class = $data['class'] ?? null;
         $id    = $data['id'] ?? bin2hex(random_bytes(8));
 
+        logDebug(
+            self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__,
+            'id #' . $id . ' ' . var_export($class, true) . ' === ' . var_export(TaskMetricsTask::class, true) . ' || ' . var_export($class, true) . ' === ' . var_export(HttpMetricsTask::class, true) . ''
+        );
         if ($class === TaskMetricsTask::class || $class === HttpMetricsTask::class) {
             // Skip recursion
             return;

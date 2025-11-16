@@ -244,6 +244,54 @@
                 }
             }
         },
+        "/opcache": {
+            "get": {
+                "tags": [
+                    "Home"
+                ],
+                "summary": "OPcache Status",
+                "description": "Returns OPcache statistics including memory, scripts, hits, misses, and preload info.",
+                "operationId": "041031ea57373cff08446065ee1eab55",
+                "responses": {
+                    "200": {
+                        "description": "OPcache status response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "jit_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "memory": {
+                                            "type": "object"
+                                        },
+                                        "stats": {
+                                            "type": "object"
+                                        },
+                                        "preloaded_count": {
+                                            "type": "integer"
+                                        },
+                                        "warmup_compiled_count": {
+                                            "type": "integer"
+                                        },
+                                        "scripts": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/items": {
             "get": {
                 "tags": [

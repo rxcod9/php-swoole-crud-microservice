@@ -46,8 +46,8 @@ export const ENV = {
     CRUD: parseList(__ENV.CRUD, ['list', 'read', 'create', 'update']),
 
     TOTAL_ENTITIES: Number(__ENV.TOTAL_ENTITIES) || 2000,
-    HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.1,
-    COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.1,
+    HOT_PERCENT: Number(__ENV.HOT_PERCENT) || 0.3,
+    COOL_PERCENT: Number(__ENV.COOL_PERCENT) || 0.3,
     TOTAL_EXECUTIONS: Number(__ENV.TOTAL_EXECUTIONS) || 20000,
     MAX_VUS: Number(__ENV.MAX_VUS) || 200,
     MAX_DURATION: __ENV.MAX_DURATION || '10m'

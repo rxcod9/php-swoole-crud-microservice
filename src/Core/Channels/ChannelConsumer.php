@@ -56,7 +56,6 @@ final class ChannelConsumer
                 $workerId,
                 json_encode($task, JSON_PRETTY_PRINT)
             );
-
             try {
                 $this->channelTaskRequestDispatcher->dispatch($task);
             } catch (Throwable) {

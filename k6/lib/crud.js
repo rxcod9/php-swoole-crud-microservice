@@ -77,7 +77,7 @@ function executeCrudOp(op, baseUrl, entity, context, idSets) {
 function executeList(baseUrl, entity, context) {
     const { trends } = context;
 
-    const res = http.get(baseUrl);
+    const res = http.get(baseUrl + `?page=${secureRandomInt(1, 5)}&limit=10&sortDirection=DESC`);
     recordTrendAndCheck(res, entity, "list", trends.list, 200);
 }
 

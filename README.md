@@ -170,8 +170,8 @@ k6 run \
     -e ENTITIES=users,items \
     -e CRUD=list,read,create,update \
     -e TOTAL_ENTITIES=200 \
-    -e HOT_PERCENT=0.1 \
-    -e COOL_PERCENT=0.1 \
+    -e HOT_PERCENT=0.3 \
+    -e COOL_PERCENT=0.3 \
     -e TOTAL_EXECUTIONS=2000 \
     -e MAX_VUS=50 \
     -e MAX_DURATION=10m \

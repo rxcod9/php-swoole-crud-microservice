@@ -67,14 +67,14 @@ final readonly class CacheService
         // 1. Check local table cache first
         $value = $this->tableCacheService->get($key);
         if ($value !== null) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: TABLE'); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: TABLE ' . var_export($value, true)); // logged internally
             return [$value, TableCacheService::CACHE_TYPE];
         }
 
         // 2. Fallback to Redis
         $value = $this->redisCacheService->get($key);
         if ($value !== null) {
-            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS'); // logged internally
+            logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'CACHE HIT: REDIS ' . var_export($value, true)); // logged internally
             // warm local cache for faster next access
             try {
                 $this->tableCacheService->set($key, $value, 2 * 60 * 10);

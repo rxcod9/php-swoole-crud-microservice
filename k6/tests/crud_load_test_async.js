@@ -53,11 +53,11 @@ function setupEntity(entity, generateFn) {
     }
 
     // Sleep for few seconds to cought up with async operations completions
-    sleep(10); // sleeps 30 second
-    
+    sleep(2 * 60); // sleeps 30 second
+
     // Now fetch lists
     for (let i = 1; i <= 10; i++) {
-        const response = getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&limiit=100&sortDirection=DESC`, trendList);
+        const response = getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&limit=100&sortDirection=DESC`, trendList);
         const records = response.data;
         console.log("records", typeof records);
         if (Array.isArray(records)) {
@@ -77,8 +77,8 @@ function setupEntity(entity, generateFn) {
     console.log('coolIds', coolIds);
 
     // Warm List Cache
-    for (let i = 1; i <= 3; i++) {
-        getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&sortDirection=DESC`, trendList);
+    for (let i = 1; i <= 5; i++) {
+        getEntities(entity, `${ENV.BASE_URL}/${entity}?page=${i}&limit=10&sortDirection=DESC`, trendList);
     }
 
     // Warm Read Cache

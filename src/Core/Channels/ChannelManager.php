@@ -12,7 +12,7 @@
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-11-02
+ * @since     2025-11-05
  * @link      https://github.com/rxcod9/php-swoole-crud-microservice/blob/main/src/Core/Channels/ChannelManager.php
  */
 declare(strict_types=1);
@@ -24,11 +24,11 @@ use Swoole\Coroutine\Channel;
 use Swoole\Http\Server;
 
 /**
- * Manages a single in-memory channel per worker.
- * Lifecycle:
- * - Created in WorkerStartHandler
- * - Consumed in coroutine
- * - Cleaned up in WorkerStopHandler
+ * Batch consumer channel manager with:
+ * - Exponential backoff on idle
+ * - Reset backoff when tasks arrive
+ * - Batch processing for lower context overhead
+ * - Clean shutdown with channel close unblocking pop()
  *
  * @category  Core
  * @package   App\Core\Channels
@@ -36,119 +36,179 @@ use Swoole\Http\Server;
  * @copyright Copyright (c) 2025
  * @license   MIT
  * @version   1.0.0
- * @since     2025-11-02
+ * @since     2025-11-05
  */
 final class ChannelManager
 {
     public const TAG = 'ChannelManager';
 
+    /**  */
     private readonly Channel $channel;
 
     private bool $running = false;
 
+    private readonly int $consumerCount;
+
     public function __construct(
         private readonly Server $server,
         private readonly int $workerId,
-        int $capacity = 1024
+        int $capacity = 5000,
+        ?int $consumerCount = null,
+        private readonly int $batchSize = 10
     ) {
-        $this->channel = new Channel($capacity);
+        $this->channel       = new Channel($capacity);
+        $this->consumerCount = $consumerCount ?? max(2, swoole_cpu_num());
     }
 
     /**
-     * Start consuming tasks in coroutine context.
+     * Start batch consumers
      *
-     * @param callable $handler  Function to process each task
-     *
-     * @SuppressWarnings("PHPMD.StaticAccess")
+     * @param callable $handler function(int $workerId, array $tasks, int $consumerIndex): void
      */
     public function startConsumer(callable $handler): void
     {
         if ($this->running) {
-            logDebug(self::TAG, sprintf(
-                "[Worker %d] skip: %s\n",
-                $this->workerId,
-                'Already runninng'
-            ));
+            logDebug(self::TAG, sprintf('[W%d] Already running', $this->workerId));
             return;
         }
 
         $this->running = true;
 
-        go(function () use ($handler): void {
-            // Assign random sleep range per worker to avoid synchronization
-            $baseSleep   = 0.1; // minimum base sleep in seconds
-            $randRange   = 0.3; // add up to +0.3s jitter
-            $workerSleep = $baseSleep + random_int(0, (int) ($randRange * 1000)) / 1000;
+        for ($i = 0; $i < $this->consumerCount; $i++) {
+            go(fn () => $this->consumeLoop($handler, $i));
+        }
 
-            logDebug(self::TAG, sprintf(
-                "[Worker %d] Random sleep interval: %.3fs\n",
-                $this->workerId,
-                $workerSleep
-            ));
+        logDebug(self::TAG, sprintf('[W%d] Started %d consumers', $this->workerId, $this->consumerCount));
+    }
 
-            while ($this->running) {
-                $task = $this->channel->pop(1.0); // wait max 1 sec
+    /**
+     * Batch consume loop with exponential backoff.
+     * Reduced cognitive complexity by extracting helper methods.
+     *
+     */
+    private function consumeLoop(callable $handler, int $index): void
+    {
+        $sleep    = 0.005;   // 5ms
+        $maxSleep = 0.2;  // 200ms cap
 
-                if ($this->channel->length() > 0) {
-                    logDebug(self::TAG, sprintf(
-                        "[Worker %d] TaskChannel length: %s\n",
-                        $this->workerId,
-                        $this->channel->length()
-                    ));
-                }
+        while (true) {
+            $batch = $this->drainBatch();
 
-                if ($task === false) {
-                    // Add jitter here too for idle workers
-                    $workerSleep = min($workerSleep * 1.5, 2.0); // exponential backoff up to 2s
-                    Coroutine::sleep($workerSleep);
-                    continue;
-                }
-
-                try {
-                    $handler($this->workerId, $task);
-                } catch (\Throwable $e) {
-                    logDebug(self::TAG, sprintf(
-                        "[Worker %d] Task error: %s\n",
-                        $this->workerId,
-                        $e->getMessage()
-                    ));
-                }
-
-                // Add jitter here too for idle workers
-                $workerSleep = $baseSleep + random_int(0, (int) ($randRange * 1000)) / 1000;
-                Coroutine::sleep($workerSleep);
+            if ($batch === null) {
+                // Channel closed → stop consumer
+                break;
             }
-        });
+
+            if ($batch !== []) {
+                $sleep = 0.005; // reset backoff
+                $this->processBatch($handler, $batch, $index);
+                continue;
+            }
+
+            if (!$this->running) {
+                break;
+            }
+
+            $sleep = $this->applyBackoff($sleep, $maxSleep);
+        }
+
+        logDebug(self::TAG, sprintf('[W%d|C%d] Stopped', $this->workerId, $index));
+    }
+
+    /**
+     * Drain up to batchSize tasks from channel.
+     * Returns:
+     * - array of tasks if available
+     * - [] when empty but open
+     * - null if channel closed
+     *
+     * @return array<mixed>|null
+     */
+    private function drainBatch(): ?array
+    {
+        $batch = [];
+
+        for ($i = 0; $i < $this->batchSize; $i++) {
+            $task = $this->channel->pop(0.0);
+
+            if ($task === false) {
+                // Channel closed
+                if ($this->channel->errCode === SWOOLE_CHANNEL_CLOSED) {
+                    return null;
+                }
+
+                // Channel empty
+                break;
+            }
+
+            $batch[] = $task;
+        }
+
+        return $batch;
+    }
+
+    /**
+     * Process tasks and catch exceptions.
+     *
+     * @param array<mixed> $batch
+     */
+    private function processBatch(callable $handler, array $batch, int $index): void
+    {
+        try {
+            $handler($this->workerId, $batch, $index);
+        } catch (\Throwable $throwable) {
+            logDebug(self::TAG, sprintf('[W%d|C%d] Error: %s', $this->workerId, $index, $throwable->getMessage()));
+        }
+    }
+
+    /**
+     * Apply exponential backoff sleep and return next sleep value.
+     *
+     *
+     */
+    private function applyBackoff(float $sleep, float $maxSleep): float
+    {
+        Coroutine::sleep($sleep);
+        return min($sleep * 2, $maxSleep);
     }
 
     /**
      * Push task into channel
-     * @param array<string, mixed> $task Task
+     * @param array<string,mixed> $task
      */
-    public function push(array $task): int|bool
+    public function push(array $task): bool
     {
         if (!$this->running) {
-            logDebug(self::TAG, sprintf("[Worker %d] Channel not running\n", $this->workerId));
+            logDebug(self::TAG, sprintf('[W%d] Reject push: not running', $this->workerId));
             return false;
         }
 
-        if ($this->channel->isFull() === true) {
-            logDebug(self::TAG, sprintf("[Worker %d] Channel is full\n", $this->workerId));
-            // Offload the task to Task worker
-            return $this->server->task($task, -1); // Push and forget
+        // Try quick non-blocking push with small timeout
+        if ($this->channel->push($task, 0.002) === false) {
+            if ($this->channel->isFull()) {
+                logDebug(self::TAG, sprintf('[W%d] Channel full → offloading to task worker', $this->workerId));
+            }
+
+            go(fn (): mixed => $this->server->task($task)); // fire & forget
         }
 
-        return $this->channel->push($task);
+        return true;
     }
 
     /**
-     * Stop consumer and close channel.
+     * Stop consumer and close channel
      */
     public function stop(): void
     {
+        if (!$this->running) {
+            return;
+        }
+
         $this->running = false;
+
+        // Unblocks all consumer pop() loops
         $this->channel->close();
 
-        logDebug(self::TAG, sprintf("[Worker %d] Channel stopped and closed\n", $this->workerId));
+        logDebug(self::TAG, sprintf('[W%d] Channel stopped', $this->workerId));
     }
 }

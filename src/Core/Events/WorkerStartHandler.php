@@ -21,6 +21,7 @@ namespace App\Core\Events;
 
 use App\Core\Channels\ChannelConsumer;
 use App\Core\Channels\ChannelManager;
+use App\Core\ChannelTaskDispatcher;
 use App\Core\Container;
 use App\Core\Contexts\AppContext;
 use App\Core\Pools\PoolFacade;
@@ -120,7 +121,10 @@ final class WorkerStartHandler
         $this->channels[$workerId] = $channelManager;
 
         // start consumer
-        $channelConsumer = new ChannelConsumer($channelManager, new ChannelTaskRequestDispatcher($this->container));
+        $channelConsumer = new ChannelConsumer($channelManager, new ChannelTaskRequestDispatcher(
+            $channelManager,
+            $this->container->get(ChannelTaskDispatcher::class)
+        ));
         $channelConsumer->start();
 
         // Register per-worker channel manager and consumer in container

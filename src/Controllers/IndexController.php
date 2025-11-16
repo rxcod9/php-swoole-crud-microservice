@@ -116,4 +116,119 @@ final class IndexController extends Controller
     {
         return $this->json(['message' => 'Welcome to PHP Swoole CRUD Microservice']);
     }
+
+    /**
+     * Returns OPcache status, memory statistics, and preload/warmup information.
+     *
+     * @return array<string,mixed> JSON response containing OPcache runtime details
+     *
+     * @phpdoc
+     * This method is useful for debugging preload/warmup behavior in Swoole context.
+     * Swoole workers DO NOT restart like FPM, so preloaded/warmup-compiled files
+     * only apply on master startup. This function helps ensure your preload/warmup
+     * script is running correctly during deployment.
+     */
+    #[OA\Get(
+        path: '/opcache',
+        summary: 'OPcache Status',
+        description: 'Returns OPcache statistics including memory, scripts, hits, misses, and preload info.',
+        tags: ['Home'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'OPcache status response',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'enabled', type: 'boolean'),
+                        new OA\Property(property: 'jit_enabled', type: 'boolean'),
+                        new OA\Property(property: 'memory', type: 'object'),
+                        new OA\Property(property: 'stats', type: 'object'),
+                        new OA\Property(property: 'preloaded_count', type: 'integer'),
+                        new OA\Property(property: 'warmup_compiled_count', type: 'integer'),
+                        new OA\Property(property: 'scripts', type: 'array', items: new OA\Items(type: 'string')),
+                    ],
+                    type: 'object'
+                )
+            ),
+        ]
+    )]
+    public function opcacheStatus(): array
+    {
+        // If OPcache is disabled, return early.
+        if (!function_exists('opcache_get_status')) {
+            return $this->json([
+                'enabled' => false,
+                'message' => 'OPcache extension is not enabled in this runtime.',
+            ]);
+        }
+
+        /** @var array<string,mixed>|false $status */
+        $status = opcache_get_status(false);
+
+        if ($status === false) {
+            return $this->json([
+                'enabled' => false,
+                'message' => 'OPcache status unavailable or disabled.',
+            ]);
+        }
+
+        // Extract memory usage info
+        $memory = $status['memory_usage'] ?? [];
+        $stats  = $status['opcache_statistics'] ?? [];
+
+        // Preloaded scripts (true preloading)
+        $preloadedCount = 0;
+        // Warmup-compiled scripts via opcache_compile_file()
+        $warmupCount = 0;
+
+        $scriptList = [];
+
+        if (!empty($status['scripts'])) {
+            foreach ($status['scripts'] as $path => $info) {
+                $scriptList[] = $path;
+
+                if (!empty($info['preload'])) {
+                    $preloadedCount++;
+                }
+
+                // Warmup compiled scripts: compiled but not executed
+                // opcache_compile_file() marks them as "hits = 0", "timestamp = null"
+                if (isset($info['timestamp']) && $info['timestamp'] === null) {
+                    $warmupCount++;
+                }
+            }
+        }
+
+        return $this->json([
+            'enabled'     => $status['opcache_enabled'] ?? false,
+            'jit_enabled' => $status['jit']['enabled'] ?? false,
+
+            // Memory details
+            'memory' => [
+                'used'           => $memory['used_memory'] ?? null,
+                'free'           => $memory['free_memory'] ?? null,
+                'wasted'         => $memory['wasted_memory'] ?? null,
+                'wasted_percent' => $memory['current_wasted_percentage'] ?? null,
+            ],
+
+            // Hit/miss stats
+            'stats' => [
+                'hits'               => $stats['hits'] ?? null,
+                'misses'             => $stats['misses'] ?? null,
+                'hit_rate'           => $stats['opcache_hit_rate'] ?? null,
+                'num_cached_scripts' => $stats['num_cached_scripts'] ?? null,
+                'max_cached_keys'    => $stats['max_cached_keys'] ?? null,
+                'oom_restarts'       => $stats['oom_restarts'] ?? null,
+                'hash_restarts'      => $stats['hash_restarts'] ?? null,
+                'manual_restarts'    => $stats['manual_restarts'] ?? null,
+            ],
+
+            // Preload + compile metrics
+            'preloaded_count'       => $preloadedCount,
+            'warmup_compiled_count' => $warmupCount,
+
+            // List all cached scripts
+            'scripts' => $scriptList,
+        ]);
+    }
 }
