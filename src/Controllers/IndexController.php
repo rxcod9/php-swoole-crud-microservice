@@ -183,7 +183,7 @@ final class IndexController extends Controller
 
         $scriptList = [];
 
-        if (isset($status['scripts']) && is_array($status['scripts']) && count($status['scripts']) > 0) {
+        if (isset($status['scripts']) && is_array($status['scripts']) && $status['scripts'] !== []) {
             foreach ($status['scripts'] as $path => $info) {
                 $scriptList[] = $path;
 
