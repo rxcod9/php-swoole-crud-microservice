@@ -54,8 +54,6 @@ final class ChannelManager
     /**
      * Constructor
      *
-     * @param Server $server
-     * @param int $workerId
      * @param array<string,mixed> $options
      */
     public function __construct(

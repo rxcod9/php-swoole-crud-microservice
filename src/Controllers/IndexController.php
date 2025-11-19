@@ -188,17 +188,15 @@ final class IndexController extends Controller
         $preloadedCount = 0;
         $warmupCount    = 0;
 
-        if ($scripts !== []) {
-            foreach ($scripts as $path => $info) {
-                $scriptList[] = $path;
+        foreach ($scripts as $path => $info) {
+            $scriptList[] = $path;
 
-                if (isset($info['preload']) && $info['preload'] === true) {
-                    $preloadedCount++;
-                }
+            if (isset($info['preload']) && $info['preload'] === true) {
+                $preloadedCount++;
+            }
 
-                if (isset($info['hits']) && $info['hits'] === 0) {
-                    $warmupCount++;
-                }
+            if (isset($info['hits']) && $info['hits'] === 0) {
+                $warmupCount++;
             }
         }
 
