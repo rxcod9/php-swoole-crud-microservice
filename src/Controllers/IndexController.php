@@ -154,7 +154,6 @@ final class IndexController extends Controller
     )]
     public function opcacheStatus(): array
     {
-        // If OPcache is disabled, return early.
         if (!function_exists('opcache_get_status')) {
             return $this->json([
                 'enabled' => false,
@@ -172,47 +171,65 @@ final class IndexController extends Controller
             ]);
         }
 
-        // Extract memory usage info
-        $memory = $status['memory_usage'] ?? [];
-        $stats  = $status['opcache_statistics'] ?? [];
+        $scriptInfo = $this->processScripts($status['scripts'] ?? []);
 
-        // Preloaded scripts (true preloading)
+        return $this->json($this->buildResponsePayload($status, $scriptInfo));
+    }
+
+    /**
+     * Processes the script list from OPcache status.
+     *
+     * @param array<string,mixed> $scripts
+     * @return array<string,mixed>
+     */
+    private function processScripts(array $scripts): array
+    {
+        $scriptList     = [];
         $preloadedCount = 0;
-        // Warmup-compiled scripts via opcache_compile_file()
-        $warmupCount = 0;
+        $warmupCount    = 0;
 
-        $scriptList = [];
-
-        if (isset($status['scripts']) && is_array($status['scripts']) && $status['scripts'] !== []) {
-            foreach ($status['scripts'] as $path => $info) {
+        if ($scripts !== []) {
+            foreach ($scripts as $path => $info) {
                 $scriptList[] = $path;
 
                 if (isset($info['preload']) && $info['preload'] === true) {
                     $preloadedCount++;
                 }
 
-                // Warmup compiled scripts: compiled but not executed
-                // Warmup compiled scripts: compiled but not executed
-                // opcache_compile_file() marks them as "hits = 0", "timestamp = null"
                 if (isset($info['hits']) && $info['hits'] === 0) {
                     $warmupCount++;
                 }
             }
         }
 
-        return $this->json([
+        return [
+            'scriptList'     => $scriptList,
+            'preloadedCount' => $preloadedCount,
+            'warmupCount'    => $warmupCount,
+        ];
+    }
+
+    /**
+     * Builds the response payload for OPcache status.
+     *
+     * @param array<string,mixed> $status
+     * @param array<string,mixed> $scriptInfo
+     * @return array<string,mixed>
+     */
+    private function buildResponsePayload(array $status, array $scriptInfo): array
+    {
+        $memory = $status['memory_usage'] ?? [];
+        $stats  = $status['opcache_statistics'] ?? [];
+
+        return [
             'enabled'     => $status['opcache_enabled'] ?? false,
             'jit_enabled' => $status['jit']['enabled'] ?? false,
-
-            // Memory details
-            'memory' => [
+            'memory'      => [
                 'used'           => $memory['used_memory'] ?? null,
                 'free'           => $memory['free_memory'] ?? null,
                 'wasted'         => $memory['wasted_memory'] ?? null,
                 'wasted_percent' => $memory['current_wasted_percentage'] ?? null,
             ],
-
-            // Hit/miss stats
             'stats' => [
                 'hits'               => $stats['hits'] ?? null,
                 'misses'             => $stats['misses'] ?? null,
@@ -223,13 +240,9 @@ final class IndexController extends Controller
                 'hash_restarts'      => $stats['hash_restarts'] ?? null,
                 'manual_restarts'    => $stats['manual_restarts'] ?? null,
             ],
-
-            // Preload + compile metrics
-            'preloaded_count'       => $preloadedCount,
-            'warmup_compiled_count' => $warmupCount,
-
-            // List all cached scripts
-            'scripts' => $scriptList,
-        ]);
+            'preloaded_count'       => $scriptInfo['preloadedCount'],
+            'warmup_compiled_count' => $scriptInfo['warmupCount'],
+            'scripts'               => $scriptInfo['scriptList'],
+        ];
     }
 }

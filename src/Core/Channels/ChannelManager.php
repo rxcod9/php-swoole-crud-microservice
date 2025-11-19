@@ -49,13 +49,23 @@ final class ChannelManager
 
     private readonly int $consumerCount;
 
+    private readonly int $batchSize;
+
+    /**
+     * Constructor
+     *
+     * @param Server $server
+     * @param int $workerId
+     * @param array<string,mixed> $options
+     */
     public function __construct(
         private readonly Server $server,
         private readonly int $workerId,
-        int $capacity = 5000,
-        ?int $consumerCount = null,
-        private readonly int $batchSize = 10
+        array $options = []
     ) {
+        $capacity            = $options['capacity'] ?? 5000;
+        $consumerCount       = $options['consumerCount'] ?? null;
+        $this->batchSize     = $options['batchSize'] ?? 10;
         $this->channel       = new Channel($capacity);
         $this->consumerCount = $consumerCount ?? max(2, swoole_cpu_num());
     }
@@ -164,7 +174,7 @@ final class ChannelManager
     /**
      * Apply exponential backoff sleep and return next sleep value.
      *
-     *
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     private function applyBackoff(float $sleep, float $maxSleep): float
     {

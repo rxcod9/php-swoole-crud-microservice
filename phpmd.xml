@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="Production PHPMD Ruleset"
     xmlns="http://phpmd.org/ruleset/1.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://phpmd.org/ruleset/1.0.0 https://phpmd.org/ruleset-1.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <description>
         Strict PHPMD rules for PHP 8.4 microservices.
         - Complexity, unused code, design &amp; cleancode rules
@@ -50,6 +49,12 @@
     <rule ref="rulesets/codesize.xml/ExcessiveClassComplexity">
         <properties>
             <property name="reportLevel" value="10" />
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/cleancode.xml/StaticAccess">
+        <properties>
+            <property name="exceptions" value="\Swoole\Coroutine" />
         </properties>
     </rule>
 
