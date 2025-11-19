@@ -185,7 +185,7 @@ final class ChannelManager
 
         // Try quick non-blocking push with small timeout
         if ($this->channel->push($task, 0.002) === false) {
-            if ($this->channel->isFull()) {
+            if ($this->channel->isFull() === true) {
                 logDebug(self::TAG, sprintf('[W%d] Channel full → offloading to task worker', $this->workerId));
             }
 

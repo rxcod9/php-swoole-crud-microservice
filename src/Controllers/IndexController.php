@@ -183,17 +183,18 @@ final class IndexController extends Controller
 
         $scriptList = [];
 
-        if (!empty($status['scripts'])) {
+        if (isset($status['scripts']) && is_array($status['scripts']) && count($status['scripts']) > 0) {
             foreach ($status['scripts'] as $path => $info) {
                 $scriptList[] = $path;
 
-                if (!empty($info['preload'])) {
+                if (isset($info['preload']) && $info['preload'] === true) {
                     $preloadedCount++;
                 }
 
                 // Warmup compiled scripts: compiled but not executed
+                // Warmup compiled scripts: compiled but not executed
                 // opcache_compile_file() marks them as "hits = 0", "timestamp = null"
-                if (isset($info['timestamp']) && $info['timestamp'] === null) {
+                if (isset($info['hits']) && $info['hits'] === 0) {
                     $warmupCount++;
                 }
             }
