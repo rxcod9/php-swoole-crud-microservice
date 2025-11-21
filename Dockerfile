@@ -22,7 +22,7 @@
 
 # ================= Base Stage =================
 # Contains common runtime dependencies
-FROM php:8.4-cli AS base
+FROM php:8.5-cli AS base
 
 # --- Runtime system dependencies ---
 RUN apt-get update && apt-get install -y \
