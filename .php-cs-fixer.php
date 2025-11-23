@@ -24,7 +24,7 @@ return (new Config())
         // ===================================
         '@PSR12' => true,
         'phpdoc_types' => ['groups' => []], // optional, keeps types short
-        '@PHP84Migration' => true,
+        '@PHP8x4Migration' => true,
         '@DoctrineAnnotation' => true,
 
         // Strictness
@@ -42,15 +42,15 @@ return (new Config())
         'trim_array_spaces' => true,
         'no_whitespace_before_comma_in_array' => true,
         'whitespace_after_comma_in_array' => true,
-        'no_trailing_comma_in_singleline_array' => true,
+        'no_trailing_comma_in_singleline' => true,
         'trailing_comma_in_multiline' => true,
         'nullable_type_declaration_for_default_null_value' => true,
         'no_unreachable_default_argument_value' => true,
         'return_type_declaration' => ['space_before' => 'none'],
 
         // Classes & methods
-        'class_attributes_separation' => ['elements' => ['method' => 'one']], // one blank line between methods
-        'visibility_required' => ['elements' => ['property', 'method', 'const']],
+        'class_attributes_separation' => ['elements' => ['method' => 'one', 'trait_import' => 'none', 'const' => 'none', 'property' => 'none']], // one blank line between methods
+        'modifier_keywords' => ['elements' => ['property', 'method', 'const']],
         'self_accessor' => true,
         'no_null_property_initialization' => true,
 
@@ -81,7 +81,7 @@ return (new Config())
 
         // Misc spacing & braces
         'no_extra_blank_lines' => ['tokens' => ['extra','curly_brace_block','square_brace_block','parenthesis_brace_block','throw','use','return']],
-        'braces' => ['allow_single_line_closure' => true,'position_after_functions_and_oop_constructs' => 'same'],
+        'control_structure_braces' => true,
         // disable only the new_expression_parentheses fixer
         'new_expression_parentheses' => false,
     ]);
