@@ -50,7 +50,7 @@ return (new Config())
 
         // Classes & methods
         'class_attributes_separation' => ['elements' => ['method' => 'one', 'trait_import' => 'none', 'const' => 'none', 'property' => 'none']], // one blank line between methods
-        'modifier_keywords' => ['override_private' => true],
+        'modifier_keywords' => ['elements' => ['property', 'method', 'const']],
         'self_accessor' => true,
         'no_null_property_initialization' => true,
 
