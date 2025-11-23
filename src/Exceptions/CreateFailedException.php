@@ -4,7 +4,7 @@
  * src/Exceptions/CreateFailedException.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Exceptions
  * @package   App\Exceptions

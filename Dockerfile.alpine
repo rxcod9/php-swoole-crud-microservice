@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------
 # Stage: base image
-# Alpine 3.20 + PHP 8.4 (CLI)
+# Alpine 3.20 + PHP 8.5 (CLI)
 # Verified for amd64 & arm64 architectures
 # ------------------------------------------------------------------------
 # Keep the original header comment as requested and preserve all comments.
@@ -10,7 +10,7 @@
 
 # Use BuildKit syntax features (for --mount=type=cache)
 # syntax=docker/dockerfile:1.4
-FROM php:8.4-cli-alpine AS alpine-base
+FROM php:8.5-cli-alpine AS alpine-base
 
 # ------------------------------------------------------------------------
 # Stage: System dependencies

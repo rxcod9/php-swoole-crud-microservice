@@ -4,7 +4,7 @@
  * Adds or merges a file-level PHPDoc block with project metadata.
  * Inserts doc **before** declare(strict_types=1) and sets correct @category and @package.
  *
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  RectorRules
  * @package   RectorRules
@@ -66,7 +66,7 @@ CODE,
  * Project: my-project
  * Description: Handles user operations
  *
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Services
  * @package   App\Services
@@ -153,7 +153,7 @@ CODE
  * Project: {$meta['project']}
  * Description: {$meta['description']}
  *
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  {$meta['category']}
  * @package   {$meta['namespace']}

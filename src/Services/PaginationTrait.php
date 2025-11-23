@@ -4,7 +4,7 @@
  * src/Services/PaginationTrait.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PHP Swoole CRUD Microservice
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Services
  * @package   App\Services
