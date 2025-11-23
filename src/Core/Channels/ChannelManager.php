@@ -46,7 +46,9 @@ final class ChannelManager
     private readonly Channel $channel;
 
     private bool $running = false;
+
     private readonly int $consumerCount;
+
     private readonly int $batchSize;
 
     /**

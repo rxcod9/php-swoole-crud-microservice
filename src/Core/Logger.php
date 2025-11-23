@@ -44,9 +44,13 @@ class Logger
 {
     // Log levels
     public const DEBUG    = 100;
+
     public const INFO     = 200;
+
     public const WARNING  = 300;
+
     public const ERROR    = 400;
+
     public const CRITICAL = 500;
 
     // Channel for log messages

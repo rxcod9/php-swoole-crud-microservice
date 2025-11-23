@@ -38,7 +38,9 @@ use Swoole\Http\Server;
 final class HttpServer
 {
     private readonly Server $server;
+
     private readonly Container $container;
+
     private readonly TableManager $tableManager;
 
     /**

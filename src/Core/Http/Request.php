@@ -46,6 +46,7 @@ use Swoole\Http\Request as HttpRequest;
 class Request
 {
     public int $fd       = 0;
+
     public int $streamId = 0;
 
     /**
