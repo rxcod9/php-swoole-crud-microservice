@@ -38,16 +38,10 @@ namespace App\Core;
 class Messages
 {
     public const ERROR_INTERNAL_ERROR          = 'An internal error occurred. Please try again later.';
-
     public const ROUTE_NOT_FOUND               = 'Route not found.';
-
     public const RESOURCE_NOT_FOUND            = 'Resource %s not found.';
-
     public const PDO_EXCEPTION_MESSAGE         = '[ERROR] pdoId #%s - Code: %s | PDOException: %s';
-
     public const PDO_EXCEPTION_FINALLY_MESSAGE = '[FINALLY] pdoId #%s - Code: %s | Info: %s';
-
     public const CREATE_FAILED                 = 'Unable to create. Please try again later.';
-
     public const QUERY_FAILED                  = 'Query failed.';
 }

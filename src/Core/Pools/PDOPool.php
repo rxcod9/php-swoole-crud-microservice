@@ -50,9 +50,7 @@ final class PDOPool
     public const TAG = 'PDOPool';
 
     private readonly Channel $channel;
-
     private bool $initialized = false;
-
     private int $created      = 0;
 
     // /** @var array<string|int, array{0: PDO, 1: int}> Active PDO instances per coroutine */
