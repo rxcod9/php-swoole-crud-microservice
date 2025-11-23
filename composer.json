@@ -30,7 +30,7 @@
         "phpmd": "vendor/bin/phpmd ./src text phpmd.xml --report-file=phpmd.csv",
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=-1 -v",
         "phpcbf": "vendor/bin/phpcbf -p ./src --encoding=utf-8 --standard=phpcs.xml --runtime-set testVersion 8.4 --parallel=1",
-        "php-cs-fixer": "vendor/bin/php-cs-fixer fix src --config=.php-cs-fixer.php --verbose",
+        "php-cs-fixer": "vendor/bin/php-cs-fixer fix src --config=.php-cs-fixer.php",
         "rector": "vendor/bin/rector process src --ansi"
     },
     "autoload": {
