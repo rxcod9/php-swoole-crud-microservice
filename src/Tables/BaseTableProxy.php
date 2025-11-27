@@ -4,7 +4,7 @@
  * src/Tables/BaseTableProxy.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: Base proxy class for dynamic interaction with Swoole\Table.
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Tables
  * @package   App\Tables
