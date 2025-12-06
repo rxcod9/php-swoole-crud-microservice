@@ -6,7 +6,7 @@ use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
 use Rector\Config\RectorConfig;
 use Rector\Set\ValueObject\SetList;
 
-// Core PHP 8.4+ improvements
+// Core PHP 8.x+ improvements
 use Rector\TypeDeclaration\Rector\StmtsAwareInterface\DeclareStrictTypesRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
 use Rector\Php81\Rector\Property\ReadOnlyPropertyRector;
