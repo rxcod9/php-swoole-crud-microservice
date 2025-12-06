@@ -59,25 +59,19 @@ final class UserController extends Controller
      *
      * @return array<string, mixed> Created user data
      */
-    #[OA\Post(
-        path: '/users',
-        summary: 'Create user',
-        tags: ['Users'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'email'],
-                properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'email', type: 'string'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'User created'),
-            new OA\Response(response: 400, description: 'Invalid input'),
-        ]
-    )]
+    #[OA\Post(path: '/users', summary: 'Create user', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['name', 'email'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'email', type: 'string'),
+            ]
+        )
+    ), tags: ['Users'], responses: [
+        new OA\Response(response: 201, description: 'User created'),
+        new OA\Response(response: 400, description: 'Invalid input'),
+    ])]
     public function create(): array
     {
         $data = $this->request->getPostParams();
@@ -95,58 +89,51 @@ final class UserController extends Controller
      *
      * @return array<string, mixed> List of users with pagination info
      */
-    #[OA\Get(
-        path: '/users',
-        summary: 'List users',
-        description: 'Get all users with optional pagination. Use either page & limit or offset & limit',
-        tags: ['Users'],
-        parameters: [
-            new OA\Parameter(name: 'email', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
-            new OA\Parameter(name: 'name', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
-            new OA\Parameter(name: 'created_after', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
-            new OA\Parameter(name: 'created_before', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
-            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)),
-            new OA\Parameter(name: 'offset', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, minimum: 0)),
-            new OA\Parameter(name: 'sortBy', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'id', enum: ['id', 'email', 'created_at', 'updated_at'])),
-            new OA\Parameter(name: 'sortDirection', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'DESC', enum: ['ASC', 'DESC'])),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(
-                                properties: [
-                                    new OA\Property(property: 'id', type: 'integer', example: 3001),
-                                    new OA\Property(property: 'name', type: 'string', example: 'string'),
-                                    new OA\Property(property: 'email', type: 'string', example: 'string'),
-                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                ],
-                                type: 'object'
-                            )
-                        ),
-                        new OA\Property(
-                            property: 'pagination',
+    #[OA\Get(path: '/users', description: 'Get all users with optional pagination. Use either page & limit or offset & limit', summary: 'List users', tags: ['Users'], parameters: [
+        new OA\Parameter(name: 'email', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
+        new OA\Parameter(name: 'name', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: null)),
+        new OA\Parameter(name: 'created_after', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
+        new OA\Parameter(name: 'created_before', in: 'query', required: false, schema: new OA\Schema(type: 'date', default: null)),
+        new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)),
+        new OA\Parameter(name: 'offset', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: null, minimum: 0)),
+        new OA\Parameter(name: 'sortBy', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'id', enum: ['id', 'email', 'created_at', 'updated_at'])),
+        new OA\Parameter(name: 'sortDirection', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'DESC', enum: ['ASC', 'DESC'])),
+    ], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Successful operation',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'data',
+                        type: 'array',
+                        items: new OA\Items(
                             properties: [
-                                new OA\Property(property: 'total', type: 'integer', example: 1),
-                                new OA\Property(property: 'count', type: 'integer', example: 1),
-                                new OA\Property(property: 'per_page', type: 'integer', example: 100),
-                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
-                                new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                                new OA\Property(property: 'id', type: 'integer', example: 3001),
+                                new OA\Property(property: 'name', type: 'string', example: 'string'),
+                                new OA\Property(property: 'email', type: 'string', example: 'string'),
+                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
                             ],
                             type: 'object'
-                        ),
-                    ],
-                    type: 'object'
-                )
-            ),
-        ]
-    )]
+                        )
+                    ),
+                    new OA\Property(
+                        property: 'pagination',
+                        properties: [
+                            new OA\Property(property: 'total', type: 'integer', example: 1),
+                            new OA\Property(property: 'count', type: 'integer', example: 1),
+                            new OA\Property(property: 'per_page', type: 'integer', example: 100),
+                            new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                            new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                        ],
+                        type: 'object'
+                    ),
+                ],
+                type: 'object'
+            )
+        ),
+    ])]
     public function index(): array
     {
         // --------------------
@@ -379,32 +366,25 @@ final class UserController extends Controller
      *
      * @return array<string, mixed> Updated user data
      */
-    #[OA\Put(
-        path: '/users/{id}',
-        summary: 'Update user',
-        tags: ['Users'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            ),
-        ],
-        requestBody: new OA\RequestBody(
+    #[OA\Put(path: '/users/{id}', summary: 'Update user', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'email', type: 'string'),
+            ]
+        )
+    ), tags: ['Users'], parameters: [
+        new OA\Parameter(
+            name: 'id',
+            in: 'path',
             required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'email', type: 'string'),
-                ]
-            )
+            schema: new OA\Schema(type: 'integer')
         ),
-        responses: [
-            new OA\Response(response: 200, description: 'User updated'),
-            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
-        ]
-    )]
+    ], responses: [
+        new OA\Response(response: 200, description: 'User updated'),
+        new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
+    ])]
     public function update(array $params): array
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
