@@ -4,7 +4,7 @@ ARG OS="linux"
 ARG MYSQLD_EXPORTER_VERSION="0.17.2"  # specify a fixed version for reproducibility
 
 # Base image (must come AFTER ARG so it can expand)
-FROM quay.io/prometheus/busybox-${OS}-${ARCH}@sha256:f173c44fab35484fa0e940e42929efe2a2f506feda431ba72c5f0d79639d7f55
+FROM quay.io/prometheus/busybox-${OS}-${ARCH}@sha256:4eb7e9b67c0839f512270bae2d84fa75ad2c09075d11468cc1c1cef19b573ebc
 
 # re-declare args after FROM if you want them in this stage
 ARG ARCH
