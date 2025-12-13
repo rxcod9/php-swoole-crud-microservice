@@ -166,7 +166,7 @@ services:
 
   # Swagger UI for API documentation
   swagger-ui:
-    image: swaggerapi/swagger-ui:v5.30.3
+    image: swaggerapi/swagger-ui:v5.31.0
     container_name: swagger_ui
     environment:
       SWAGGER_JSON: ${SWAGGER_JSON_PATH:-/app/swagger.json}
