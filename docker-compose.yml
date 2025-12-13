@@ -149,7 +149,7 @@ services:
 
   # Caddy web server and reverse proxy
   caddy:
-    image: caddy:2.10
+    image: caddy:2.11
     ports: 
       - "443:443"
       - "80:80"
