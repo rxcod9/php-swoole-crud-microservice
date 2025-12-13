@@ -3,7 +3,7 @@
     xmlns="http://phpmd.org/ruleset/1.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <description>
-        Strict PHPMD rules for PHP 8.4 microservices.
+        Strict PHPMD rules for PHP 8.x microservices.
         - Complexity, unused code, design &amp; cleancode rules
         - Exclude cosmetic or non-critical rules
     </description>

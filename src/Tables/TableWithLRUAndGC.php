@@ -5,7 +5,7 @@
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: Composite Table implementation with LRU eviction, TTL expiration,
  * and Garbage Collection (GC) capabilities on top of Swoole\Table.
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Tables
  * @package   App\Tables
