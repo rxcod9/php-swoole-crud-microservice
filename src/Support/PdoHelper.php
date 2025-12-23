@@ -4,7 +4,7 @@
  * src/Support/PdoHelper.php
  * Project: rxcod9/php-swoole-crud-microservice
  * Description: PDO-specific retry and connection error detection logic with enhanced debug logging.
- * PHP version 8.4
+ * PHP version 8.5
  *
  * @category  Support
  * @package   App\Support

@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------
 # Dockerfile for PHP Swoole CRUD Microservice
 #
-# This Dockerfile builds a PHP 8.4 CLI image with Swoole, Redis, Xdebug, Opcache, and other required extensions.
+# This Dockerfile builds a PHP 8.5 CLI image with Swoole, Redis, Xdebug, Opcache, and other required extensions.
 # It uses a multi-stage build to compile Swoole and extensions, then creates a runtime image with all extensions included.
 #
 # Supervisor is used to run the PHP process and manage restarts.
@@ -22,7 +22,7 @@
 
 # ================= Base Stage =================
 # Contains common runtime dependencies
-FROM php:8.4-cli AS base
+FROM php:8.5-cli AS base
 
 # --- Runtime system dependencies ---
 RUN apt-get update && apt-get install -y \

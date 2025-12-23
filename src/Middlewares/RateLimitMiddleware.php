@@ -6,7 +6,7 @@
  * Applies request rate limiting per IP using cache-based tracking.
  * Implements a simple fixed-window algorithm with configurable limits.
  * Project: rxcod9/php-swoole-crud-microservice
- * PHP version: 8.4+
+ * PHP version: 8.5
  *
  * @category  Middleware
  * @package   App\Middlewares

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <ruleset name="ProductionStrictStandard">
     <description>
-        Harmonized PHPCS ruleset for PHP 8.4 microservices
+        Harmonized PHPCS ruleset for PHP 8.x microservices
         - PSR-12 baseline
         - Slevomat strict typing modern PHP
         - Class function docblocks
