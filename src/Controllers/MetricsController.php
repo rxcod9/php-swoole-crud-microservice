@@ -58,18 +58,12 @@ final class MetricsController extends Controller
      *
      * @return array<string, mixed> Metrics data or error message
      */
-    #[OA\Get(
-        path: '/metrics',
-        summary: 'Metrics Check',
-        description: 'Metrics check endpoint to verify the service is running.',
-        tags: ['Home'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation'
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/metrics', description: 'Metrics check endpoint to verify the service is running.', summary: 'Metrics Check', tags: ['Home'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Successful operation'
+        ),
+    ])]
     public function check(): array
     {
         try {

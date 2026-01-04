@@ -38,11 +38,7 @@ use OpenApi\Attributes as OA;
  * @version   1.0.0
  * @since     2025-10-02
  */
-#[OA\Info(
-    version: '1.0.0',
-    title: 'PHP Swoole CRUD Microservice API',
-    description: 'OpenAPI docs for PHP Swoole CRUD Microservice'
-)]
+#[OA\Info(version: '1.0.0', description: 'OpenAPI docs for PHP Swoole CRUD Microservice', title: 'PHP Swoole CRUD Microservice API')]
 #[OA\Server(
     url: 'http://localhost:9501',
     description: 'Local dev server'
@@ -94,24 +90,18 @@ final class IndexController extends Controller
      *
      * @return array<string,mixed> JSON response
      */
-    #[OA\Get(
-        path: '/',
-        summary: 'Home',
-        description: 'Home',
-        tags: ['Home'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'message', type: 'string'),
-                    ],
-                    type: 'object'
-                )
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/', description: 'Home', summary: 'Home', tags: ['Home'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Successful operation',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'message', type: 'string'),
+                ],
+                type: 'object'
+            )
+        ),
+    ])]
     public function index(): array
     {
         return $this->json(['message' => 'Welcome to PHP Swoole CRUD Microservice']);
@@ -128,30 +118,24 @@ final class IndexController extends Controller
      * only apply on master startup. This function helps ensure your preload/warmup
      * script is running correctly during deployment.
      */
-    #[OA\Get(
-        path: '/opcache',
-        summary: 'OPcache Status',
-        description: 'Returns OPcache statistics including memory, scripts, hits, misses, and preload info.',
-        tags: ['Home'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'OPcache status response',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'enabled', type: 'boolean'),
-                        new OA\Property(property: 'jit_enabled', type: 'boolean'),
-                        new OA\Property(property: 'memory', type: 'object'),
-                        new OA\Property(property: 'stats', type: 'object'),
-                        new OA\Property(property: 'preloaded_count', type: 'integer'),
-                        new OA\Property(property: 'warmup_compiled_count', type: 'integer'),
-                        new OA\Property(property: 'scripts', type: 'array', items: new OA\Items(type: 'string')),
-                    ],
-                    type: 'object'
-                )
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/opcache', description: 'Returns OPcache statistics including memory, scripts, hits, misses, and preload info.', summary: 'OPcache Status', tags: ['Home'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'OPcache status response',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'enabled', type: 'boolean'),
+                    new OA\Property(property: 'jit_enabled', type: 'boolean'),
+                    new OA\Property(property: 'memory', type: 'object'),
+                    new OA\Property(property: 'stats', type: 'object'),
+                    new OA\Property(property: 'preloaded_count', type: 'integer'),
+                    new OA\Property(property: 'warmup_compiled_count', type: 'integer'),
+                    new OA\Property(property: 'scripts', type: 'array', items: new OA\Items(type: 'string')),
+                ],
+                type: 'object'
+            )
+        ),
+    ])]
     public function opcacheStatus(): array
     {
         if (!function_exists('opcache_get_status')) {
