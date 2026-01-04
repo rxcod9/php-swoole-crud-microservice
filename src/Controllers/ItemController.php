@@ -55,26 +55,20 @@ final class ItemController extends Controller
      *
      * @return array<string, mixed> Created item data
      */
-    #[OA\Post(
-        path: '/items',
-        summary: 'Create item',
-        tags: ['Items'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['sku', 'title'],
-                properties: [
-                    new OA\Property(property: 'sku', type: 'string'),
-                    new OA\Property(property: 'title', type: 'string'),
-                    new OA\Property(property: 'price', type: 'number', format: 'float'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Item created'),
-            new OA\Response(response: 400, description: 'Invalid input'),
-        ]
-    )]
+    #[OA\Post(path: '/items', summary: 'Create item', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['sku', 'title'],
+            properties: [
+                new OA\Property(property: 'sku', type: 'string'),
+                new OA\Property(property: 'title', type: 'string'),
+                new OA\Property(property: 'price', type: 'number', format: 'float'),
+            ]
+        )
+    ), tags: ['Items'], responses: [
+        new OA\Response(response: 201, description: 'Item created'),
+        new OA\Response(response: 400, description: 'Invalid input'),
+    ])]
     public function create(): array
     {
         $data = $this->request->getPostParams();
@@ -88,107 +82,100 @@ final class ItemController extends Controller
      *
      * @return array<string, mixed> List of items with pagination info
      */
-    #[OA\Get(
-        path: '/items',
-        summary: 'List items',
-        description: 'Get all items with optional pagination',
-        tags: ['Items'],
-        parameters: [
-            new OA\Parameter(
-                name: 'sku',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', default: null)
-            ),
-            new OA\Parameter(
-                name: 'title',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', default: null)
-            ),
-            new OA\Parameter(
-                name: 'created_after',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'date', default: null)
-            ),
-            new OA\Parameter(
-                name: 'created_before',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'date', default: null)
-            ),
-            new OA\Parameter(
-                name: 'limit',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)
-            ),
-            new OA\Parameter(
-                name: 'offset',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
-            ),
-            new OA\Parameter(
-                name: 'sortBy',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(
-                    type: 'string', // allowed columns
-                    default: 'id',
-                    enum: ['id', 'sku', 'created_at', 'updated_at']
-                )
-            ),
-            new OA\Parameter(
-                name: 'sortDirection',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(
-                    type: 'string', // allowed columns
-                    default: 'DESC',
-                    enum: ['ASC', 'DESC']
-                )
-            ),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(
-                                properties: [
-                                    new OA\Property(property: 'id', type: 'integer'),
-                                    new OA\Property(property: 'sku', type: 'string'),
-                                    new OA\Property(property: 'title', type: 'string'),
-                                    new OA\Property(property: 'price', type: 'number', format: 'float'),
-                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
-                                ],
-                                type: 'object'
-                            )
-                        ),
-                        new OA\Property(
-                            property: 'pagination',
+    #[OA\Get(path: '/items', description: 'Get all items with optional pagination', summary: 'List items', tags: ['Items'], parameters: [
+        new OA\Parameter(
+            name: 'sku',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'string', default: null)
+        ),
+        new OA\Parameter(
+            name: 'title',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'string', default: null)
+        ),
+        new OA\Parameter(
+            name: 'created_after',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'date', default: null)
+        ),
+        new OA\Parameter(
+            name: 'created_before',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'date', default: null)
+        ),
+        new OA\Parameter(
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'integer', default: null, maximum: 1000)
+        ),
+        new OA\Parameter(
+            name: 'offset',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(type: 'integer', default: null, minimum: 0)
+        ),
+        new OA\Parameter(
+            name: 'sortBy',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(
+                type: 'string', // allowed columns
+                default: 'id',
+                enum: ['id', 'sku', 'created_at', 'updated_at']
+            )
+        ),
+        new OA\Parameter(
+            name: 'sortDirection',
+            in: 'query',
+            required: false,
+            schema: new OA\Schema(
+                type: 'string', // allowed columns
+                default: 'DESC',
+                enum: ['ASC', 'DESC']
+            )
+        ),
+    ], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Successful operation',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'data',
+                        type: 'array',
+                        items: new OA\Items(
                             properties: [
-                                new OA\Property(property: 'total', type: 'integer', example: 1),
-                                new OA\Property(property: 'count', type: 'integer', example: 1),
-                                new OA\Property(property: 'per_page', type: 'integer', example: 100),
-                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
-                                new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                                new OA\Property(property: 'id', type: 'integer'),
+                                new OA\Property(property: 'sku', type: 'string'),
+                                new OA\Property(property: 'title', type: 'string'),
+                                new OA\Property(property: 'price', type: 'number', format: 'float'),
+                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
+                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2025-09-21 09:28:37'),
                             ],
                             type: 'object'
-                        ),
-                    ],
-                    type: 'object'
-                )
-            ),
-        ]
-    )]
+                        )
+                    ),
+                    new OA\Property(
+                        property: 'pagination',
+                        properties: [
+                            new OA\Property(property: 'total', type: 'integer', example: 1),
+                            new OA\Property(property: 'count', type: 'integer', example: 1),
+                            new OA\Property(property: 'per_page', type: 'integer', example: 100),
+                            new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                            new OA\Property(property: 'total_pages', type: 'integer', example: 1),
+                        ],
+                        type: 'object'
+                    ),
+                ],
+                type: 'object'
+            )
+        ),
+    ])]
     public function index(): array
     {
         // Pagination params
@@ -327,33 +314,26 @@ final class ItemController extends Controller
      *
      * @return array<string, mixed> Updated item data
      */
-    #[OA\Put(
-        path: '/items/{id}',
-        summary: 'Update item',
-        tags: ['Items'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            ),
-        ],
-        requestBody: new OA\RequestBody(
+    #[OA\Put(path: '/items/{id}', summary: 'Update item', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'sku', type: 'string'),
+                new OA\Property(property: 'title', type: 'string'),
+                new OA\Property(property: 'price', type: 'number', format: 'float'),
+            ]
+        )
+    ), tags: ['Items'], parameters: [
+        new OA\Parameter(
+            name: 'id',
+            in: 'path',
             required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'sku', type: 'string'),
-                    new OA\Property(property: 'title', type: 'string'),
-                    new OA\Property(property: 'price', type: 'number', format: 'float'),
-                ]
-            )
+            schema: new OA\Schema(type: 'integer')
         ),
-        responses: [
-            new OA\Response(response: 200, description: 'Item updated'),
-            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
-        ]
-    )]
+    ], responses: [
+        new OA\Response(response: 200, description: 'Item updated'),
+        new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
+    ])]
     public function update(array $params): array
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);

@@ -63,24 +63,18 @@ final class HealthController extends Controller
      *
      * @return array<string,mixed>
      */
-    #[OA\Get(
-        path: '/health',
-        summary: 'Health Check',
-        description: 'Health check endpoint to verify the service is running.',
-        tags: ['Home'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'ok', type: 'bool'),
-                    ],
-                    type: 'object'
-                )
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/health', description: 'Health check endpoint to verify the service is running.', summary: 'Health Check', tags: ['Home'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Successful operation',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'ok', type: 'bool'),
+                ],
+                type: 'object'
+            )
+        ),
+    ])]
     public function check(): array
     {
         $data      = $this->getWorkerData();

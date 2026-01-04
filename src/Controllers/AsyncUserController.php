@@ -58,49 +58,43 @@ final class AsyncUserController extends Controller
      *
      * @return array<string, mixed> Created user data
      */
-    #[OA\Post(
-        path: '/async-users',
-        summary: 'Create user async',
-        tags: ['AsyncUsers'],
-        requestBody: new OA\RequestBody(
-            required: true,
+    #[OA\Post(path: '/async-users', summary: 'Create user async', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['name', 'email'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'email', type: 'string'),
+            ]
+        )
+    ), tags: ['AsyncUsers'], responses: [
+        new OA\Response(
+            response: 202,
+            description: 'Accepted',
             content: new OA\JsonContent(
-                required: ['name', 'email'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'email', type: 'string'),
-                ]
+                    new OA\Property(
+                        property: 'message',
+                        description: 'Descriptive status message explaining the current state or outcome of the async request.',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'jobId',
+                        description: 'Unique identifier assigned to the asynchronous job or task for tracking and polling.',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'result',
+                        description: 'Optional numeric result or status code returned once the async job has completed.',
+                        type: 'integer',
+                        nullable: true
+                    ),
+                ],
+                type: 'object'
             )
         ),
-        responses: [
-            new OA\Response(
-                response: 202,
-                description: 'Accepted',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(
-                            property: 'message',
-                            description: 'Descriptive status message explaining the current state or outcome of the async request.',
-                            type: 'string'
-                        ),
-                        new OA\Property(
-                            property: 'jobId',
-                            description: 'Unique identifier assigned to the asynchronous job or task for tracking and polling.',
-                            type: 'string'
-                        ),
-                        new OA\Property(
-                            property: 'result',
-                            description: 'Optional numeric result or status code returned once the async job has completed.',
-                            type: 'integer',
-                            nullable: true
-                        ),
-                    ],
-                    type: 'object'
-                )
-            ),
-            new OA\Response(response: 400, description: 'Invalid input'),
-        ]
-    )]
+        new OA\Response(response: 400, description: 'Invalid input'),
+    ])]
     public function create(): array
     {
         $start  = microtime(true);
@@ -148,56 +142,49 @@ final class AsyncUserController extends Controller
      *
      * @return array<string, mixed> Updated user data
      */
-    #[OA\Put(
-        path: '/async-users/{id}',
-        summary: 'Update user async',
-        tags: ['AsyncUsers'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            ),
-        ],
-        requestBody: new OA\RequestBody(
+    #[OA\Put(path: '/async-users/{id}', summary: 'Update user async', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'email', type: 'string'),
+            ]
+        )
+    ), tags: ['AsyncUsers'], parameters: [
+        new OA\Parameter(
+            name: 'id',
+            in: 'path',
             required: true,
+            schema: new OA\Schema(type: 'integer')
+        ),
+    ], responses: [
+        new OA\Response(
+            response: 202,
+            description: 'Accepted',
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'email', type: 'string'),
-                ]
+                    new OA\Property(
+                        property: 'message',
+                        description: 'Descriptive status message explaining the current state or outcome of the async request.',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'jobId',
+                        description: 'Unique identifier assigned to the asynchronous job or task for tracking and polling.',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'result',
+                        description: 'Optional numeric result or status code returned once the async job has completed.',
+                        type: 'integer',
+                        nullable: true
+                    ),
+                ],
+                type: 'object'
             )
         ),
-        responses: [
-            new OA\Response(
-                response: 202,
-                description: 'Accepted',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(
-                            property: 'message',
-                            description: 'Descriptive status message explaining the current state or outcome of the async request.',
-                            type: 'string'
-                        ),
-                        new OA\Property(
-                            property: 'jobId',
-                            description: 'Unique identifier assigned to the asynchronous job or task for tracking and polling.',
-                            type: 'string'
-                        ),
-                        new OA\Property(
-                            property: 'result',
-                            description: 'Optional numeric result or status code returned once the async job has completed.',
-                            type: 'integer',
-                            nullable: true
-                        ),
-                    ],
-                    type: 'object'
-                )
-            ),
-            new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
-        ]
-    )]
+        new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
+    ])]
     public function update(array $params): array
     {
         $start = microtime(true);
