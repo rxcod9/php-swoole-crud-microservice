@@ -56,8 +56,8 @@ final readonly class Dispatcher
      *
      * @param string            $action Action in the format 'Controller@method'
      * @param array<string, string> $params Parameters to pass to the method
-     * @param Request           $req    Request object
-     * @param Response          $res    Response object
+     * @param Request $request Request object
+     * @param Response $response Response object
      *
      * @throws InvalidArgumentException If the action format is invalid OR If the resolved controller is not an object
      * @throws ClassNotFoundException If the controller class does not exist
@@ -65,7 +65,7 @@ final readonly class Dispatcher
      *
      * @return Response Response from the controller method
      */
-    public function dispatch(string $action, array $params, Request $req, Response $res): Response
+    public function dispatch(string $action, array $params, Request $request, Response $response): Response
     {
         if (strpos($action, '@') === false) {
             throw new InvalidArgumentException("Action must be in 'Controller@method' format.");
@@ -93,11 +93,11 @@ final readonly class Dispatcher
         }
 
         if (method_exists($controller, 'setRequest')) {
-            $controller->setRequest($req);
+            $controller->setRequest($request);
         }
 
         if (method_exists($controller, 'setResponse')) {
-            $controller->setResponse($res);
+            $controller->setResponse($response);
         }
 
         /** @var Response $result */

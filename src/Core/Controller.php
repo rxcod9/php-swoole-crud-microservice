@@ -101,6 +101,7 @@ abstract class Controller
         if ($cacheTagType !== null) {
             $this->response->setHeader('X-Cache-Type', $cacheTagType);
         }
+
         $this->response->setHeader('Content-Type', $contentType);
         $this->response->setBody($status === 204 ? '' : $data);
         return $this->response;
@@ -125,6 +126,7 @@ abstract class Controller
         if ($cacheTagType !== null) {
             $this->response->setHeader('X-Cache-Type', $cacheTagType);
         }
+
         $this->response->setHeader('Content-Type', $contentType);
         $this->response->setBody($status === 204 ? '' : $data);
         return $this->response;
@@ -149,6 +151,7 @@ abstract class Controller
         if ($cacheTagType !== null) {
             $this->response->setHeader('X-Cache-Type', $cacheTagType);
         }
+
         $this->response->setHeader('Content-Type', $contentType);
         $this->response->setBody($status === 204 ? '' : $data);
         return $this->response;

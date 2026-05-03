@@ -69,9 +69,9 @@ final class RouteDispatcher
     {
         $dispatcher = new Dispatcher($this->container);
         $response   = $dispatcher->dispatch(
-            $action, 
-            $params, 
-            $requestContext->exchange()->request(), 
+            $action,
+            $params,
+            $requestContext->exchange()->request(),
             $requestContext->exchange()->response()
         );
 

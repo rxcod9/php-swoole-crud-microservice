@@ -23,7 +23,6 @@ use App\Core\Constants;
 use App\Core\Messages;
 use App\Core\Pools\PDOPool;
 use App\Services\PaginationParams;
-use App\Repositories\RepositoryInterface;
 use PDO;
 use PDOStatement;
 use Throwable;

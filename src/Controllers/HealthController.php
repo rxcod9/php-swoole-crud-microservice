@@ -61,8 +61,6 @@ final class HealthController extends Controller
     /**
      * Health check JSON endpoint.
      * Returns the health status of the service including worker and cache stats.
-     *
-     * @return \App\Core\Http\Response
      */
     #[OA\Get(
         path: '/health',
@@ -103,8 +101,6 @@ final class HealthController extends Controller
 
     /**
      * Health check HTML endpoint.
-     *
-     * @return \App\Core\Http\Response
      */
     public function checkHtml(): Response
     {
