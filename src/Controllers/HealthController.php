@@ -21,6 +21,7 @@ namespace App\Controllers;
 
 use App\Core\Constants;
 use App\Core\Controller;
+use App\Core\Http\Response;
 use App\Tables\TableWithLRUAndGC;
 use Carbon\Carbon;
 use OpenApi\Attributes as OA;
@@ -61,7 +62,7 @@ final class HealthController extends Controller
      * Health check JSON endpoint.
      * Returns the health status of the service including worker and cache stats.
      *
-     * @return array<string,mixed>
+     * @return \App\Core\Http\Response
      */
     #[OA\Get(
         path: '/health',
@@ -81,7 +82,7 @@ final class HealthController extends Controller
             ),
         ]
     )]
-    public function check(): array
+    public function check(): Response
     {
         $data      = $this->getWorkerData();
         $cacheData = $this->getCacheData();
@@ -103,9 +104,9 @@ final class HealthController extends Controller
     /**
      * Health check HTML endpoint.
      *
-     * @return array<string,mixed>
+     * @return \App\Core\Http\Response
      */
-    public function checkHtml(): array
+    public function checkHtml(): Response
     {
         return $this->html(
             $this->renderHtml()

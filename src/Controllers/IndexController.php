@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Http\Response;
 use OpenApi\Attributes as OA;
 
 /**
@@ -92,7 +93,7 @@ final class IndexController extends Controller
     /**
      * Home endpoint.
      *
-     * @return array<string,mixed> JSON response
+     * @return \App\Core\Http\Response JSON response
      */
     #[OA\Get(
         path: '/',
@@ -112,7 +113,7 @@ final class IndexController extends Controller
             ),
         ]
     )]
-    public function index(): array
+    public function index(): Response
     {
         return $this->json(['message' => 'Welcome to PHP Swoole CRUD Microservice']);
     }

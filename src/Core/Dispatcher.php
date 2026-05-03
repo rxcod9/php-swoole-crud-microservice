@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Core\Http\Request;
+use App\Core\Http\Response;
 use App\Exceptions\ControllerMethodNotFoundException;
 use InvalidArgumentException;
 use Symfony\Component\VarExporter\Exception\ClassNotFoundException;
@@ -54,15 +56,16 @@ final readonly class Dispatcher
      *
      * @param string            $action Action in the format 'Controller@method'
      * @param array<string, string> $params Parameters to pass to the method
-     * @param mixed             $req    Request object (optional)
+     * @param Request           $req    Request object
+     * @param Response          $res    Response object
      *
      * @throws InvalidArgumentException If the action format is invalid OR If the resolved controller is not an object
      * @throws ClassNotFoundException If the controller class does not exist
      * @throws ControllerMethodNotFoundException If the method does not exist in the controller
      *
-     * @return array<string, mixed> Response from the controller method
+     * @return Response Response from the controller method
      */
-    public function dispatch(string $action, array $params, mixed $req = null): array
+    public function dispatch(string $action, array $params, Request $req, Response $res): Response
     {
         if (strpos($action, '@') === false) {
             throw new InvalidArgumentException("Action must be in 'Controller@method' format.");
@@ -93,7 +96,12 @@ final readonly class Dispatcher
             $controller->setRequest($req);
         }
 
-        /** @var object $controller */
-        return call_user_func_array([$controller, $method], [$params]);
+        if (method_exists($controller, 'setResponse')) {
+            $controller->setResponse($res);
+        }
+
+        /** @var Response $result */
+        $result = call_user_func_array([$controller, $method], [$params]);
+        return $result;
     }
 }

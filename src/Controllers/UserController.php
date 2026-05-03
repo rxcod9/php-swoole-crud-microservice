@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Http\Response;
 use App\Core\Messages;
 use App\Models\User;
 use App\Services\Cache\CacheRecordParams;
@@ -57,7 +58,7 @@ final class UserController extends Controller
      * Create a new user.
      * Expects JSON body with user data.
      *
-     * @return array<string, mixed> Created user data
+     * @return \App\Core\Http\Response Created user data
      */
     #[OA\Post(
         path: '/users',
@@ -78,7 +79,7 @@ final class UserController extends Controller
             new OA\Response(response: 400, description: 'Invalid input'),
         ]
     )]
-    public function create(): array
+    public function create(): Response
     {
         $data = $this->request->getPostParams();
         $user = $this->userService->create($data);
@@ -93,7 +94,7 @@ final class UserController extends Controller
      * List users with optional pagination.
      * Query params: limit (default 100), offset (default 0)
      *
-     * @return array<string, mixed> List of users with pagination info
+     * @return \App\Core\Http\Response List of users with pagination info
      */
     #[OA\Get(
         path: '/users',
@@ -147,7 +148,7 @@ final class UserController extends Controller
             ),
         ]
     )]
-    public function index(): array
+    public function index(): Response
     {
         // --------------------
         // Resolve query params
@@ -185,9 +186,9 @@ final class UserController extends Controller
      * Attempt to retrieve cached user list.
      * @param array<string, mixed> $query Contains limit, offset, filters, sortBy, sortDirection
      *
-     * @return array<string, mixed>|null Cached user list or null if not found
+     * @return \App\Core\Http\Response|null Cached user list or null if not found
      */
-    private function getCachedUserList(array $query): ?array
+    private function getCachedUserList(array $query): ?Response
     {
         [$users, $cacheTagType] = $this->cacheService->getList('users', $query);
         if ($users !== null) {
@@ -201,9 +202,9 @@ final class UserController extends Controller
      * Fetch users from service and cache results.
      * @param array<string, mixed> $query Contains limit, offset, filters, sortBy, sortDirection
      *
-     * @return array<string, mixed> Fetched user list
+     * @return \App\Core\Http\Response Fetched user list
      */
-    private function fetchAndCacheUsers(array $query): array
+    private function fetchAndCacheUsers(array $query): Response
     {
         [$records, $pagination] = $this->userService->pagination($query);
 
@@ -269,7 +270,7 @@ final class UserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> User data
+     * @return \App\Core\Http\Response User data
      */
     #[OA\Get(
         path: '/users/{id}',
@@ -298,7 +299,7 @@ final class UserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function show(array $params): array
+    public function show(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id                    = (int)$params['id'];
@@ -319,7 +320,7 @@ final class UserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> User data
+     * @return \App\Core\Http\Response User data
      * @SuppressWarnings("PHPMD.StaticAccess")
      */
     #[OA\Get(
@@ -349,7 +350,7 @@ final class UserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function showByEmail(array $params): array
+    public function showByEmail(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['email']);
         $email                 = (string)$params['email'];
@@ -377,7 +378,7 @@ final class UserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Updated user data
+     * @return \App\Core\Http\Response Updated user data
      */
     #[OA\Put(
         path: '/users/{id}',
@@ -405,7 +406,7 @@ final class UserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function update(array $params): array
+    public function update(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
@@ -431,7 +432,7 @@ final class UserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Deletion status
+     * @return \App\Core\Http\Response Deletion status
      */
     #[OA\Delete(
         path: '/users/{id}',
@@ -450,7 +451,7 @@ final class UserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function destroy(array $params): array
+    public function destroy(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id = (int)$params['id'];

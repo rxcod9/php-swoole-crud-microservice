@@ -67,36 +67,14 @@ final class RouteDispatcher
      */
     private function runController(RequestContext $requestContext, string $action, array $params): void
     {
-        $dispatcher   = new Dispatcher($this->container);
-        $payload      = $dispatcher->dispatch($action, $params, $requestContext->exchange()->request());
-        $response     = $requestContext->exchange()->response();
-        $status       = $payload['__status'] ?? 200;
-        $json         = $payload['__json'] ?? null;
-        $html         = $payload['__html'] ?? null;
-        $text         = $payload['__text'] ?? null;
-        $ctype        = $payload['__contentType'] ?? null;
-        $cacheTagType = $payload['__cacheTagType'] ?? null;
+        $dispatcher = new Dispatcher($this->container);
+        $response   = $dispatcher->dispatch(
+            $action, 
+            $params, 
+            $requestContext->exchange()->request(), 
+            $requestContext->exchange()->response()
+        );
 
-        $response->setStatus($status);
-        $response->setHeader('X-Cache-Type', $cacheTagType);
-
-        // Format response
-        if ($html !== null) {
-            $response->setHeader('Content-Type', $ctype ?? 'text/html');
-            $response->setBody($status === 204 ? '' : $html);
-            $response->send();
-            return;
-        }
-
-        if ($text !== null) {
-            $response->setHeader('Content-Type', $ctype ?? 'text/plain');
-            $response->setBody($status === 204 ? '' : $text);
-            $response->send();
-            return;
-        }
-
-        $response->setHeader('Content-Type', $ctype ?? 'application/json');
-        $response->setBody($status === 204 ? '' : json_encode($json ?? $payload));
         $response->send();
     }
 }

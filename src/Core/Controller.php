@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Core\Http\Request;
+use App\Core\Http\Response;
 
 /**
  * Class Controller
@@ -67,26 +68,42 @@ abstract class Controller
     }
 
     /**
+     * The response object associated with the controller.
+     */
+    protected Response $response;
+
+    /**
+     * Assigns the response object to the controller.
+     *
+     * @param Response $response The response object.
+     */
+    public function setResponse(Response $response): void
+    {
+        $this->response = $response;
+    }
+
+    /**
      * Returns a structured JSON response.
      *
      * @param mixed  $data        The data to encode as JSON.
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: application/json)
      *
-     * @return array<string, mixed> The structured response containing status and JSON data.
+     * @return Response The structured response object.
      */
     protected function json(
         mixed $data,
         int $status = 200,
         string $contentType = 'application/json',
         ?string $cacheTagType = null
-    ): array {
-        return [
-            '__status'       => $status,
-            '__json'         => $data,
-            '__contentType'  => $contentType,
-            '__cacheTagType' => $cacheTagType,
-        ];
+    ): Response {
+        $this->response->setStatus($status);
+        if ($cacheTagType !== null) {
+            $this->response->setHeader('X-Cache-Type', $cacheTagType);
+        }
+        $this->response->setHeader('Content-Type', $contentType);
+        $this->response->setBody($status === 204 ? '' : $data);
+        return $this->response;
     }
 
     /**
@@ -96,20 +113,21 @@ abstract class Controller
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: text/html)
      *
-     * @return array<string, mixed> The structured response containing status and HTML data.
+     * @return Response The structured response object.
      */
     protected function html(
         mixed $data,
         int $status = 200,
         string $contentType = 'text/html',
         ?string $cacheTagType = null
-    ): array {
-        return [
-            '__status'       => $status,
-            '__html'         => $data,
-            '__contentType'  => $contentType,
-            '__cacheTagType' => $cacheTagType,
-        ];
+    ): Response {
+        $this->response->setStatus($status);
+        if ($cacheTagType !== null) {
+            $this->response->setHeader('X-Cache-Type', $cacheTagType);
+        }
+        $this->response->setHeader('Content-Type', $contentType);
+        $this->response->setBody($status === 204 ? '' : $data);
+        return $this->response;
     }
 
     /**
@@ -119,19 +137,20 @@ abstract class Controller
      * @param int    $status      The HTTP status code (default: 200).
      * @param string $contentType Content-Type (default: text/plain)
      *
-     * @return array<string, mixed> The structured response containing status and Text data.
+     * @return Response The structured response object.
      */
     protected function text(
         mixed $data,
         int $status = 200,
         string $contentType = 'text/plain',
         ?string $cacheTagType = null
-    ): array {
-        return [
-            '__status'       => $status,
-            '__text'         => $data,
-            '__contentType'  => $contentType,
-            '__cacheTagType' => $cacheTagType,
-        ];
+    ): Response {
+        $this->response->setStatus($status);
+        if ($cacheTagType !== null) {
+            $this->response->setHeader('X-Cache-Type', $cacheTagType);
+        }
+        $this->response->setHeader('Content-Type', $contentType);
+        $this->response->setBody($status === 204 ? '' : $data);
+        return $this->response;
     }
 }

@@ -51,7 +51,7 @@ final class HttpExceptionHandler
     }
 
     /**
-     * @return array<string, mixed>
+     * @return \App\Core\Http\Response
      */
     private function buildErrorPayload(Throwable $throwable, int $status): array
     {

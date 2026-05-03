@@ -166,7 +166,7 @@ class Request
     /**
      * Get query parameters (?param=value).
      *
-     * @return array<string, mixed>
+     * @return \App\Core\Http\Response
      */
     public function getAll(): array
     {
@@ -176,7 +176,7 @@ class Request
     /**
      * Get POST parameters (form-encoded).
      *
-     * @return array<string, mixed>
+     * @return \App\Core\Http\Response
      */
     public function getPostParams(): array
     {
@@ -186,7 +186,7 @@ class Request
     /**
      * Decode and return JSON request body as an associative array.
      *
-     * @return array<string, mixed> Returns an empty array if body is empty or invalid JSON
+     * @return \App\Core\Http\Response Returns an empty array if body is empty or invalid JSON
      */
     public function getJsonBody(): array
     {

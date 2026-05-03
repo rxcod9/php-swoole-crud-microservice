@@ -46,7 +46,7 @@ final class Config
     /**
      * Get all configuration settings.
      *
-     * @return array<string, mixed> All configuration settings.
+     * @return \App\Core\Http\Response All configuration settings.
      */
     public function all(): array
     {

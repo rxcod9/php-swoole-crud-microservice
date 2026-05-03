@@ -43,11 +43,11 @@ abstract class CoroutineTestCase extends BaseTestCase
         Coroutine\run(function () use ($fn, &$exception): void {
             try {
                 $fn();
-            } catch (Throwable $e) {
-                $exception = $e;
+            } catch (Throwable $throwable) {
+                $exception = $throwable;
             }
         });
-        if ($exception !== null) {
+        if ($exception instanceof \Throwable) {
             throw $exception;
         }
     }

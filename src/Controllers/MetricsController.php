@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Http\Response;
 use App\Core\Messages;
 use App\Core\Metrics;
 use App\Core\Pools\RedisPool;
@@ -56,7 +57,7 @@ final class MetricsController extends Controller
     /**
      * Metrics check endpoint to verify the service is running.
      *
-     * @return array<string, mixed> Metrics data or error message
+     * @return \App\Core\Http\Response Metrics data or error message
      */
     #[OA\Get(
         path: '/metrics',
@@ -70,7 +71,7 @@ final class MetricsController extends Controller
             ),
         ]
     )]
-    public function check(): array
+    public function check(): Response
     {
         try {
             $redis            = $this->redisPool->get();

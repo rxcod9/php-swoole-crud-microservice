@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Http\Response;
 use App\Core\Messages;
 use App\Models\Item;
 use App\Services\ItemService;
@@ -53,7 +54,7 @@ final class ItemController extends Controller
      * Create a new item.
      * Expects JSON body with item data.
      *
-     * @return array<string, mixed> Created item data
+     * @return \App\Core\Http\Response Created item data
      */
     #[OA\Post(
         path: '/items',
@@ -75,7 +76,7 @@ final class ItemController extends Controller
             new OA\Response(response: 400, description: 'Invalid input'),
         ]
     )]
-    public function create(): array
+    public function create(): Response
     {
         $data = $this->request->getPostParams();
         $item = $this->itemService->create($data);
@@ -86,7 +87,7 @@ final class ItemController extends Controller
      * List items with optional pagination.
      * Query params: limit (default 100), offset (default 0)
      *
-     * @return array<string, mixed> List of items with pagination info
+     * @return \App\Core\Http\Response List of items with pagination info
      */
     #[OA\Get(
         path: '/items',
@@ -189,7 +190,7 @@ final class ItemController extends Controller
             ),
         ]
     )]
-    public function index(): array
+    public function index(): Response
     {
         // Pagination params
         $page   = (int)($this->request->get('page', 1));
@@ -234,7 +235,7 @@ final class ItemController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Item data
+     * @return \App\Core\Http\Response Item data
      */
     #[OA\Get(
         path: '/items/{id}',
@@ -264,7 +265,7 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function show(array $params): array
+    public function show(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
@@ -279,7 +280,7 @@ final class ItemController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Item data
+     * @return \App\Core\Http\Response Item data
      */
     #[OA\Get(
         path: '/items/sku/{sku}',
@@ -309,7 +310,7 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function showBySku(array $params): array
+    public function showBySku(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['sku']);
         $sku  = urldecode($params['sku']);
@@ -325,7 +326,7 @@ final class ItemController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Updated item data
+     * @return \App\Core\Http\Response Updated item data
      */
     #[OA\Put(
         path: '/items/{id}',
@@ -354,7 +355,7 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function update(array $params): array
+    public function update(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id   = (int)$params['id'];
@@ -372,7 +373,7 @@ final class ItemController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Deletion status
+     * @return \App\Core\Http\Response Deletion status
      */
     #[OA\Delete(
         path: '/items/{id}',
@@ -391,7 +392,7 @@ final class ItemController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function destroy(array $params): array
+    public function destroy(array $params): Response
     {
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
         $id = (int)$params['id'];

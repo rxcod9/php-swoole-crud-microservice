@@ -21,6 +21,7 @@ namespace App\Controllers;
 
 use App\Core\Channels\ChannelManager;
 use App\Core\Controller;
+use App\Core\Http\Response;
 use App\Core\Messages;
 use App\Tasks\User\CreateUserTask;
 use App\Tasks\User\DeleteUserTask;
@@ -56,7 +57,7 @@ final class AsyncUserController extends Controller
      * Create a new user.
      * Expects JSON body with user data.
      *
-     * @return array<string, mixed> Created user data
+     * @return \App\Core\Http\Response Created user data
      */
     #[OA\Post(
         path: '/async-users',
@@ -101,7 +102,7 @@ final class AsyncUserController extends Controller
             new OA\Response(response: 400, description: 'Invalid input'),
         ]
     )]
-    public function create(): array
+    public function create(): Response
     {
         $start  = microtime(true);
         $data   = $this->request->getPostParams();
@@ -146,7 +147,7 @@ final class AsyncUserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Updated user data
+     * @return \App\Core\Http\Response Updated user data
      */
     #[OA\Put(
         path: '/async-users/{id}',
@@ -198,7 +199,7 @@ final class AsyncUserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function update(array $params): array
+    public function update(array $params): Response
     {
         $start = microtime(true);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
@@ -243,7 +244,7 @@ final class AsyncUserController extends Controller
      *
      * @param array<string, string|null> $params Route parameters
      *
-     * @return array<string, mixed> Deletion status
+     * @return \App\Core\Http\Response Deletion status
      */
     #[OA\Delete(
         path: '/async-users/{id}',
@@ -286,7 +287,7 @@ final class AsyncUserController extends Controller
             new OA\Response(response: 404, description: Messages::RESOURCE_NOT_FOUND),
         ]
     )]
-    public function destroy(array $params): array
+    public function destroy(array $params): Response
     {
         $start = microtime(true);
         logDebug(self::TAG . ':' . __LINE__ . '] [' . __FUNCTION__, 'called #' . $params['id']);
