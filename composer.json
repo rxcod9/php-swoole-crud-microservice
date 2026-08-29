@@ -20,7 +20,7 @@
         "rector/rector": "^2.2",
         "squizlabs/php_codesniffer": "^4.0",
         "swoole/ide-helper": "^6.0",
-        "zircote/swagger-php": "^5.4"
+        "zircote/swagger-php": "^6.0"
     },
     "scripts": {
         "start": "php public/index.php",
